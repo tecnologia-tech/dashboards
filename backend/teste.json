@@ -1,0 +1,655 @@
+Informações completas da lead 732035:
+{
+  "meta": {
+    "instanceId": "333765",
+    "siteId": "KFlF2aOJ"
+  },
+  "links": {
+    "leads.accounts": {
+      "href": "https://app.nutshell.com/rest/accounts/{leads.accounts}",
+      "type": "accounts"
+    },
+    "leads.contacts": {
+      "href": "https://app.nutshell.com/rest/contacts/{leads.contacts}",
+      "type": "contacts"
+    },
+    "leads.tags": {
+      "href": "https://app.nutshell.com/rest/tags/{leads.tags}",
+      "type": "tags"
+    },
+    "leads.sources": {
+      "href": "https://app.nutshell.com/rest/sources/{leads.sources}",
+      "type": "sources"
+    },
+    "leads.owner": {
+      "href": "https://app.nutshell.com/rest/{leads.ownerType}/{leads.owner}",
+      "type": "owners"
+    },
+    "leads.files": {
+      "href": "https://app.nutshell.com/rest/leads/{leads.id}/files",
+      "type": "files"
+    },
+    "leads.relatedFiles": {
+      "href": "https://app.nutshell.com/rest/leads/{leads.id}/relatedfiles",
+      "type": "files"
+    },
+    "leads.territory": {
+      "href": "https://app.nutshell.com/rest/territories/{leads.territory}",
+      "type": "territories"
+    },
+    "leads.destinations": {
+      "href": "https://app.nutshell.com/rest/destinations?entityId={leads.id}",
+      "type": "destinations"
+    },
+    "leads.stage": {
+      "href": "https://app.nutshell.com/rest/stages/{leads.stage}",
+      "type": "stages"
+    },
+    "leads.stageset": {
+      "href": "https://app.nutshell.com/rest/leads/{leads.id}/stages",
+      "type": "stagesets"
+    },
+    "leads.creator": {
+      "href": "https://app.nutshell.com/rest/creators/{leads.creator}",
+      "type": "creators"
+    },
+    "leads.origin": {
+      "href": "https://app.nutshell.com/rest/origins/{leads.origin}",
+      "type": "origins"
+    },
+    "leads.products": {
+      "href": "https://app.nutshell.com/rest/products/{leads.products}",
+      "type": "products"
+    },
+    "leads.productMaps": {
+      "href": "https://app.nutshell.com/rest/productMaps/{leads.productMaps}",
+      "type": "productMaps"
+    },
+    "leads.competitors": {
+      "href": "https://app.nutshell.com/rest/competitors/{leads.competitors}",
+      "type": "competitors"
+    },
+    "leads.competitorMaps": {
+      "href": "https://app.nutshell.com/rest/competitorMaps/{leads.competitorMaps}",
+      "type": "competitorMaps"
+    },
+    "leads.outcome": {
+      "href": "https://app.nutshell.com/rest/outcomes/{leads.outcome}",
+      "type": "outcomes"
+    },
+    "leads.watchers": {
+      "href": "https://app.nutshell.com/rest/users/{leads.watchers}",
+      "type": "users"
+    },
+    "accounts.creator": {
+      "href": "https://app.nutshell.com/rest/creators/{accounts.creator}",
+      "type": "creators"
+    },
+    "accounts.owner": {
+      "href": "https://app.nutshell.com/rest/owners/{accounts.owner}",
+      "type": "owners"
+    },
+    "accounts.territory": {
+      "href": "https://app.nutshell.com/rest/territories/{accounts.territory}",
+      "type": "territories"
+    },
+    "accounts.tags": {
+      "href": "https://app.nutshell.com/rest/tags/{accounts.tags}",
+      "type": "tags"
+    },
+    "accounts.files": {
+      "href": "https://app.nutshell.com/rest/accounts/{accounts.id}/files",
+      "type": "files"
+    },
+    "accounts.relatedFiles": {
+      "href": "https://app.nutshell.com/rest/accounts/{accounts.id}/relatedfiles",
+      "type": "files"
+    },
+    "accounts.followup": {
+      "href": "https://app.nutshell.com/rest/followups/{accounts.followup}",
+      "type": "followups"
+    },
+    "accounts.recurringTask": {
+      "href": "https://app.nutshell.com/rest/tasks/{accounts.recurringTask}",
+      "type": "tasks"
+    },
+    "accounts.contacts": {
+      "href": "https://app.nutshell.com/rest/contacts/{accounts.contacts}",
+      "type": "contacts"
+    },
+    "accounts.accountType": {
+      "href": "https://app.nutshell.com/rest/accountTypes/{accounts.accountType}",
+      "type": "accountTypes"
+    },
+    "accounts.industry": {
+      "href": "https://app.nutshell.com/rest/industries/{accounts.industry}",
+      "type": "industries"
+    },
+    "contacts.accounts": {
+      "href": "https://app.nutshell.com/rest/accounts/{contacts.accounts}",
+      "type": "accounts"
+    },
+    "contacts.emAudiences": {
+      "href": "https://app.nutshell.com/rest/emAudiences/{contacts.emAudiences}",
+      "type": "emAudiences"
+    },
+    "contacts.creator": {
+      "href": "https://app.nutshell.com/rest/creators/{contacts.creator}",
+      "type": "creators"
+    },
+    "contacts.owner": {
+      "href": "https://app.nutshell.com/rest/owners/{contacts.owner}",
+      "type": "owners"
+    },
+    "contacts.territory": {
+      "href": "https://app.nutshell.com/rest/territories/{contacts.territory}",
+      "type": "territories"
+    },
+    "contacts.tags": {
+      "href": "https://app.nutshell.com/rest/tags/{contacts.tags}",
+      "type": "tags"
+    },
+    "contacts.files": {
+      "href": "https://app.nutshell.com/rest/contacts/{contacts.id}/files",
+      "type": "files"
+    },
+    "contacts.relatedFiles": {
+      "href": "https://app.nutshell.com/rest/contacts/{contacts.id}/relatedfiles",
+      "type": "files"
+    },
+    "contacts.followup": {
+      "href": "https://app.nutshell.com/rest/followups/{contacts.followup}",
+      "type": "followups"
+    },
+    "contacts.recurringTask": {
+      "href": "https://app.nutshell.com/rest/tasks/{contacts.recurringTask}",
+      "type": "tasks"
+    },
+    "owners.teams": {
+      "href": "https://app.nutshell.com/rest/teams/{owners.teams}",
+      "type": "teams"
+    },
+    "stages.stageset": {
+      "href": "https://app.nutshell.com/rest/stagesets/{stages.stageset}",
+      "type": "stagesets"
+    },
+    "stagesets.stages": {
+      "href": "https://app.nutshell.com/rest/stages/{stagesets.stages}",
+      "type": "stages"
+    },
+    "creators.teams": {
+      "href": "https://app.nutshell.com/rest/teams/{creators.teams}",
+      "type": "teams"
+    },
+    "productMaps.product": {
+      "href": "https://app.nutshell.com/rest/products/{productMaps.product}",
+      "type": "products"
+    },
+    "productMaps.lead": {
+      "href": "https://app.nutshell.com/rest/leads/{productMaps.lead}",
+      "type": "leads"
+    }
+  },
+  "leads": [
+    {
+      "id": "732035-leads",
+      "type": "leads",
+      "isCurrentUserWatching": false,
+      "deletedTime": null,
+      "name": "ORDEM - I",
+      "value": {
+        "amount": "16786.80",
+        "currency": "BRL",
+        "formatted": "R$16,786.80"
+      },
+      "number": "183662",
+      "description": "ORDEM - I",
+      "createdTime": {
+        "absoluteLocalizedString": "September 20, 2025",
+        "timestamp": 1758363287,
+        "value": "September 20, 2025"
+      },
+      "closedTime": {
+        "absoluteLocalizedString": "October 24, 2025",
+        "timestamp": 1761330175,
+        "value": "October 24, 2025"
+      },
+      "dueTime": {
+        "absoluteLocalizedString": "October 24, 2025",
+        "timestamp": 1761330175,
+        "value": "October 24, 2025"
+      },
+      "anticipatedClosedTime": {
+        "absoluteLocalizedString": "October 24, 2025",
+        "timestamp": 1761330175,
+        "value": "October 24, 2025"
+      },
+      "ownerType": "users",
+      "mcfxContactIds": [],
+      "status": "won",
+      "lastContactedTime": {
+        "absoluteLocalizedString": "October 24, 2025",
+        "timestamp": 1761330840,
+        "value": "October 24, 2025"
+      },
+      "pieState": "won",
+      "isOverdue": false,
+      "overdueTime": null,
+      "href": "https://app.nutshell.com/rest/leads/732035-leads",
+      "confidence": 100,
+      "priority": 0,
+      "htmlUrl": "https://app.nutshell.com/lead/183662",
+      "htmlUrlPath": "/lead/183662",
+      "avatarUrl": "https://app.nutshell.com/avatar/leads/v1/10",
+      "initials": null,
+      "links": {
+        "accounts": [
+          "678907-accounts"
+        ],
+        "contacts": [
+          "687931-contacts"
+        ],
+        "tags": [
+          "1967-tags",
+          "2363-tags",
+          "2403-tags"
+        ],
+        "sources": [
+          "855-sources"
+        ],
+        "owner": "255-users",
+        "files": [],
+        "relatedFiles": [],
+        "territory": "55-territories",
+        "destinations": [],
+        "stage": "395-stages",
+        "stageset": "23-stagesets",
+        "creator": "11-users",
+        "origin": "339-origins",
+        "products": [
+          "167-products"
+        ],
+        "productMaps": [
+          "222703-productMaps"
+        ],
+        "competitors": [],
+        "competitorMaps": [],
+        "outcome": "1-outcomes",
+        "watchers": []
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "id": "678907-accounts",
+      "type": "accounts",
+      "name": "METALCOUROS COMERCIO DE METAIS E COUROS LTDA",
+      "description": "",
+      "emails": [],
+      "addresses": [
+        {
+          "isPrimary": true,
+          "name": "address",
+          "value": {
+            "location": {
+              "longitude": -38.5344632,
+              "latitude": -3.7313217
+            },
+            "locationAccuracy": "8",
+            "address_1": "Avenida Tristao Goncalves, 199",
+            "address_2": null,
+            "address_3": null,
+            "city": "Fortaleza",
+            "state": "CE",
+            "postalCode": "60015000",
+            "country": "BR",
+            "timezone": "America/Fortaleza"
+          }
+        }
+      ],
+      "phones": [],
+      "urls": [],
+      "href": "https://app.nutshell.com/rest/accounts/678907-accounts",
+      "revenue": null,
+      "employeeCount": null,
+      "avatarUrl": "https://app.nutshell.com/avatar/accounts/678907/333765/EXaYLt6uwa8nKs-cWfmMyCeoC3qFH0pWyegLX8N2MjA.2/1761332708",
+      "initials": "MC",
+      "htmlUrl": "https://app.nutshell.com/company/678907-metalcouros-comercio-de-metais-e-couros-",
+      "htmlUrlPath": "/company/678907-metalcouros-comercio-de-metais-e-couros-",
+      "links": {
+        "creator": "211-users",
+        "owner": "211-users",
+        "territory": "55-territories",
+        "tags": [],
+        "files": [],
+        "relatedFiles": [],
+        "followup": null,
+        "recurringTask": null,
+        "contacts": [],
+        "accountType": "1-accountTypes",
+        "industry": null
+      }
+    }
+  ],
+  "contacts": [
+    {
+      "id": "687931-contacts",
+      "type": "contacts",
+      "name": "Victor Hugo",
+      "description": null,
+      "emails": [
+        {
+          "isPrimary": true,
+          "name": "email",
+          "value": "victorhugo@anmap.com.br"
+        }
+      ],
+      "addresses": [],
+      "phones": [
+        {
+          "isPrimary": true,
+          "name": "phone",
+          "value": {
+            "countryCode": "55",
+            "number": "8596880061",
+            "extension": null,
+            "numberFormatted": "85 9688-0061",
+            "E164": "+558596880061",
+            "countryCodeAndNumber": "+55 85 9688-0061"
+          },
+          "isOptedOut": false
+        }
+      ],
+      "urls": [],
+      "jobs": [],
+      "jobTitle": "",
+      "firstName": "Victor",
+      "lastName": "Hugo",
+      "mcfxContactId": null,
+      "href": "https://app.nutshell.com/rest/contacts/687931-contacts",
+      "avatarUrl": "https://app.nutshell.com/avatar/contacts/687931/333765/wWOV3vMH7VsFsUYagAHIYEnO4Z47fq4sRP0TiFoRIp0.2/1757938666",
+      "initials": "VH",
+      "htmlUrl": "https://app.nutshell.com/person/687931-victor-hugo",
+      "htmlUrlPath": "/person/687931-victor-hugo",
+      "links": {
+        "accounts": [],
+        "emAudiences": [],
+        "creator": "211-users",
+        "owner": "211-users",
+        "territory": null,
+        "tags": [],
+        "files": [],
+        "relatedFiles": [],
+        "followup": null,
+        "recurringTask": null
+      }
+    }
+  ],
+  "tags": [
+    {
+      "id": "1967-tags",
+      "type": "tags",
+      "name": "Stephany",
+      "href": "https://app.nutshell.com/rest/tags/1967-tags",
+      "modifiedTime": 1748864627,
+      "tagType": "leads",
+      "count": 277,
+      "colorType": "COLOR_DEFAULT"
+    },
+    {
+      "id": "2363-tags",
+      "type": "tags",
+      "name": "Automação Consultoria",
+      "href": "https://app.nutshell.com/rest/tags/2363-tags",
+      "modifiedTime": 1750082419,
+      "tagType": "leads",
+      "count": 437,
+      "colorType": "COLOR_DEFAULT"
+    },
+    {
+      "id": "2403-tags",
+      "type": "tags",
+      "name": "Beatriz Alcara",
+      "href": "https://app.nutshell.com/rest/tags/2403-tags",
+      "modifiedTime": 1752080004,
+      "tagType": "leads",
+      "count": 46,
+      "colorType": "COLOR_BLUE"
+    }
+  ],
+  "sources": [
+    {
+      "id": "855-sources",
+      "type": "sources",
+      "name": "Consultoria - Novas importações",
+      "href": "https://app.nutshell.com/rest/sources/855-sources",
+      "modifiedTime": 1726420429,
+      "channel": null,
+      "sourceType": 0
+    }
+  ],
+  "owners": [
+    {
+      "id": "255-users",
+      "type": "users",
+      "name": "Fernando Finatto",
+      "firstName": "Fernando",
+      "modifiedTime": 1704895925,
+      "isEnabled": true,
+      "hasSetPassword": false,
+      "isAdministrator": false,
+      "agentStatus": "NOT_ACCEPTING_CHATS",
+      "isViewingRestricted": false,
+      "isHiddenFromFilters": false,
+      "canAccessEmailMarketing": true,
+      "permissions": {
+        "canAccessSetup": false,
+        "canAccessMarketing": true,
+        "canBulkEdit": false,
+        "canExport": false,
+        "canViewSharedEmails": true,
+        "canImport": false,
+        "canMergeEntities": true,
+        "canDeleteEntities": false,
+        "canAssignEntities": true,
+        "canAccessBilling": false,
+        "canManageEmailTemplates": false,
+        "canAccessCrm": true,
+        "canAccessFullCampaigns": false,
+        "canUsePeopleIQ": true,
+        "canUseInbox": false,
+        "canUseProspectorIQ": true,
+        "canUseSalesDocuments": true,
+        "canUseOrTryInbox": false,
+        "canUseSms": false
+      },
+      "emails": [
+        "fernando@metodo12p.com.br"
+      ],
+      "phonecallerType": "",
+      "isAgent": false,
+      "isMainSidebarCollapsed": false,
+      "autoPresenceEnabled": false,
+      "hasDisabledShortcuts": false,
+      "isRecentlyAdded": false,
+      "avatarUrl": "https://app.nutshell.com/avatar/users/255/333765/HY8prn7caqXTU5JcESg0m8UfloOzxDqmIBzuUQYhHFg.2/1704895925",
+      "initials": "FF",
+      "links": {
+        "teams": [
+          "127-teams"
+        ]
+      }
+    }
+  ],
+  "territories": [
+    {
+      "id": "55-territories",
+      "type": "territories",
+      "name": "CE",
+      "href": "https://app.nutshell.com/rest/territories/55-territories",
+      "modifiedTime": 1620217190
+    }
+  ],
+  "stages": [
+    {
+      "id": "395-stages",
+      "type": "stages",
+      "name": "Won 🟢",
+      "description": "",
+      "position": 7,
+      "activeAvatarUrl": "https://app.nutshell.com/avatar/stages/395/333765/zFIJBSx9M8vBsJlDO1EwuSMQwOb8BatK_J0luc_Vy8Q.2?active=1",
+      "completeAvatarUrl": "https://app.nutshell.com/avatar/stages/395/333765/zFIJBSx9M8vBsJlDO1EwuSMQwOb8BatK_J0luc_Vy8Q.2?complete=1",
+      "incompleteAvatarUrl": "https://app.nutshell.com/avatar/stages/395/333765/zFIJBSx9M8vBsJlDO1EwuSMQwOb8BatK_J0luc_Vy8Q.2",
+      "overdueAvatarUrl": "https://app.nutshell.com/avatar/stages/395/333765/zFIJBSx9M8vBsJlDO1EwuSMQwOb8BatK_J0luc_Vy8Q.2?active=1&overdue=1",
+      "links": {
+        "stageset": "23-stagesets"
+      }
+    }
+  ],
+  "stagesets": [
+    {
+      "id": "23-stagesets",
+      "type": "stagesets",
+      "name": "CONSULTORIA LANNISTER 🦁",
+      "default": false,
+      "canAccess": true,
+      "links": {
+        "stages": [
+          "375-stages",
+          "987-stages",
+          "723-stages",
+          "871-stages",
+          "967-stages",
+          "391-stages",
+          "395-stages",
+          "647-stages",
+          "1007-stages"
+        ]
+      }
+    }
+  ],
+  "creators": [
+    {
+      "id": "11-users",
+      "type": "users",
+      "name": "Gabriel Xavier",
+      "firstName": "Gabriel",
+      "modifiedTime": 1736356183,
+      "isEnabled": true,
+      "hasSetPassword": true,
+      "isAdministrator": true,
+      "agentStatus": "NOT_ACCEPTING_CHATS",
+      "isViewingRestricted": false,
+      "isHiddenFromFilters": false,
+      "canAccessEmailMarketing": true,
+      "permissions": {
+        "canAccessSetup": true,
+        "canAccessMarketing": true,
+        "canBulkEdit": true,
+        "canExport": true,
+        "canViewSharedEmails": true,
+        "canImport": true,
+        "canMergeEntities": true,
+        "canDeleteEntities": true,
+        "canAssignEntities": true,
+        "canAccessBilling": true,
+        "canManageEmailTemplates": true,
+        "canAccessCrm": true,
+        "canAccessFullCampaigns": true,
+        "canUsePeopleIQ": true,
+        "canUseInbox": true,
+        "canUseProspectorIQ": true,
+        "canUseSalesDocuments": true,
+        "canUseOrTryInbox": true,
+        "canUseSms": false
+      },
+      "emails": [
+        "gabriel@metodo12p.com.br"
+      ],
+      "phonecallerType": "clicktocall",
+      "isAgent": true,
+      "isMainSidebarCollapsed": true,
+      "autoPresenceEnabled": false,
+      "hasDisabledShortcuts": false,
+      "isRecentlyAdded": false,
+      "avatarUrl": "https://app.nutshell.com/avatar/users/11/333765/p7WUkH1g9oGnj19Rk4Y7u-ngRQIBMtB-EHb8ukfx2rQ.2/1736356183",
+      "initials": "GX",
+      "links": {
+        "teams": [
+          "127-teams"
+        ]
+      }
+    }
+  ],
+  "origins": [
+    {
+      "id": "339-origins",
+      "type": "origins",
+      "name": "fefo12p",
+      "modifiedTime": 1747411244,
+      "lastseenTime": 1761564080,
+      "originType": "api",
+      "avatarUrl": "https://app.nutshell.com/avatar/origins/339/333765/gbsXYCuAiUIWzCvKBDBz_gBeXQkCaFyFnz33vvrkDmk.2/1747411244",
+      "initials": null,
+      "htmlUrl": null,
+      "htmlUrlPath": null
+    }
+  ],
+  "products": [
+    {
+      "id": "167-products",
+      "type": "products",
+      "name": "Consultoria - PACOTE CHINA",
+      "href": "https://app.nutshell.com/rest/products/167-products",
+      "description": null,
+      "modifiedTime": 1736453500,
+      "sku": "",
+      "productType": "product",
+      "prices": {
+        "3-markets": {
+          "amount": "10000.00",
+          "currency": "BRL",
+          "formatted": "R$10,000.00",
+          "currencySymbol": "R$",
+          "isAvailable": true
+        }
+      },
+      "price": {
+        "amount": "10000.00",
+        "currency": "BRL",
+        "formatted": "R$10,000.00",
+        "currencySymbol": "R$",
+        "isAvailable": true
+      },
+      "category": null
+    }
+  ],
+  "productMaps": [
+    {
+      "id": "222703-productMaps",
+      "type": "productMaps",
+      "relationship": null,
+      "price": {
+        "amount": "16786.80",
+        "currency": "BRL",
+        "formatted": "R$16,786.80"
+      },
+      "name": "Consultoria - PACOTE CHINA",
+      "unit": "",
+      "quantity": 1,
+      "productType": "product",
+      "links": {
+        "product": "167-products",
+        "lead": "732035-leads"
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "1-outcomes",
+      "type": "outcomes",
+      "name": "Won",
+      "status": "won"
+    }
+  ]
+}
