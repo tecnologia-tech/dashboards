@@ -89,7 +89,7 @@ function mapLeadToRow(leadFull) {
   );
   const pipeline = leadFull.stageset?.name || leadFull.milestone?.name || "";
   const empresa =
-    leadFull.primaryAccount?.name ?? leadFull.primaryAccountName ?? "";
+    leadFull.primaryC?.name ?? leadFull.primaryAccountName ?? "";
   const assigned = leadFull.assignee?.name ?? leadFull.assigneeName ?? "";
   const valor = parseAmountToNumber(
     leadFull.value ?? leadFull.estimatedValue ?? 0
@@ -270,9 +270,6 @@ export default async function () {
     await client.end().catch(() => {});
     return [];
   }
-
-  console.log(`Total de leads WON encontradas: ${allLeadIds.length}`);
-
   const allRows = [];
 
   for (let i = 0; i < allLeadIds.length; i += 500) {

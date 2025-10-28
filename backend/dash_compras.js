@@ -139,8 +139,6 @@ async function saveToPostgres(items, columnMap) {
     grupo TEXT
   );
 `;
-
-    console.log("CREATE TABLE QUERY:\n", createQuery);
     await client.query(createQuery);
 
     await client.query(`DELETE FROM ${TABLE_NAME}`);
@@ -157,7 +155,6 @@ async function saveToPostgres(items, columnMap) {
         ].join(",")}
       )
     `;
-    console.log("INSERT QUERY:\n", insertQuery);
 
     for (const item of items) {
       const col = {};
@@ -177,10 +174,7 @@ async function saveToPostgres(items, columnMap) {
 
       await client.query(insertQuery, row);
     }
-
-    console.log("✅ Dados salvos com sucesso no PostgreSQL!");
   } catch (err) {
-    console.error("❌ Erro ao salvar no banco:", err);
     throw err;
   } finally {
     await client.end().catch(() => {});
@@ -191,7 +185,7 @@ export default async function dashCompras() {
   const columnMap = await getColumnMap();
   const items = await getMondayData();
   if (!items.length) {
-    console.log("⚠️ Nenhum registro retornado do Monday");
+    console.log("Nenhum registro retornado do Monday");
     return [];
   }
   await saveToPostgres(items, columnMap);
