@@ -250,14 +250,14 @@ async function connectWithAutoSSL() {
   throw lastErr;
 }
 
-(async function main() {
+export default async function () {
   let client;
   try {
     client = await connectWithAutoSSL();
     await ensureTable(client);
   } catch (err) {
     console.error("Erro ao conectar/garantir tabela:", err.message || err);
-    process.exit(1);
+    return [];
   }
 
   const allLeadIds = [];
@@ -274,15 +274,14 @@ async function connectWithAutoSSL() {
     }
   } catch (err) {
     console.error("Erro ao buscar IDs de leads:", err.message || err);
-    try {
-      await client.end();
-    } catch (_) {}
-    process.exit(1);
+    await client.end().catch(() => {});
+    return [];
   }
+
+  const allRows = [];
+
   for (let i = 0; i < allLeadIds.length; i += 500) {
     const batchIds = allLeadIds.slice(i, i + 500);
-    const batchNo = Math.floor(i / 500) + 1;
-
     const tasks = batchIds.map((id) =>
       (async () => {
         try {
@@ -304,13 +303,13 @@ async function connectWithAutoSSL() {
     try {
       if (rows.length) {
         await upsertRows(client, rows);
+        allRows.push(...rows);
       }
     } catch (err) {
-      console.error(`Erro no batch ${batchNo}:`, err.message || err);
+      console.error(`Erro ao salvar batch:`, err.message || err);
     }
   }
-  try {
-    await client.end();
-  } catch (_) {}
-  process.exit(0);
-})();
+
+  await client.end().catch(() => {});
+  return allRows;
+}

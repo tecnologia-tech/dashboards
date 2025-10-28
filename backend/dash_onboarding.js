@@ -10,8 +10,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
-  process.env;
+const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } = process.env;
 
 const MONDAY_BOARD_ID = "8149184073";
 const TABLE_NAME = "dash_onboarding";
@@ -119,7 +118,6 @@ async function saveToPostgres(items) {
     );
   `);
 
-  // Limpa a tabela antes de inserir
   await client.query(`DELETE FROM ${TABLE_NAME}`);
 
   const insertQuery = `
@@ -181,18 +179,17 @@ async function saveToPostgres(items) {
   await client.end();
 }
 
-async function main() {
+export default async function () {
   try {
     const items = await getMondayData();
     if (!items.length) {
       console.log("Nenhum item retornado");
-      return;
+      return [];
     }
     await saveToPostgres(items);
+    return items;
   } catch (err) {
     console.error("Erro:", err);
-    process.exitCode = 1;
+    return [];
   }
 }
-
-main();

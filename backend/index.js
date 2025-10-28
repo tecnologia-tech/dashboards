@@ -1,62 +1,119 @@
 import express from "express";
-import cron from "node-cron";
 import fs from "fs";
 import path from "path";
 import cors from "cors";
+import pkg from "pg";
+import dotenv from "dotenv";
 import { fileURLToPath, pathToFileURL } from "url";
 
-// Setup para __dirname em ESM
+const { Client } = pkg;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, "banco.env") });
+
+const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 const app = express();
 const PORT = 3001;
 
-// Armazenamento em memória
 let dashboardData = {};
 
 app.use(cors());
 app.use(express.json());
 
-// Função que executa todos os arquivos dash_*.js
-async function runDashModules() {
+const TABLES = [
+  "dash_apoio",
+  "dash_compras",
+  "dash_cs",
+  "dash_csat",
+  "dash_cx",
+  "dash_fornecedores",
+  "dash_geralcs",
+  "dash_handover",
+  "dash_icp",
+  "dash_logmakers",
+  "dash_nps",
+  "dash_onboarding",
+];
+
+async function fetchTableData(tableName) {
+  const client = new Client({
+    host: PGHOST,
+    port: PGPORT ? parseInt(PGPORT, 10) : undefined,
+    database: PGDATABASE,
+    user: PGUSER,
+    password: PGPASSWORD,
+    ssl: false,
+  });
+
+  try {
+    await client.connect();
+    const result = await client.query(`SELECT * FROM ${tableName}`);
+    return result.rows;
+  } catch (err) {
+    console.error(`Erro ao buscar dados da tabela ${tableName}:`, err.message);
+    return [];
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+async function runDashModulesAndLoadData() {
+  console.log("Iniciando execução dos módulos");
   const files = fs
     .readdirSync(__dirname)
     .filter((file) => file.startsWith("dash_") && file.endsWith(".js"));
 
-  const results = {};
-
   for (const file of files) {
     const modulePath = pathToFileURL(path.join(__dirname, file)).href;
+    console.log(`Executando módulo: ${file}`);
     try {
       const dashModule = await import(modulePath);
       if (typeof dashModule.default === "function") {
-        const data = await dashModule.default();
-        const key = file.replace(".js", "");
-        results[key] = data;
+        await dashModule.default();
+        console.log(`Módulo ${file} executado com sucesso.`);
       } else {
-        console.warn(`⚠️ Módulo ${file} não exporta uma função default.`);
+        console.warn(`Módulo ${file} não exporta uma função default.`);
       }
     } catch (err) {
-      console.error(`❌ Erro ao executar ${file}:`, err);
+      console.error(`Erro ao executar ${file}:`, err.message || err);
     }
   }
 
+  console.log("📊 Carregando dados das tabelas");
+  const results = {};
+
+  for (const table of TABLES) {
+    const data = await fetchTableData(table);
+    results[table] = data;
+    console.log(`📦 ${table}: ${data.length} registros carregados.`);
+  }
+
   dashboardData = results;
-  console.log(`[${new Date().toLocaleString()}] ✅ Dados atualizados.`);
+  console.log(`[${new Date().toLocaleString()}] Dados prontos para o frontend`);
 }
 
-// Agendamento: a cada 15 minutos
-cron.schedule("*/15 * * * *", runDashModules);
+async function loopDashModules() {
+  while (true) {
+    await runDashModulesAndLoadData();
+  }
+}
 
-// Executa ao iniciar
-runDashModules();
+loopDashModules();
 
-// Endpoint para o frontend acessar os dados
 app.get("/api/dashboard", (req, res) => {
   res.json(dashboardData);
 });
 
+TABLES.forEach((tableName) => {
+  app.get(`/api/${tableName}`, async (req, res) => {
+    const data = await fetchTableData(tableName);
+    res.json(data);
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

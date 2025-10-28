@@ -73,8 +73,6 @@ async function getMondayData() {
     cursor = itemsPage.cursor;
   } while (cursor);
 
-  console.dir(allItems.slice(0, 3), { depth: null });
-
   return allItems;
 }
 
@@ -127,18 +125,18 @@ async function saveToPostgres(items) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        col["long_text_mkp0n12b"] ?? "", // onboarding
-        col["text_mkp04cn4"] ?? "", // compras
-        col["multiple_person_mknr9p3z"] ?? "", // consultor
+        col["long_text_mkp0n12b"] ?? "",
+        col["text_mkp04cn4"] ?? "",
+        col["multiple_person_mknr9p3z"] ?? "",
         col["status"] ?? "",
-        col["button_mknr5ymk"] ?? "", // início
-        col["data"] ?? "", // data de início
-        col["date_mknr8cm7"] ?? "", // data final
-        col["button_mknrfqxy"] ?? "", // fim
-        col["file_mkp1n91g"] ?? "", // planilha
-        col["text_mknrcbj3"] ?? "", // motivo recusa
-        col["long_text_mkp0n12b"] ?? "", // briefing (mesmo campo do onboarding)
-        item.group?.title ?? "", // grupo
+        col["button_mknr5ymk"] ?? "",
+        col["data"] ?? "",
+        col["date_mknr8cm7"] ?? "",
+        col["button_mknrfqxy"] ?? "",
+        col["file_mkp1n91g"] ?? "",
+        col["text_mknrcbj3"] ?? "",
+        col["long_text_mkp0n12b"] ?? "",
+        item.group?.title ?? "",
       ];
 
       await client.query(insertQuery, row);
@@ -151,17 +149,12 @@ async function saveToPostgres(items) {
   }
 }
 
-async function main() {
-  try {
-    const items = await getMondayData();
-    if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday");
-    }
-    await saveToPostgres(items);
-  } catch (err) {
-    console.error("Erro geral:", err);
-    process.exitCode = 1;
+export default async function () {
+  const items = await getMondayData();
+  if (!items.length) {
+    console.log("Nenhum registro retornado do Monday");
+    return [];
   }
+  await saveToPostgres(items);
+  return items;
 }
-
-main();

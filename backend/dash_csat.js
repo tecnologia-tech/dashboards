@@ -12,6 +12,7 @@ dotenv.config({ path: path.join(__dirname, "banco.env") });
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
+
 const MONDAY_BOARD_ID = "9194427137";
 const TABLE_NAME = "dash_csat";
 
@@ -71,7 +72,6 @@ async function getMondayData() {
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
-  console.dir(allItems.slice(0, 3), { depth: null });
 
   return allItems;
 }
@@ -128,18 +128,18 @@ async function saveToPostgres(items) {
         item.id ?? "",
         item.name ?? "",
         item.group?.title ?? "",
-        col["color_mkr4cg73"] ?? "", // ordem
-        col["numeric_mkr49cs2"] ?? "", // lead
-        col["numeric_mkrb8jw6"] ?? "", // pedido
-        col["multiple_person_mkr4twn8"] ?? "", // consultor
-        col["multiple_person_mkr4m799"] ?? "", // closer
-        col["multiple_person_mkr44npa"] ?? "", // atendimento
-        col["date_mkr46a4s"] ?? "", // data início
-        col["date_mkr4aetg"] ?? "", // data limite
-        col["color_mkr4evmz"] ?? "", // status
-        col["text_mkv0jqa1"] ?? "", // link formulário
-        col["long_text_mktz4b4d"] ?? "", // observações
-        col["date_mkr4rhvy"] ?? "", // data resposta
+        col["color_mkr4cg73"] ?? "",
+        col["numeric_mkr49cs2"] ?? "",
+        col["numeric_mkrb8jw6"] ?? "",
+        col["multiple_person_mkr4twn8"] ?? "",
+        col["multiple_person_mkr4m799"] ?? "",
+        col["multiple_person_mkr44npa"] ?? "",
+        col["date_mkr46a4s"] ?? "",
+        col["date_mkr4aetg"] ?? "",
+        col["color_mkr4evmz"] ?? "",
+        col["text_mkv0jqa1"] ?? "",
+        col["long_text_mktz4b4d"] ?? "",
+        col["date_mkr4rhvy"] ?? "",
       ];
 
       await client.query(insertQuery, row);
@@ -152,17 +152,12 @@ async function saveToPostgres(items) {
   }
 }
 
-async function main() {
-  try {
-    const items = await getMondayData();
-    if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday");
-    }
-    await saveToPostgres(items);
-  } catch (err) {
-    console.error("Erro geral:", err);
-    process.exitCode = 1;
+export default async function () {
+  const items = await getMondayData();
+  if (!items.length) {
+    console.log("Nenhum registro retornado do Monday");
+    return [];
   }
+  await saveToPostgres(items);
+  return items;
 }
-
-main();

@@ -70,6 +70,7 @@ async function getMondayData() {
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
+
   return allItems;
 }
 
@@ -132,7 +133,6 @@ async function saveToPostgres(items) {
 
       await client.query(insertQuery, row);
     }
-
   } catch (err) {
     console.error("Erro ao salvar no banco:", err);
     throw err;
@@ -141,16 +141,17 @@ async function saveToPostgres(items) {
   }
 }
 
-async function main() {
+export default async function () {
   try {
     const items = await getMondayData();
     if (!items.length) {
-      return console.log("Nenhum dado retornado.");
+      console.log("Nenhum dado retornado.");
+      return [];
     }
     await saveToPostgres(items);
+    return items;
   } catch (err) {
-    process.exitCode = 1;
+    console.error("Erro geral:", err);
+    return [];
   }
 }
-
-main();

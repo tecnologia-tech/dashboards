@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, "banco.env") });
+
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
@@ -71,7 +72,6 @@ async function getMondayData() {
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
-  console.dir(allItems.slice(0, 3), { depth: null });
 
   return allItems;
 }
@@ -149,17 +149,17 @@ async function saveToPostgres(items) {
   }
 }
 
-async function main() {
+export default async function () {
   try {
     const items = await getMondayData();
     if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday");
+      console.log("Nenhum registro retornado do Monday");
+      return [];
     }
     await saveToPostgres(items);
+    return items;
   } catch (err) {
     console.error("Erro geral:", err);
-    process.exitCode = 1;
+    return [];
   }
 }
-
-main();

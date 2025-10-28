@@ -73,11 +73,11 @@ async function getMondayData() {
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
+
   return allItems;
 }
 
 async function saveToPostgres(items) {
-  console.log("Conectando ao banco");
   const client = new Client({
     host: PGHOST,
     port: PGPORT ? parseInt(PGPORT, 10) : undefined,
@@ -143,17 +143,12 @@ async function saveToPostgres(items) {
   }
 }
 
-async function main() {
-  try {
-    const items = await getMondayData();
-    if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday");
-    }
-    await saveToPostgres(items);
-  } catch (err) {
-    console.error("Erro geral:", err);
-    process.exitCode = 1;
+export default async function () {
+  const items = await getMondayData();
+  if (!items.length) {
+    console.log("Nenhum registro retornado do Monday");
+    return [];
   }
+  await saveToPostgres(items);
+  return items;
 }
-
-export { main };
