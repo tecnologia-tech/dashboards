@@ -37,6 +37,7 @@ const TABLES = [
   "dash_nps",
   "dash_onboarding",
   "dash_reembolso",
+  "dash_delivery",
 ];
 
 async function fetchTableData(tableName) {
