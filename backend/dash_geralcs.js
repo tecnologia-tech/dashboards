@@ -15,17 +15,8 @@ const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 
-function getEnvTrimmed(k) {
-  const v = process.env[k];
-  return typeof v === "string" ? v.trim() : v;
-}
-
-const PGHOST = getEnvTrimmed("PGHOST");
-const PGPORT = getEnvTrimmed("PGPORT");
-const PGDATABASE = getEnvTrimmed("PGDATABASE");
-const PGUSER = getEnvTrimmed("PGUSER");
-const PGPASSWORD = getEnvTrimmed("PGPASSWORD");
-const PGSSLMODE = getEnvTrimmed("PGSSLMODE");
+const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
+  process.env;
 
 const dbCfgBase = {
   host: PGHOST,
@@ -34,18 +25,6 @@ const dbCfgBase = {
   user: PGUSER,
   password: PGPASSWORD,
 };
-
-function formatTags(tags) {
-  if (!Array.isArray(tags)) return "";
-  return tags
-    .map((tag) => {
-      if (typeof tag === "string") return tag.trim();
-      if (typeof tag === "object" && tag.name) return tag.name.trim();
-      return null;
-    })
-    .filter(Boolean)
-    .join(" | ");
-}
 
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
@@ -62,14 +41,11 @@ function extractNumeroFromLead(lead) {
 }
 
 function toSQLDateFromISO(isoString) {
-  if (!isoString) return null;
+  if (!isoString || typeof isoString !== "string") return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
   const br = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-  const yyyy = br.getFullYear();
-  const mm = String(br.getMonth() + 1).padStart(2, "0");
-  const dd = String(br.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return br.toISOString().slice(0, 10);
 }
 
 function parseAmountToNumber(valueObj) {
@@ -92,6 +68,18 @@ function parseAmountToNumber(valueObj) {
   s = s.replace(/[^\d.-]/g, "");
   const n = Number(s);
   return Number.isNaN(n) ? 0.0 : Number(n.toFixed(2));
+}
+
+function formatTags(tags) {
+  if (!Array.isArray(tags)) return "";
+  return tags
+    .map((tag) => {
+      if (typeof tag === "string") return tag.trim();
+      if (typeof tag === "object" && tag.name) return tag.name.trim();
+      return null;
+    })
+    .filter(Boolean)
+    .join(" | ");
 }
 
 function mapLeadToRow(leadFull) {
@@ -268,8 +256,13 @@ export default async function () {
       const res = await callNutshellJSONRPC("findLeads", params);
       const leadsPage = Array.isArray(res) ? res : res.result ?? [];
       if (!Array.isArray(leadsPage) || leadsPage.length === 0) break;
-      for (const s of leadsPage) if (s?.id) allLeadIds.push(s.id);
-      if (leadsPage.length < 50) break;
+      for (const s of leadsPage) {
+        if (s?.id) {
+          allLeadIds.push(s.id);
+        } else {
+          console.warn("Lead sem ID ignorada:", s);
+        }
+      }
       page++;
     }
   } catch (err) {
@@ -277,6 +270,8 @@ export default async function () {
     await client.end().catch(() => {});
     return [];
   }
+
+  console.log(`Total de leads WON encontradas: ${allLeadIds.length}`);
 
   const allRows = [];
 
@@ -297,8 +292,15 @@ export default async function () {
     const leadFullObjects = await Promise.all(tasks);
     const rows = leadFullObjects
       .filter((x) => x && (x.id || x.leadId))
-      .map(mapLeadToRow)
-      .filter((r) => r && r.numero);
+      .map((lead) => {
+        const row = mapLeadToRow(lead);
+        if (!row.numero) {
+          console.warn("Lead sem número ignorada:", lead.id);
+          return null;
+        }
+        return row;
+      })
+      .filter(Boolean);
 
     try {
       if (rows.length) {
@@ -310,6 +312,7 @@ export default async function () {
     }
   }
 
+  console.log(`Total de leads processadas e salvas: ${allRows.length}`);
   await client.end().catch(() => {});
   return allRows;
 }
