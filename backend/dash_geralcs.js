@@ -88,8 +88,7 @@ function mapLeadToRow(leadFull) {
     leadFull.closedTime ?? leadFull.dueTime ?? leadFull.modifiedTime
   );
   const pipeline = leadFull.stageset?.name || leadFull.milestone?.name || "";
-  const empresa =
-    leadFull.primaryC?.name ?? leadFull.primaryAccountName ?? "";
+  const empresa = leadFull.primaryC?.name ?? leadFull.primaryAccountName ?? "";
   const assigned = leadFull.assignee?.name ?? leadFull.assigneeName ?? "";
   const valor = parseAmountToNumber(
     leadFull.value ?? leadFull.estimatedValue ?? 0
@@ -265,12 +264,18 @@ export default async function () {
       }
       page++;
     }
+    console.log(
+      `🔍 Total de leads encontradas com status 10: ${allLeadIds.length}`
+    );
   } catch (err) {
     console.error("Erro ao buscar IDs de leads:", err.message || err);
     await client.end().catch(() => {});
     return [];
   }
+
   const allRows = [];
+  let totalFalhasGetLead = 0;
+  let totalSemNumero = 0;
 
   for (let i = 0; i < allLeadIds.length; i += 500) {
     const batchIds = allLeadIds.slice(i, i + 500);
@@ -278,9 +283,10 @@ export default async function () {
       (async () => {
         try {
           const res = await callNutshellJSONRPC("getLead", { leadId: id });
-          const lead = res?.result ?? res;
-          return lead;
-        } catch {
+          return res?.result ?? res;
+        } catch (err) {
+          console.warn(`⚠️ Falha ao buscar lead ${id}:`, err.message || err);
+          totalFalhasGetLead++;
           return null;
         }
       })()
@@ -292,7 +298,8 @@ export default async function () {
       .map((lead) => {
         const row = mapLeadToRow(lead);
         if (!row.numero) {
-          console.warn("Lead sem número ignorada:", lead.id);
+          console.warn("⚠️ Lead sem número ignorada:", lead.id);
+          totalSemNumero++;
           return null;
         }
         return row;
@@ -309,7 +316,21 @@ export default async function () {
     }
   }
 
-  console.log(`Total de leads processadas e salvas: ${allRows.length}`);
+  console.log(`✅ Leads salvas no banco: ${allRows.length}`);
+  console.log(`⚠️ Falhas ao buscar detalhes (getLead): ${totalFalhasGetLead}`);
+  console.log(`⚠️ Leads ignoradas por falta de número: ${totalSemNumero}`);
+  console.log(`📉 Leads totais esperadas: ${allLeadIds.length}`);
+
   await client.end().catch(() => {});
   return allRows;
+}
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  (async () => {
+    console.log("🚀 Iniciando execução...");
+    const result = await (await import("./dash_geralcs.js")).default();
+    console.log(
+      "🏁 Execução finalizada. Total de leads processadas:",
+      result.length
+    );
+  })();
 }
