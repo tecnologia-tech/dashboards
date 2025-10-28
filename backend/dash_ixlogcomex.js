@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
-import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,9 +12,8 @@ dotenv.config({ path: path.join(__dirname, "banco.env") });
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
-
-const MONDAY_BOARD_ID = "8182800749";
-const TABLE_NAME = "dash_reembolso";
+const MONDAY_BOARD_ID = "8918157934";
+const TABLE_NAME = `dash_ixlogcomex`;
 
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
@@ -28,6 +27,7 @@ const MONDAY_QUERY = `
           column_values {
             id
             text
+            value
           }
         }
       }
@@ -60,20 +60,17 @@ async function getMondayData() {
     if (!response.ok) {
       const text = await response.text().catch(() => "");
       throw new Error(
-        `Erro na requisição ao Monday: ${response.status} ${response.statusText} - ${text}`
+        `Erro na requisição: ${response.status} ${response.statusText} - ${text}`
       );
     }
 
     const data = await response.json();
     const itemsPage = data?.data?.boards?.[0]?.items_page;
-
     if (!itemsPage) break;
 
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
-  console.dir(allItems.slice(0, 3), { depth: null });
-
   return allItems;
 }
 
@@ -89,53 +86,64 @@ async function saveToPostgres(items) {
 
   try {
     await client.connect();
+
+    // Detectar todos os campos únicos
+    const allColumnIds = new Set();
+    for (const item of items) {
+      for (const col of item.column_values || []) {
+        if (col?.id) allColumnIds.add(col.id);
+      }
+    }
+
+    const columnList = Array.from(allColumnIds);
+    const columnDefs = columnList
+      .map((id) => `"${id}_text" TEXT, "${id}_value" TEXT`)
+      .join(", ");
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
         id TEXT,
         nome TEXT,
         grupo TEXT,
-        data_prevista TEXT,
-        codigo TEXT,
-        valor TEXT,
-        data_pagamento TEXT,
-        tipo TEXT,
-        status TEXT,
-        solicitacao TEXT,
-        reclame_aqui TEXT,
-        reclamacao TEXT,
-        status_processo TEXT
+        ${columnDefs}
       );
     `);
     await client.query(`DELETE FROM ${TABLE_NAME}`);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME}
-        (id, nome, grupo, data_prevista, codigo, valor, data_pagamento, tipo, status, solicitacao, reclame_aqui, reclamacao, status_processo)
+        (id, nome, grupo, ${columnList
+          .flatMap((id) => [`"${id}_text"`, `"${id}_value"`])
+          .join(", ")})
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        (${[
+          "$1",
+          "$2",
+          "$3",
+          ...columnList.flatMap((_, i) => [`$${i * 2 + 4}`, `$${i * 2 + 5}`]),
+        ].join(", ")})
     `;
 
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c) return;
-        col[c.id] = c.text ?? "";
+        if (!c?.id) return;
+        col[c.id] = {
+          text: c.text ?? "",
+          value:
+            typeof c.value === "object"
+              ? JSON.stringify(c.value)
+              : c.value ?? "",
+        };
       });
 
       const row = [
         item.id ?? "",
         item.name ?? "",
         item.group?.title ?? "",
-        col["data__1"] ?? "",
-        col["text_mkqryzfw"] ?? "",
-        col["n_meros__1"] ?? "",
-        col["data_1__1"] ?? "",
-        col["color_mkv110fr"] ?? "",
-        col["status1__1"] ?? "",
-        col["dup__of_solicita__o__1"] ?? "",
-        col["dup__of_solicita__o1__1"] ?? "",
-        col["dup__of_respostas__ra___1"] ?? "",
-        col["status7__1"] ?? "",
+        ...columnList.flatMap((id) => {
+          const c = col[id] || {};
+          return [c.text ?? "", c.value ?? ""];
+        }),
       ];
 
       await client.query(insertQuery, row);

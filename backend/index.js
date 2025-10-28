@@ -38,6 +38,8 @@ const TABLES = [
   "dash_onboarding",
   "dash_reembolso",
   "dash_delivery",
+  "dash_ixdelivery",
+  "dash_ixlogcomex",
 ];
 
 async function fetchTableData(tableName) {

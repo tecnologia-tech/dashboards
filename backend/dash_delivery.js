@@ -170,4 +170,15 @@ async function main() {
   }
 }
 
-main();
+export default async function () {
+  try {
+    const items = await getMondayData();
+    if (!items.length) {
+      return console.log("Nenhum registro retornado do Monday.");
+    }
+    await saveToPostgres(items);
+  } catch (err) {
+    console.error("Erro geral:", err);
+    process.exitCode = 1;
+  }
+}
