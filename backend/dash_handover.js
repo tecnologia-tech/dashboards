@@ -35,6 +35,41 @@ const MONDAY_QUERY = `
   }
 `;
 
+async function getColumnMap() {
+  const query = `
+    query ($board_id: ID!) {
+      boards(ids: [$board_id]) {
+        columns {
+          id
+          title
+        }
+      }
+    }
+  `;
+  const variables = { board_id: MONDAY_BOARD_ID };
+
+  const response = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      Authorization: MONDAY_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  const columns = data?.data?.boards?.[0]?.columns || [];
+
+  const map = {};
+  columns.forEach((col) => {
+    if (col.id && col.title) {
+      map[col.id] = col.title;
+    }
+  });
+
+  return map;
+}
+
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
@@ -76,7 +111,7 @@ async function getMondayData() {
   return allItems;
 }
 
-async function saveToPostgres(items) {
+async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
     port: PGPORT ? parseInt(PGPORT, 10) : undefined,
@@ -88,60 +123,54 @@ async function saveToPostgres(items) {
 
   try {
     await client.connect();
-    await client.query(`
+
+    const columnTitles = Object.values(columnMap)
+      .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+      .map((title) => `"${title}"`);
+
+    if (columnTitles.length === 0) {
+      throw new Error("Nenhum título de coluna válido foi encontrado.");
+    }
+
+    const createQuery = `
       CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
         id TEXT,
-        nome TEXT,
-        grupo TEXT,
-        briefing TEXT,
-        arquivo1 TEXT,
-        arquivo2 TEXT,
-        data1 TEXT,
-        data2 TEXT,
-        data3 TEXT,
-        data4 TEXT,
-        data5 TEXT,
-        data6 TEXT,
-        data7 TEXT,
-        observacoes TEXT,
-        valor TEXT,
-        formula TEXT
+        name TEXT,
+        ${columnTitles.map((title) => `${title} TEXT`).join(", ")},
+        grupo TEXT
       );
-    `);
+    `;
+    await client.query(createQuery);
 
     await client.query(`DELETE FROM ${TABLE_NAME}`);
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME}
-        (id, nome, grupo, briefing, arquivo1, arquivo2, data1, data2, data3, data4, data5, data6, data7, observacoes, valor, formula)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      INSERT INTO ${TABLE_NAME} (
+        id, name, ${columnTitles.join(",")}, grupo
+      ) VALUES (
+        ${[
+          "$1",
+          "$2",
+          ...columnTitles.map((_, i) => `$${i + 3}`),
+          `$${columnTitles.length + 3}`,
+        ].join(",")}
+      )
     `;
 
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c) return;
-        col[c.id] = c.text ?? "";
+        if (!c || !columnMap[c.id]) return;
+        col[columnMap[c.id]] = c.text ?? "";
       });
 
       const row = [
         item.id ?? "",
         item.name ?? "",
+        ...Object.values(columnMap)
+          .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+          .map((title) => col[title] ?? ""),
         item.group?.title ?? "",
-        col["long_text_mkrdbbwv"] ?? "",
-        col["file_mkrtn84p"] ?? "",
-        col["file_mkrtv1kc"] ?? "",
-        col["date_mkp8nsqp"] ?? "",
-        col["date_mkp828bq"] ?? "",
-        col["date_mkp86fnp"] ?? "",
-        col["date_mkp81ebp"] ?? "",
-        col["date_mkp8t97n"] ?? "",
-        col["date_mkvvbjea"] ?? "",
-        col["date_mkvvn68c"] ?? "",
-        col["long_text_mkvvwqsq"] ?? "",
-        col["numeric_mkp8dvrq"] ?? "",
-        col["formula_mkpwsfv5"] ?? "",
       ];
 
       await client.query(insertQuery, row);
@@ -154,14 +183,15 @@ async function saveToPostgres(items) {
   }
 }
 
-export default async function () {
+export default async function dashHandover() {
   try {
+    const columnMap = await getColumnMap();
     const items = await getMondayData();
     if (!items.length) {
       console.log("Nenhum registro retornado do Monday");
       return [];
     }
-    await saveToPostgres(items);
+    await saveToPostgres(items, columnMap);
     return items;
   } catch (err) {
     console.error("Erro geral:", err);

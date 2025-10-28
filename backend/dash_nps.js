@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
-import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +34,41 @@ const MONDAY_QUERY = `
     }
   }
 `;
+
+async function getColumnMap() {
+  const query = `
+    query ($board_id: ID!) {
+      boards(ids: [$board_id]) {
+        columns {
+          id
+          title
+        }
+      }
+    }
+  `;
+  const variables = { board_id: MONDAY_BOARD_ID };
+
+  const response = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      Authorization: MONDAY_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  const columns = data?.data?.boards?.[0]?.columns || [];
+
+  const map = {};
+  columns.forEach((col) => {
+    if (col.id && col.title) {
+      map[col.id] = col.title;
+    }
+  });
+
+  return map;
+}
 
 async function getMondayData() {
   const allItems = [];
@@ -76,7 +111,7 @@ async function getMondayData() {
   return allItems;
 }
 
-async function saveToPostgres(items) {
+async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
     port: PGPORT ? parseInt(PGPORT, 10) : undefined,
@@ -88,59 +123,54 @@ async function saveToPostgres(items) {
 
   try {
     await client.connect();
-    await client.query(`
+
+    const columnTitles = Object.values(columnMap)
+      .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+      .map((title) => `"${title}"`);
+
+    if (columnTitles.length === 0) {
+      throw new Error("Nenhum título de coluna válido foi encontrado.");
+    }
+
+    const createQuery = `
       CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
         id TEXT,
-        nome TEXT,
-        grupo TEXT,
-        ordem TEXT,
-        lead TEXT,
-        consultor TEXT,
-        closer TEXT,
-        pedido TEXT,
-        data_inicio TEXT,
-        data_limite TEXT,
-        status TEXT,
-        link_formulario TEXT,
-        nota_cliente TEXT,
-        nota_consultor TEXT,
-        feedback TEXT,
-        data_resposta TEXT
+        name TEXT,
+        ${columnTitles.map((title) => `${title} TEXT`).join(", ")},
+        grupo TEXT
       );
-    `);
+    `;
+    await client.query(createQuery);
+
     await client.query(`DELETE FROM ${TABLE_NAME}`);
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME}
-        (id, nome, grupo, ordem, lead, consultor, closer, pedido, data_inicio, data_limite, status, link_formulario, nota_cliente, nota_consultor, feedback, data_resposta)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      INSERT INTO ${TABLE_NAME} (
+        id, name, ${columnTitles.join(", ")}, grupo
+      ) VALUES (
+        ${[
+          "$1",
+          "$2",
+          ...columnTitles.map((_, i) => `$${i + 3}`),
+          `$${columnTitles.length + 3}`,
+        ].join(", ")}
+      )
     `;
 
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c) return;
-        col[c.id] = c.text ?? "";
+        if (!c || !columnMap[c.id]) return;
+        col[columnMap[c.id]] = c.text ?? "";
       });
 
       const row = [
         item.id ?? "",
         item.name ?? "",
+        ...Object.values(columnMap)
+          .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+          .map((title) => col[title] ?? ""),
         item.group?.title ?? "",
-        col["status"] ?? "",
-        col["numeric_mkv1bhck"] ?? "",
-        col["text_mkv1pg5k"] ?? "",
-        col["text_mkv1jv9q"] ?? "",
-        col["numeric_mkv1qwr8"] ?? "",
-        col["date_mkv1natd"] ?? "",
-        col["date_mkv1zx3k"] ?? "",
-        col["color_mkv1dg1c"] ?? "",
-        col["text_mkv1yqna"] ?? "",
-        col["text_mkv1s1wf"] ?? "",
-        col["text_mkv1rna6"] ?? "",
-        col["long_text_mkv11gaw"] ?? "",
-        col["date_mkv19k7g"] ?? "",
       ];
 
       await client.query(insertQuery, row);
@@ -153,14 +183,15 @@ async function saveToPostgres(items) {
   }
 }
 
-export default async function () {
+export default async function dashNPS() {
   try {
+    const columnMap = await getColumnMap();
     const items = await getMondayData();
     if (!items.length) {
       console.log("Nenhum registro retornado do Monday");
       return [];
     }
-    await saveToPostgres(items);
+    await saveToPostgres(items, columnMap);
     return items;
   } catch (err) {
     console.error("Erro geral:", err);

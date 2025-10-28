@@ -14,7 +14,8 @@ const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
 const MONDAY_BOARD_ID = "8860920734";
-const TABLE_NAME = `dash_ixdelivery`;
+const TABLE_NAME = "dash_ixdelivery";
+
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -34,6 +35,41 @@ const MONDAY_QUERY = `
     }
   }
 `;
+
+async function getColumnMap() {
+  const query = `
+    query ($board_id: ID!) {
+      boards(ids: [$board_id]) {
+        columns {
+          id
+          title
+        }
+      }
+    }
+  `;
+  const variables = { board_id: MONDAY_BOARD_ID };
+
+  const response = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      Authorization: MONDAY_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  const columns = data?.data?.boards?.[0]?.columns || [];
+
+  const map = {};
+  columns.forEach((col) => {
+    if (col.id && col.title) {
+      map[col.id] = col.title;
+    }
+  });
+
+  return map;
+}
 
 async function getMondayData() {
   const allItems = [];
@@ -71,10 +107,11 @@ async function getMondayData() {
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
+
   return allItems;
 }
 
-async function saveToPostgres(items) {
+async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
     port: PGPORT ? parseInt(PGPORT, 10) : undefined,
@@ -87,47 +124,50 @@ async function saveToPostgres(items) {
   try {
     await client.connect();
 
-    // Detectar todos os campos únicos
-    const allColumnIds = new Set();
-    for (const item of items) {
-      for (const col of item.column_values || []) {
-        if (col?.id) allColumnIds.add(col.id);
-      }
+    const columnList = Object.entries(columnMap)
+      .filter(([id, title]) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+      .map(([id, title]) => ({ id, title }));
+
+    if (columnList.length === 0) {
+      throw new Error("Nenhum título de coluna válido foi encontrado.");
     }
 
-    const columnList = Array.from(allColumnIds);
     const columnDefs = columnList
-      .map((id) => `"${id}_text" TEXT, "${id}_value" TEXT`)
+      .map(({ title }) => `"${title}_text" TEXT, "${title}_value" TEXT`)
       .join(", ");
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
         id TEXT,
-        nome TEXT,
+        name TEXT,
         grupo TEXT,
         ${columnDefs}
       );
     `);
+
     await client.query(`DELETE FROM ${TABLE_NAME}`);
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME}
-        (id, nome, grupo, ${columnList
-          .flatMap((id) => [`"${id}_text"`, `"${id}_value"`])
-          .join(", ")})
-      VALUES
-        (${[
+      INSERT INTO ${TABLE_NAME} (
+        id, name, grupo, ${columnList
+          .flatMap(({ title }) => [`"${title}_text"`, `"${title}_value"`])
+          .join(", ")}
+      ) VALUES (
+        ${[
           "$1",
           "$2",
           "$3",
           ...columnList.flatMap((_, i) => [`$${i * 2 + 4}`, `$${i * 2 + 5}`]),
-        ].join(", ")})
+        ].join(", ")}
+      )
     `;
 
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c?.id) return;
-        col[c.id] = {
+        if (!c?.id || !columnMap[c.id]) return;
+        const title = columnMap[c.id];
+        col[title] = {
           text: c.text ?? "",
           value:
             typeof c.value === "object"
@@ -140,8 +180,8 @@ async function saveToPostgres(items) {
         item.id ?? "",
         item.name ?? "",
         item.group?.title ?? "",
-        ...columnList.flatMap((id) => {
-          const c = col[id] || {};
+        ...columnList.flatMap(({ title }) => {
+          const c = col[title] || {};
           return [c.text ?? "", c.value ?? ""];
         }),
       ];
@@ -156,28 +196,17 @@ async function saveToPostgres(items) {
   }
 }
 
-async function main() {
+export default async function dashIXDelivery() {
   try {
+    const columnMap = await getColumnMap();
     const items = await getMondayData();
     if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday.");
+      console.log("Nenhum registro retornado do Monday.");
+      return [];
     }
-    await saveToPostgres(items);
+    await saveToPostgres(items, columnMap);
   } catch (err) {
     console.error("Erro geral:", err);
-    process.exitCode = 1;
-  }
-}
-
-export default async function () {
-  try {
-    const items = await getMondayData();
-    if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday.");
-    }
-    await saveToPostgres(items);
-  } catch (err) {
-    console.error("Erro geral:", err);
-    process.exitCode = 1;
+    return [];
   }
 }

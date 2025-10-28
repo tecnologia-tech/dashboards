@@ -29,17 +29,17 @@ const TABLES = [
   "dash_cs",
   "dash_csat",
   "dash_cx",
+  "dash_delivery",
   "dash_fornecedores",
   "dash_geralcs",
   "dash_handover",
   "dash_icp",
+  "dash_ixdelivery",
+  "dash_ixlogcomex",
   "dash_logmakers",
   "dash_nps",
   "dash_onboarding",
   "dash_reembolso",
-  "dash_delivery",
-  "dash_ixdelivery",
-  "dash_ixlogcomex",
 ];
 
 async function fetchTableData(tableName) {
@@ -65,38 +65,38 @@ async function fetchTableData(tableName) {
 }
 
 async function runDashModulesAndLoadData() {
-  console.log("Iniciando execução dos módulos");
+  console.log("Iniciando execução dos módulos dash_*.js");
+
   const files = fs
     .readdirSync(__dirname)
     .filter((file) => file.startsWith("dash_") && file.endsWith(".js"));
 
   for (const file of files) {
     const modulePath = pathToFileURL(path.join(__dirname, file)).href;
-    console.log(`Executando módulo: ${file}`);
+    console.log(`🔧 Executando módulo: ${file}`);
     try {
       const dashModule = await import(modulePath);
       if (typeof dashModule.default === "function") {
         await dashModule.default();
-        console.log(`Módulo ${file} executado com sucesso.`);
+        console.log(`✅ Módulo ${file} executado com sucesso.`);
       } else {
-        console.warn(`Módulo ${file} não exporta uma função default.`);
+        console.warn(`⚠️ Módulo ${file} não exporta uma função default.`);
       }
     } catch (err) {
-      console.error(`Erro ao executar ${file}:`, err.message || err);
+      console.error(`❌ Erro ao executar ${file}:`, err.message || err);
     }
   }
-
-  console.log("📊 Carregando dados das tabelas");
   const results = {};
 
   for (const table of TABLES) {
     const data = await fetchTableData(table);
     results[table] = data;
-    console.log(`📦 ${table}: ${data.length} registros carregados.`);
   }
 
   dashboardData = results;
-  console.log(`[${new Date().toLocaleString()}] Dados prontos para o frontend`);
+  console.log(
+    `[${new Date().toLocaleString()}] ✅ Dados prontos para o frontend`
+  );
 }
 
 async function loopDashModules() {
@@ -119,5 +119,5 @@ TABLES.forEach((tableName) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`);
 });
