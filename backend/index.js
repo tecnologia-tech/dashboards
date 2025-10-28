@@ -1,57 +1,62 @@
 import express from "express";
-import cors from "cors";
-import pkg from "pg";
-import dotenv from "dotenv";
+import cron from "node-cron";
+import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
+import cors from "cors";
+import { fileURLToPath, pathToFileURL } from "url";
 
-import { main as atualizarDashboardCS } from "./dash_cs.js";
-
-const { Client } = pkg;
-
+// Setup para __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, "banco.env") });
-
 const app = express();
+const PORT = 3001;
+
+// Armazenamento em memória
+let dashboardData = {};
+
 app.use(cors());
 app.use(express.json());
 
-console.log("Iniciando atualização imediata do dash_cs...");
-atualizarDashboardCS()
-  .then(() => console.log("Atualização inicial concluída"))
-  .catch((err) => console.error("Erro na atualização inicial:", err));
+// Função que executa todos os arquivos dash_*.js
+async function runDashModules() {
+  const files = fs
+    .readdirSync(__dirname)
+    .filter((file) => file.startsWith("dash_") && file.endsWith(".js"));
 
-setInterval(() => {
-  console.log("Executando atualização automática (15 min) de dash_cs...");
-  atualizarDashboardCS().catch((err) =>
-    console.error("Erro na atualização automática:", err)
-  );
-}, 15 * 60 * 1000);
+  const results = {};
 
-app.get("/dash-cs", async (req, res) => {
-  const client = new Client({
-    host: process.env.PGHOST,
-    port: process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : undefined,
-    database: process.env.PGDATABASE,
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    ssl: false,
-  });
-
-  try {
-    await client.connect();
-    const result = await client.query("SELECT * FROM dash_cs");
-    res.json({ dash_cs: result.rows });
-  } catch (err) {
-    console.error("Erro na API /dash-cs:", err);
-    res.status(500).json({ error: "Erro ao consultar dash_cs" });
-  } finally {
-    await client.end().catch(() => {});
+  for (const file of files) {
+    const modulePath = pathToFileURL(path.join(__dirname, file)).href;
+    try {
+      const dashModule = await import(modulePath);
+      if (typeof dashModule.default === "function") {
+        const data = await dashModule.default();
+        const key = file.replace(".js", "");
+        results[key] = data;
+      } else {
+        console.warn(`⚠️ Módulo ${file} não exporta uma função default.`);
+      }
+    } catch (err) {
+      console.error(`❌ Erro ao executar ${file}:`, err);
+    }
   }
+
+  dashboardData = results;
+  console.log(`[${new Date().toLocaleString()}] ✅ Dados atualizados.`);
+}
+
+// Agendamento: a cada 15 minutos
+cron.schedule("*/15 * * * *", runDashModules);
+
+// Executa ao iniciar
+runDashModules();
+
+// Endpoint para o frontend acessar os dados
+app.get("/api/dashboard", (req, res) => {
+  res.json(dashboardData);
 });
 
-app.listen(3001, () => {
-  console.log("✅ API rodando em http://localhost:3001");
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
 });

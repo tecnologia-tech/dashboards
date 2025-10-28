@@ -239,7 +239,6 @@ async function connectWithAutoSSL() {
     const client = new Client(cfg);
     try {
       await client.connect();
-      console.log(`Conectado ao Postgres (ssl=${useSsl})`);
       return client;
     } catch (err) {
       lastErr = err;
@@ -252,7 +251,6 @@ async function connectWithAutoSSL() {
 }
 
 (async function main() {
-  console.log("Iniciando FULL SYNC Nutshell -> Postgres (WON only)");
   let client;
   try {
     client = await connectWithAutoSSL();
@@ -281,9 +279,6 @@ async function connectWithAutoSSL() {
     } catch (_) {}
     process.exit(1);
   }
-
-  console.log(`Total de leads WON encontradas: ${allLeadIds.length}`);
-
   for (let i = 0; i < allLeadIds.length; i += 500) {
     const batchIds = allLeadIds.slice(i, i + 500);
     const batchNo = Math.floor(i / 500) + 1;
@@ -293,7 +288,6 @@ async function connectWithAutoSSL() {
         try {
           const res = await callNutshellJSONRPC("getLead", { leadId: id });
           const lead = res?.result ?? res;
-          console.log(`Lead ${id} tags brutas:`, lead.tags);
           return lead;
         } catch {
           return null;
@@ -310,14 +304,11 @@ async function connectWithAutoSSL() {
     try {
       if (rows.length) {
         await upsertRows(client, rows);
-        console.log(`Batch ${batchNo} inserido com ${rows.length} leads.`);
       }
     } catch (err) {
       console.error(`Erro no batch ${batchNo}:`, err.message || err);
     }
   }
-
-  console.log("SYNC concluído.");
   try {
     await client.end();
   } catch (_) {}

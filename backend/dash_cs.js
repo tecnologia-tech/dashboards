@@ -37,7 +37,6 @@ const MONDAY_QUERY = `
 `;
 
 async function getMondayData() {
-  console.log("Pegando dados do Monday");
   const allItems = [];
   let cursor = null;
   const limit = 50;
@@ -74,8 +73,6 @@ async function getMondayData() {
     allItems.push(...(itemsPage.items || []));
     cursor = itemsPage.cursor;
   } while (cursor);
-
-  console.log(`Total itens coletados: ${allItems.length}`);
   return allItems;
 }
 
@@ -92,8 +89,6 @@ async function saveToPostgres(items) {
 
   try {
     await client.connect();
-
-    console.log("Limpando tabela antes de inserir");
     await client.query(`DELETE FROM ${TABLE_NAME}`);
 
     const insertQuery = `
@@ -140,10 +135,6 @@ async function saveToPostgres(items) {
 
       await client.query(insertQuery, row);
     }
-
-    console.log(
-      `INSERIDOS: ${items.length} | Data: ${new Date().toLocaleString("pt-BR")}`
-    );
   } catch (err) {
     console.error("Erro ao salvar no banco:", err);
     throw err;
@@ -154,10 +145,9 @@ async function saveToPostgres(items) {
 
 async function main() {
   try {
-    console.log("Rodando main()");
     const items = await getMondayData();
     if (!items.length) {
-      return console.log("Nenhum registro retornado do Monday.");
+      return console.log("Nenhum registro retornado do Monday");
     }
     await saveToPostgres(items);
   } catch (err) {
