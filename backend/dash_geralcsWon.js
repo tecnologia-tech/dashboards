@@ -76,7 +76,11 @@ function mapLeadToRow(leadFull) {
     leadFull.closedTime ?? leadFull.dueTime ?? leadFull.modifiedTime
   );
   const pipeline = leadFull.stageset?.name || leadFull.milestone?.name || "";
-  const empresa = leadFull.primaryC?.name ?? leadFull.primaryAccountName ?? "";
+  const empresa =
+    leadFull.primaryAccount?.name ??
+    leadFull.primaryC?.name ??
+    leadFull.primaryAccountName ??
+    "";
   const assigned = leadFull.assignee?.name ?? leadFull.assigneeName ?? "";
   const valor = parseAmountToNumber(
     leadFull.value ?? leadFull.estimatedValue ?? 0
@@ -127,7 +131,7 @@ async function callNutshellJSONRPC(method, params = {}) {
 
 async function ensureTable(client) {
   const createSQL = `
-    CREATE TABLE IF NOT EXISTS dash_geralcs (
+    CREATE TABLE IF NOT EXISTS dash_geralcsWon (
       data DATE,
       pipeline TEXT,
       empresa TEXT,
@@ -156,7 +160,7 @@ async function upsertRows(client, rows) {
     .join(",");
 
   const sql = `
-    INSERT INTO dash_geralcs (${cols.join(",")})
+    INSERT INTO dash_geralcsWon (${cols.join(",")})
     VALUES ${placeholders}
     ON CONFLICT (numero) DO UPDATE SET
       ${cols
@@ -167,40 +171,55 @@ async function upsertRows(client, rows) {
   await client.query(sql, params);
 }
 
-export default async function () {
+async function main() {
   const client = new Client(dbCfg);
-  await client.connect();
-  await ensureTable(client);
+  try {
+    await client.connect();
+    await ensureTable(client);
 
-  const allLeadIds = [];
-  let page = 1;
-  while (true) {
-    const res = await callNutshellJSONRPC("findLeads", {
-      query: { status: 10 },
-      page,
-      limit: 50,
-    });
-    const leads = Array.isArray(res) ? res : res.result ?? [];
-    if (!leads.length) break;
-    allLeadIds.push(...leads.map((l) => l.id));
-    page++;
+    const allLeadIds = [];
+    let page = 1;
+    while (true) {
+      const res = await callNutshellJSONRPC("findLeads", {
+        query: { status: 10 },
+        page,
+        limit: 50,
+      });
+      const leads = Array.isArray(res) ? res : res.result ?? [];
+      if (!leads.length) break;
+      allLeadIds.push(...leads.map((l) => l.id));
+      page++;
+    }
+
+    const allRows = [];
+    for (let i = 0; i < allLeadIds.length; i += 100) {
+      const batch = allLeadIds.slice(i, i + 100);
+      const tasks = batch.map((id) =>
+        callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
+      );
+      const results = await Promise.all(tasks);
+
+      results.forEach((lead) => {
+        if (!lead) return;
+        const empresa =
+          lead.primaryAccount?.name ??
+          lead.primaryC?.name ??
+          lead.primaryAccountName ??
+          "";
+      });
+
+      const rows = results
+        .filter(Boolean)
+        .map(mapLeadToRow)
+        .filter((r) => r.numero);
+      await upsertRows(client, rows);
+      allRows.push(...rows);
+    }
+  } catch (err) {
+    console.error("Erro:", err.message);
+  } finally {
+    await client.end();
   }
-
-  const allRows = [];
-  for (let i = 0; i < allLeadIds.length; i += 100) {
-    const batch = allLeadIds.slice(i, i + 100);
-    const tasks = batch.map((id) =>
-      callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
-    );
-    const results = await Promise.all(tasks);
-    const rows = results
-      .filter(Boolean)
-      .map(mapLeadToRow)
-      .filter((r) => r.numero);
-    await upsertRows(client, rows);
-    allRows.push(...rows);
-  }
-
-  await client.end();
-  return allRows;
 }
+
+export { main };
