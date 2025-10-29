@@ -8,22 +8,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-const NUTSHELL_USERNAME = "contato@metodo12p.com.br";
-const NUTSHELL_API_TOKEN = "a68927c5dcbc967e9e97c6a3aa77cd6a0ce84854";
+const {
+  PGHOST,
+  PGPORT,
+  PGDATABASE,
+  PGUSER,
+  PGPASSWORD,
+  PGSSLMODE,
+  NUTSHELL_USERNAME,
+  NUTSHELL_API_TOKEN,
+} = process.env;
+
 const NUTSHELL_API_URL = "https://app.nutshell.com/api/v1/json";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 
-const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
-  process.env;
-
-const dbCfgBase = {
+const dbCfg = {
   host: PGHOST,
-  port: PGPORT ? Number(PGPORT) : 5432,
+  port: Number(PGPORT || 5432),
   database: PGDATABASE,
   user: PGUSER,
   password: PGPASSWORD,
+  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
 function extractNumeroFromLead(lead) {
@@ -51,33 +58,14 @@ function toSQLDateFromISO(isoString) {
 function parseAmountToNumber(valueObj) {
   if (valueObj == null) return 0.0;
   let amt = valueObj.amount ?? valueObj;
-  if (typeof amt === "number") return Number(amt.toFixed(2));
-  if (typeof amt !== "string") {
-    const n = Number(amt);
-    return Number.isNaN(n) ? 0.0 : Number(n.toFixed(2));
-  }
-  let s = amt.trim();
-  const hasComma = s.includes(",");
-  const hasDot = s.includes(".");
-  if (hasComma && hasDot) {
-    if (s.lastIndexOf(",") > s.lastIndexOf("."))
-      s = s.replace(/\./g, "").replace(",", ".");
-    else s = s.replace(/,/g, "");
-  } else if (hasComma && !hasDot) s = s.replace(/\./g, "").replace(",", ".");
-  else s = s.replace(/,/g, "");
-  s = s.replace(/[^\d.-]/g, "");
-  const n = Number(s);
+  const n = Number(amt);
   return Number.isNaN(n) ? 0.0 : Number(n.toFixed(2));
 }
 
 function formatTags(tags) {
   if (!Array.isArray(tags)) return "";
   return tags
-    .map((tag) => {
-      if (typeof tag === "string") return tag.trim();
-      if (typeof tag === "object" && tag.name) return tag.name.trim();
-      return null;
-    })
+    .map((tag) => (typeof tag === "object" ? tag.name : tag))
     .filter(Boolean)
     .join(" | ");
 }
@@ -96,14 +84,11 @@ function mapLeadToRow(leadFull) {
   const tag = formatTags(leadFull.tags);
   const id_primary_company = leadFull.primaryAccount?.id
     ? `${leadFull.primaryAccount.id}-accounts`
-    : leadFull.primaryAccountId
-    ? `${leadFull.primaryAccountId}-accounts`
     : "";
-  let id_primary_person = "";
-  if (Array.isArray(leadFull.contacts) && leadFull.contacts.length > 0)
-    id_primary_person = `${leadFull.contacts[0].id}-contacts`;
-  else if (leadFull.primaryContactId)
-    id_primary_person = `${leadFull.primaryContactId}-contacts`;
+  const id_primary_person =
+    Array.isArray(leadFull.contacts) && leadFull.contacts.length > 0
+      ? `${leadFull.contacts[0].id}-contacts`
+      : "";
 
   return {
     data: dataSQL,
@@ -124,7 +109,7 @@ async function callNutshellJSONRPC(method, params = {}) {
     jsonrpc: "2.0",
     method,
     params,
-    id: String(Math.floor(Date.now() / 1000)),
+    id: String(Date.now()),
   };
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
@@ -134,11 +119,10 @@ async function callNutshellJSONRPC(method, params = {}) {
     },
     body: JSON.stringify(payload),
   });
-  const text = await res.text();
-  const json = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(json)}`);
-  if (json.error) throw new Error(JSON.stringify(json.error));
-  return json.result ?? json;
+  const json = await res.json();
+  if (!res.ok || json.error)
+    throw new Error(JSON.stringify(json.error || json));
+  return json.result;
 }
 
 async function ensureTable(client) {
@@ -161,34 +145,12 @@ async function ensureTable(client) {
 
 async function upsertRows(client, rows) {
   if (!rows || rows.length === 0) return;
-  const cols = [
-    "data",
-    "pipeline",
-    "empresa",
-    "assigned",
-    "valor",
-    "numero",
-    "tag",
-    "id_primary_company",
-    "id_primary_person",
-    "lead_id",
-  ];
+  const cols = Object.keys(rows[0]);
   const params = [];
   const placeholders = rows
     .map((r, i) => {
       const base = i * cols.length;
-      params.push(
-        r.data,
-        r.pipeline,
-        r.empresa,
-        r.assigned,
-        r.valor,
-        r.numero,
-        r.tag,
-        r.id_primary_company,
-        r.id_primary_person,
-        r.lead_id
-      );
+      params.push(...cols.map((c) => r[c]));
       return `(${cols.map((_, k) => `$${base + k + 1}`).join(",")})`;
     })
     .join(",");
@@ -197,140 +159,48 @@ async function upsertRows(client, rows) {
     INSERT INTO dash_geralcs (${cols.join(",")})
     VALUES ${placeholders}
     ON CONFLICT (numero) DO UPDATE SET
-      data = EXCLUDED.data,
-      pipeline = EXCLUDED.pipeline,
-      empresa = EXCLUDED.empresa,
-      assigned = EXCLUDED.assigned,
-      valor = EXCLUDED.valor,
-      tag = EXCLUDED.tag,
-      id_primary_company = EXCLUDED.id_primary_company,
-      id_primary_person = EXCLUDED.id_primary_person,
-      lead_id = EXCLUDED.lead_id;
+      ${cols
+        .filter((c) => c !== "numero")
+        .map((c) => `${c} = EXCLUDED.${c}`)
+        .join(", ")};
   `;
   await client.query(sql, params);
 }
 
-async function connectWithAutoSSL() {
-  const tries =
-    PGSSLMODE === "true" || PGSSLMODE === "1" ? [true, false] : [false, true];
-  let lastErr = null;
-  for (const useSsl of tries) {
-    const cfg = {
-      host: dbCfgBase.host,
-      port: dbCfgBase.port,
-      database: dbCfgBase.database,
-      user: dbCfgBase.user,
-      password: dbCfgBase.password,
-      ssl: useSsl ? { rejectUnauthorized: false } : false,
-    };
-    const client = new Client(cfg);
-    try {
-      await client.connect();
-      return client;
-    } catch (err) {
-      lastErr = err;
-      try {
-        await client.end();
-      } catch (_) {}
-    }
-  }
-  throw lastErr;
-}
-
 export default async function () {
-  let client;
-  try {
-    client = await connectWithAutoSSL();
-    await ensureTable(client);
-  } catch (err) {
-    console.error("Erro ao conectar/garantir tabela:", err.message || err);
-    return [];
-  }
+  const client = new Client(dbCfg);
+  await client.connect();
+  await ensureTable(client);
 
   const allLeadIds = [];
-  try {
-    let page = 1;
-    while (true) {
-      const params = { query: { status: 10 }, page, limit: 50 };
-      const res = await callNutshellJSONRPC("findLeads", params);
-      const leadsPage = Array.isArray(res) ? res : res.result ?? [];
-      if (!Array.isArray(leadsPage) || leadsPage.length === 0) break;
-      for (const s of leadsPage) {
-        if (s?.id) {
-          allLeadIds.push(s.id);
-        } else {
-          console.warn("Lead sem ID ignorada:", s);
-        }
-      }
-      page++;
-    }
-    console.log(
-      `🔍 Total de leads encontradas com status 10: ${allLeadIds.length}`
-    );
-  } catch (err) {
-    console.error("Erro ao buscar IDs de leads:", err.message || err);
-    await client.end().catch(() => {});
-    return [];
+  let page = 1;
+  while (true) {
+    const res = await callNutshellJSONRPC("findLeads", {
+      query: { status: 10 },
+      page,
+      limit: 50,
+    });
+    const leads = Array.isArray(res) ? res : res.result ?? [];
+    if (!leads.length) break;
+    allLeadIds.push(...leads.map((l) => l.id));
+    page++;
   }
 
   const allRows = [];
-  let totalFalhasGetLead = 0;
-  let totalSemNumero = 0;
-
-  for (let i = 0; i < allLeadIds.length; i += 500) {
-    const batchIds = allLeadIds.slice(i, i + 500);
-    const tasks = batchIds.map((id) =>
-      (async () => {
-        try {
-          const res = await callNutshellJSONRPC("getLead", { leadId: id });
-          return res?.result ?? res;
-        } catch (err) {
-          console.warn(`⚠️ Falha ao buscar lead ${id}:`, err.message || err);
-          totalFalhasGetLead++;
-          return null;
-        }
-      })()
+  for (let i = 0; i < allLeadIds.length; i += 100) {
+    const batch = allLeadIds.slice(i, i + 100);
+    const tasks = batch.map((id) =>
+      callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
     );
-
-    const leadFullObjects = await Promise.all(tasks);
-    const rows = leadFullObjects
-      .filter((x) => x && (x.id || x.leadId))
-      .map((lead) => {
-        const row = mapLeadToRow(lead);
-        if (!row.numero) {
-          console.warn("⚠️ Lead sem número ignorada:", lead.id);
-          totalSemNumero++;
-          return null;
-        }
-        return row;
-      })
-      .filter(Boolean);
-
-    try {
-      if (rows.length) {
-        await upsertRows(client, rows);
-        allRows.push(...rows);
-      }
-    } catch (err) {
-      console.error(`Erro ao salvar batch:`, err.message || err);
-    }
+    const results = await Promise.all(tasks);
+    const rows = results
+      .filter(Boolean)
+      .map(mapLeadToRow)
+      .filter((r) => r.numero);
+    await upsertRows(client, rows);
+    allRows.push(...rows);
   }
 
-  console.log(`✅ Leads salvas no banco: ${allRows.length}`);
-  console.log(`⚠️ Falhas ao buscar detalhes (getLead): ${totalFalhasGetLead}`);
-  console.log(`⚠️ Leads ignoradas por falta de número: ${totalSemNumero}`);
-  console.log(`📉 Leads totais esperadas: ${allLeadIds.length}`);
-
-  await client.end().catch(() => {});
+  await client.end();
   return allRows;
-}
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  (async () => {
-    console.log("🚀 Iniciando execução...");
-    const result = await (await import("./dash_geralcs.js")).default();
-    console.log(
-      "🏁 Execução finalizada. Total de leads processadas:",
-      result.length
-    );
-  })();
 }
