@@ -1,17 +1,17 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
+.root {
   height: 100%;
   width: 100%;
   background-color: #202124;
   font-family: sans-serif;
   color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
+
+
+/* Layout principal */
 .dashboard {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -22,49 +22,45 @@ html, body {
   padding: 16px;
 }
 
-.dashboard > div {
+.dashboardItem {
   border: 1px solid #fece00;
   border-radius: 6px;
   padding: 8px;
   display: flex;
   align-items: center;
-  justify-content: center;
   overflow: hidden;
   font-weight: bold;
 }
 
+/* Cabeçalho */
 .header {
   grid-column: 1 / span 12;
   grid-row: 1 / span 1;
   background-color: #fece00;
   color: #202124;
-  font-weight: bold;
   font-size: 1.4rem;
   padding: 16px;
   border-radius: 8px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 25px;
 }
 
-.header p {
-  margin: 0;
-  font-size: 1.2rem;
+.headerText {
+  font-size: 1.6rem;
   font-weight: 600;
   display: flex;
   align-items: center;
 }
 
 .logoDozeP {
-  width: 48px;
-  height: auto;
-  max-height: 48px;
+  max-height: 50px;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
+/* Grid de blocos */
 .ltda         { grid-column: 1 / span 3;  grid-row: 2 / span 3; }
 .cs           { grid-column: 4 / span 3;  grid-row: 2 / span 3; }
 .bonus        { grid-column: 7 / span 3;  grid-row: 2 / span 3; }
@@ -76,69 +72,99 @@ html, body {
 .csat         { grid-column: 5 / span 4;  grid-row: 8 / span 3; }
 .reputacao12p { grid-column: 9 / span 4;  grid-row: 8 / span 3; }
 
+/* Blocos de desempenho */
+.bloco {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  height: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  color: #fece00;
+}
+
 .titulo {
-  font-size: 1.2rem;
+  font-size: 35px;
   margin-bottom: 12px;
 }
 
-.valor-meta {
+.valorMeta {
   display: flex;
   justify-content: space-between;
-  font-size: 1rem;
+  align-items: center;
   width: 100%;
-  margin-bottom: 8px;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
 }
 
-.valor {
+.valor,
+.meta {
+  font-size: 30px;
   font-weight: bold;
 }
 
 .meta {
-  color: #202124;
+  color: #fece00;
+  font-weight: 600;
 }
 
-.barra-container {
-  height: 12px;
-  background-color: #fff;
-  border-radius: 6px;
-  overflow: hidden;
+.barraContainer {
   width: 100%;
-  margin-bottom: 8px;
+  height: 14px;
+  background-color: #fff;
+  border-radius: 7px;
+  overflow: hidden;
+  margin-bottom: 4px;
 }
 
-.barra-preenchida {
+.barraPreenchida {
   height: 100%;
   background-color: #fece00;
   transition: width 0.3s ease;
 }
 
 .porcentagem {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: bold;
   text-align: right;
   width: 100%;
-  margin-bottom: 12px;
+  margin: 8px 0;
 }
 
+.sugerida,
 .estornos {
-  font-size: 0.9rem;
-  color: #202124;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fece00;
+  text-align: center;
+  margin: 0;
 }
 
-/* 🟪 Onboarding */
-.titulo-onboarding {
+.rodape {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+/* Onboarding */
+.tituloOnboarding {
   font-size: 1.2rem;
   font-weight: bold;
   color: #fff;
 }
 
-.onboarding-total {
+.onboardingTotal {
   font-size: 2rem;
   font-weight: bold;
   color: #fff;
 }
 
-.onboarding-lista {
+.onboardingLista {
   display: flex;
   flex-direction: column;
   gap: 12px;

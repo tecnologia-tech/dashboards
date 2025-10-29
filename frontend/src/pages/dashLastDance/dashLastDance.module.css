@@ -1,0 +1,143 @@
+.root {
+  height: 100vh;
+  width: 100vw;
+  background-color: #dd044e;
+  font-family: 'Noto Sans', 'Roboto', sans-serif;
+  color: #cad003;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  width: 100%;
+  height: 20vh;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+}
+.header img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+.dashboard {
+  height: 80vh;
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden; 
+}
+.valor {
+  grid-column: span 10 / span 10;
+  grid-row: span 6 / span 6;
+  grid-row-start: 1;
+  display: flex;
+  flex-direction: row; 
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  gap: 2rem; 
+}
+.seta {
+  font-size: clamp(5rem, 10vw, 10rem);
+  font-weight: 800;
+  color: #fff;
+}
+.valorfaltadiario {
+  font-size: clamp(10rem, 30vw, 30rem);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+.valorfaltamensal {
+  grid-column: span 10 / span 10;
+  grid-row-start: 7;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 600;
+}
+.valorfaltamensal p:first-child {
+  color: white;
+}
+.valorfaltamensal p:last-child {
+  color: #cad003;
+}
+.ultimoswon {
+  grid-column: span 5 / span 5;
+  grid-row-start: 8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #fff;
+}
+.projecaogeral {
+  grid-column: span 5 / span 5;
+  grid-column-start: 6;
+  grid-row-start: 8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #fff;
+}
+.tabelawon {
+  grid-column: span 5 / span 5;
+  grid-row: span 2 / span 2;
+  grid-row-start: 9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.meta {
+  grid-column: span 5 / span 5;
+  grid-row: span 2 / span 2;
+  grid-column-start: 6;
+  grid-row-start: 9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+}
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1.2rem;
+  color: #fff;
+}
+.tabela th,
+.tabela td {
+  padding: 8px;
+  text-align: center;
+}
+.tabela th {
+  font-weight: bold;
+}
+.tabela tr:nth-child(odd) {
+  background-color: #dd044e;
+}
+.valorMeta {
+  text-align: center;
+  font-size: 160px;
+  font-weight: 800;
+  color: #cad003;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  height: 100%;
+}
