@@ -1,15 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashConsultoria from "./pages/dashConsultoria/dashConsultoria";
-import DashLastDance from "./pages/dashLastDance/dashLastDance"; // novo import
-
+import DashLastDance from "./pages/dashLastDance/dashLastDance";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/consultoria" element={<DashConsultoria />} />
-        <Route path="/lastdance" element={<DashLastDance />} />{" "}
-        {/* nova rota */}
+        <Route path="/lastdance" element={<DashLastDance />} />
         <Route path="/" element={<DashConsultoria />} />
       </Routes>
     </BrowserRouter>
