@@ -17,9 +17,9 @@ const {
   PGSSLMODE,
   NUTSHELL_USERNAME,
   NUTSHELL_API_TOKEN,
+  NUTSHELL_API_URL,
 } = process.env;
 
-const NUTSHELL_API_URL = "https://app.nutshell.com/api/v1/json";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
@@ -115,18 +115,36 @@ async function callNutshellJSONRPC(method, params = {}) {
     params,
     id: String(Date.now()),
   };
-  const res = await fetch(NUTSHELL_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: AUTH_HEADER,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  const json = await res.json();
-  if (!res.ok || json.error)
-    throw new Error(JSON.stringify(json.error || json));
-  return json.result;
+
+  try {
+    const res = await fetch(NUTSHELL_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: AUTH_HEADER,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    if (!json) {
+      throw new Error("Resposta inválida da API (não é JSON)");
+    }
+
+    if (json.error) {
+      throw new Error(`Erro da API: ${JSON.stringify(json.error)}`);
+    }
+
+    return json.result;
+  } catch (err) {
+    console.error(`❌ Erro na chamada Nutshell (${method}):`, err.message);
+    throw err;
+  }
 }
 
 async function ensureTable(client) {
@@ -195,18 +213,12 @@ async function main() {
     for (let i = 0; i < allLeadIds.length; i += 100) {
       const batch = allLeadIds.slice(i, i + 100);
       const tasks = batch.map((id) =>
-        callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
+        callNutshellJSONRPC("getLead", { leadId: id }).catch((err) => {
+          console.warn(`⚠️ Falha ao buscar lead ${id}: ${err.message}`);
+          return null;
+        })
       );
       const results = await Promise.all(tasks);
-
-      results.forEach((lead) => {
-        if (!lead) return;
-        const empresa =
-          lead.primaryAccount?.name ??
-          lead.primaryC?.name ??
-          lead.primaryAccountName ??
-          "";
-      });
 
       const rows = results
         .filter(Boolean)
@@ -216,7 +228,7 @@ async function main() {
       allRows.push(...rows);
     }
   } catch (err) {
-    console.error("Erro:", err.message);
+    console.error("💥 Erro geral no módulo dash_geralcsWon:", err.message);
   } finally {
     await client.end();
   }
