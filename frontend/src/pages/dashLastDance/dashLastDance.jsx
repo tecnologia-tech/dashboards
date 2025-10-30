@@ -115,7 +115,6 @@ export default function DashLastDance() {
         console.error("Erro ao buscar dados:", error);
       }
     }
-    //teste
     async function fetchSomaOpen() {
       try {
         const response = await fetch(

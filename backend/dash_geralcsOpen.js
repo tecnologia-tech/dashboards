@@ -1,234 +1,205 @@
-import { Client } from "pg";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
+import pkg from "pg";
+const { Client } = pkg;
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-const {
-  PGHOST,
-  PGPORT,
-  PGDATABASE,
-  PGUSER,
-  PGPASSWORD,
-  PGSSLMODE,
-  NUTSHELL_USERNAME,
-  NUTSHELL_API_TOKEN,
-} = process.env;
+const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
+  process.env;
 
-const NUTSHELL_API_URL = "https://app.nutshell.com/api/v1/json";
-const AUTH_HEADER =
-  "Basic " +
-  Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
+const MONDAY_BOARD_ID = "8182800749";
+const TABLE_NAME = "dash_reembolso";
 
-const dbCfg = {
-  host: PGHOST,
-  port: Number(PGPORT || 5432),
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
-
-function extractNumeroFromLead(lead) {
-  const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
-  if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
-    const parts = pathVal.split("/").filter(Boolean);
-    const last = parts[parts.length - 1];
-    if (last && /^\d+$/.test(last)) return last;
+const MONDAY_QUERY = `
+  query ($board_id: ID!, $limit: Int!, $cursor: String) {
+    boards(ids: [$board_id]) {
+      items_page(limit: $limit, cursor: $cursor) {
+        cursor
+        items {
+          id
+          name
+          group { title }
+          column_values {
+            id
+            text
+          }
+        }
+      }
+    }
   }
-  if (typeof lead.name === "string") {
-    const m = lead.name.match(/(\d{3,})/);
-    if (m) return m[1];
-  }
-  return String(lead.id ?? lead.leadId ?? "");
-}
+`;
 
-function toSQLDateFromISO(isoString) {
-  if (!isoString || typeof isoString !== "string") return null;
-  const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return null;
-  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-  return br.toISOString().slice(0, 10);
-}
+async function getColumnMap() {
+  const query = `
+    query ($board_id: ID!) {
+      boards(ids: [$board_id]) {
+        columns {
+          id
+          title
+        }
+      }
+    }
+  `;
+  const variables = { board_id: MONDAY_BOARD_ID };
 
-function parseAmountToNumber(valueObj) {
-  if (valueObj == null) return 0.0;
-  let amt = valueObj.amount ?? valueObj;
-  const n = Number(amt);
-  return Number.isNaN(n) ? 0.0 : Number(n.toFixed(2));
-}
-
-function formatTags(tags) {
-  if (!Array.isArray(tags)) return "";
-  return tags
-    .map((tag) => (typeof tag === "object" ? tag.name : tag))
-    .filter(Boolean)
-    .join(" | ");
-}
-
-function mapLeadToRow(leadFull, accountMap) {
-  const numero = extractNumeroFromLead(leadFull);
-  const dataSQL = toSQLDateFromISO(
-    leadFull.closedTime ?? leadFull.dueTime ?? leadFull.modifiedTime
-  );
-  const pipeline = leadFull.stageset?.name || leadFull.milestone?.name || "";
-  const assigned = leadFull.assignee?.name ?? leadFull.assigneeName ?? "";
-  const valor = parseAmountToNumber(
-    leadFull.value ?? leadFull.estimatedValue ?? 0
-  );
-  const tag = formatTags(leadFull.tags);
-  const id_primary_company = leadFull.primaryAccount?.id
-    ? `${leadFull.primaryAccount.id}-accounts`
-    : "";
-  const id_primary_person =
-    Array.isArray(leadFull.contacts) && leadFull.contacts.length > 0
-      ? `${leadFull.contacts[0].id}-contacts`
-      : "";
-
-  const empresa =
-    leadFull.primaryAccount?.name ??
-    accountMap[leadFull.primaryAccount?.id] ??
-    leadFull.primaryC?.name ??
-    leadFull.primaryAccountName ??
-    "";
-
-  return {
-    data: dataSQL,
-    pipeline,
-    empresa,
-    assigned,
-    valor,
-    numero,
-    tag,
-    id_primary_company,
-    id_primary_person,
-    lead_id: String(leadFull.id ?? leadFull.leadId),
-  };
-}
-
-async function callNutshellJSONRPC(method, params = {}) {
-  const payload = {
-    jsonrpc: "2.0",
-    method,
-    params,
-    id: String(Date.now()),
-  };
-  const res = await fetch(NUTSHELL_API_URL, {
+  const response = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
-      Authorization: AUTH_HEADER,
+      Authorization: MONDAY_API_KEY,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ query, variables }),
   });
-  const json = await res.json();
-  if (!res.ok || json.error)
-    throw new Error(JSON.stringify(json.error || json));
-  return json.result;
+
+  const data = await response.json();
+  const columns = data?.data?.boards?.[0]?.columns || [];
+
+  const map = {};
+  columns.forEach((col) => {
+    if (col.id && col.title) {
+      map[col.id] = col.title;
+    }
+  });
+
+  return map;
 }
 
-async function ensureTable(client) {
-  const createSQL = `
-    CREATE TABLE IF NOT EXISTS dash_geralcsopen (
-      data DATE,
-      pipeline TEXT,
-      empresa TEXT,
-      assigned TEXT,
-      valor NUMERIC(12,2),
-      numero TEXT PRIMARY KEY,
-      tag TEXT,
-      id_primary_company TEXT,
-      id_primary_person TEXT,
-      lead_id TEXT
-    );
-  `;
-  await client.query(createSQL);
+async function getMondayData() {
+  const allItems = [];
+  let cursor = null;
+  const limit = 50;
+
+  do {
+    const response = await fetch("https://api.monday.com/v2", {
+      method: "POST",
+      headers: {
+        Authorization: MONDAY_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: MONDAY_QUERY,
+        variables: {
+          board_id: MONDAY_BOARD_ID,
+          limit,
+          cursor,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(
+        `Erro na requisição ao Monday: ${response.status} ${response.statusText} - ${text}`
+      );
+    }
+
+    const data = await response.json();
+    const itemsPage = data?.data?.boards?.[0]?.items_page;
+
+    if (!itemsPage) break;
+
+    allItems.push(...(itemsPage.items || []));
+    cursor = itemsPage.cursor;
+  } while (cursor);
+
+  return allItems;
 }
 
-async function upsertRows(client, rows) {
-  if (!rows || rows.length === 0) return;
-  const cols = Object.keys(rows[0]);
-  const params = [];
-  const placeholders = rows
-    .map((r, i) => {
-      const base = i * cols.length;
-      params.push(...cols.map((c) => r[c]));
-      return `(${cols.map((_, k) => `$${base + k + 1}`).join(",")})`;
-    })
-    .join(",");
+async function saveToPostgres(items, columnMap) {
+  const client = new Client({
+    host: PGHOST,
+    port: PGPORT ? parseInt(PGPORT, 10) : undefined,
+    database: PGDATABASE,
+    user: PGUSER,
+    password: PGPASSWORD,
+    ssl: false,
+  });
 
-  const insertSQL = `
-    INSERT INTO dash_geralcsopen (${cols.join(",")})
-    VALUES ${placeholders}
-    ON CONFLICT (numero) DO UPDATE SET
-      ${cols
-        .filter((c) => c !== "numero")
-        .map((c) => `${c} = EXCLUDED.${c}`)
-        .join(", ")};
-  `;
-
-  try {
-    await client.query("BEGIN;");
-    await client.query("SET LOCAL lock_timeout = '10s';");
-    await client.query(insertSQL, params);
-    await client.query("COMMIT;");
-  } catch (err) {
-    await client.query("ROLLBACK;");
-    console.error("Erro ao inserir:", err.message);
-  }
-}
-
-async function main() {
-  const client = new Client(dbCfg);
   try {
     await client.connect();
-    await ensureTable(client);
 
-    const allLeadIds = [];
-    let page = 1;
-    while (true) {
-      const res = await callNutshellJSONRPC("findLeads", {
-        query: { status: 0, stageId: 391 },
-        page,
-        limit: 50,
-      });
-      const leads = Array.isArray(res) ? res : res.result ?? [];
-      if (!leads.length) break;
-      allLeadIds.push(...leads.map((l) => l.id));
-      page++;
+    const uniqueTitles = [
+      ...new Set(
+        Object.values(columnMap).filter(
+          (title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title)
+        )
+      ),
+    ];
+
+    const columnTitles = uniqueTitles.map((title) => `"${title}"`);
+
+    if (columnTitles.length === 0) {
+      throw new Error("Nenhum título de coluna válido foi encontrado.");
     }
 
-    const allRows = [];
-    for (let i = 0; i < allLeadIds.length; i += 100) {
-      const batch = allLeadIds.slice(i, i + 100);
-      const tasks = batch.map((id) =>
-        callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
-      );
-      const results = await Promise.all(tasks);
+    // 🔥 Drop da tabela antes de recriar
+    await client.query(`DROP TABLE IF EXISTS ${TABLE_NAME}`);
 
-      const accountMap = {};
-      results.forEach((lead) => {
-        if (lead?.primaryAccount?.id && lead.primaryAccount?.name) {
-          accountMap[lead.primaryAccount.id] = lead.primaryAccount.name;
-        }
+    const createQuery = `
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT,
+        name TEXT,
+        ${columnTitles.map((title) => `${title} TEXT`).join(", ")},
+        grupo TEXT
+      );
+    `;
+    await client.query(createQuery);
+
+    const insertQuery = `
+      INSERT INTO ${TABLE_NAME} (
+        id, name, ${columnTitles.join(", ")}, grupo
+      ) VALUES (
+        ${[
+          "$1",
+          "$2",
+          ...columnTitles.map((_, i) => `$${i + 3}`),
+          `$${columnTitles.length + 3}`,
+        ].join(", ")}
+      )
+    `;
+
+    for (const item of items) {
+      const col = {};
+      (item.column_values || []).forEach((c) => {
+        if (!c || !columnMap[c.id]) return;
+        col[columnMap[c.id]] = c.text ?? "";
       });
 
-      const rows = results
-        .filter(Boolean)
-        .map((lead) => mapLeadToRow(lead, accountMap))
-        .filter((r) => r.numero);
-      await upsertRows(client, rows);
-      allRows.push(...rows);
+      const row = [
+        item.id ?? "",
+        item.name ?? "",
+        ...uniqueTitles.map((title) => col[title] ?? ""),
+        item.group?.title ?? "",
+      ];
+
+      await client.query(insertQuery, row);
     }
   } catch (err) {
-    console.error("Erro:", err.message);
+    console.error("Erro ao salvar no banco:", err);
+    throw err;
   } finally {
-    await client.end();
+    await client.end().catch(() => {});
   }
 }
 
-export default main;
+export default async function dashReembolso() {
+  try {
+    const columnMap = await getColumnMap();
+    const items = await getMondayData();
+    if (!items.length) {
+      console.log("Nenhum registro retornado do Monday.");
+      return [];
+    }
+    await saveToPostgres(items, columnMap);
+    return items;
+  } catch (err) {
+    console.error("Erro geral:", err);
+    return [];
+  }
+}

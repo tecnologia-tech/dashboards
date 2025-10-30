@@ -124,9 +124,15 @@ async function saveToPostgres(items, columnMap) {
   try {
     await client.connect();
 
-    const columnTitles = Object.values(columnMap)
-      .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
-      .map((title) => `"${title}"`);
+    const uniqueTitles = [
+      ...new Set(
+        Object.values(columnMap).filter(
+          (title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title)
+        )
+      ),
+    ];
+
+    const columnTitles = uniqueTitles.map((title) => `"${title}"`);
 
     if (columnTitles.length === 0) {
       throw new Error("Nenhum título de coluna válido foi encontrado.");
@@ -167,9 +173,7 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        ...Object.values(columnMap)
-          .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
-          .map((title) => col[title] ?? ""),
+        ...uniqueTitles.map((title) => col[title] ?? ""),
         item.group?.title ?? "",
       ];
 
