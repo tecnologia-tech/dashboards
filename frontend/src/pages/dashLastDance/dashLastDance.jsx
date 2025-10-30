@@ -6,7 +6,13 @@ export default function DashLastDance() {
   const [dados, setDados] = useState([]);
   const [total, setTotal] = useState(0);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
-  const [valorDiario, setValorDiario] = useState(298000); // valor em reais para exibir como 298K
+  const [valorDiario, setValorDiario] = useState(0);
+  const [mostrarVideo, setMostrarVideo] = useState(false);
+  const [somaOpen, setSomaOpen] = useState(0);
+
+  // 🧪 Simule a data aqui (ou deixe como null para usar a data real)
+  const dataSimulada = "2025-10-31"; // Altere para testar outras datas
+  const hoje = dataSimulada ? new Date(dataSimulada) : new Date();
 
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
@@ -20,13 +26,10 @@ export default function DashLastDance() {
 
   function formatarValorAbreviado(valor) {
     if (valor === null || valor === undefined || isNaN(valor)) return "0K";
-
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
-
     if (numero >= 1000000) {
       return (numero / 1000000).toFixed(1).replace(".0", "") + "M";
     }
-
     return (numero / 1000).toFixed(0) + "K";
   }
 
@@ -58,6 +61,20 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
+        const hojeZerado = new Date(hoje);
+        hojeZerado.setHours(0, 0, 0, 0);
+
+        const somaHoje = data
+          .filter((item) => {
+            const dataItem = new Date(item.data);
+            dataItem.setHours(0, 0, 0, 0);
+            return (
+              pipelinesParaDescontar.includes(item.pipeline) &&
+              dataItem.getTime() === hojeZerado.getTime()
+            );
+          })
+          .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -73,15 +90,59 @@ export default function DashLastDance() {
 
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
+
+        const ultimoDiaMes = new Date(
+          hoje.getFullYear(),
+          hoje.getMonth() + 1,
+          0
+        );
+        const diasRestantes = ultimoDiaMes.getDate() - hoje.getDate() + 1;
+
+        const valorBaseDiario = restante / diasRestantes;
+        const valorFinalDiario = valorBaseDiario - somaHoje;
+        const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
+
+        // 🧪 Logs para teste
+        console.log("Data simulada:", hoje.toLocaleDateString());
+        console.log("Dias restantes:", diasRestantes);
+        console.log("Valor restante para meta:", restante);
+        console.log("Valor base diário:", valorBaseDiario);
+        console.log("Soma hoje:", somaHoje);
+        console.log("Valor final diário:", valorFinalDiario);
+
+        setValorDiario(valorCorrigido);
+        setMostrarVideo(valorCorrigido <= 0);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
     }
 
-    fetchData();
-  }, []);
+    async function fetchSomaOpen() {
+      try {
+        const response = await fetch(
+          "http://localhost:3001/api/dash_geralcsopen"
+        );
+        const data = await response.json();
+        const soma = data.reduce(
+          (acc, item) => acc + (parseFloat(item.valor) || 0),
+          0
+        );
+        setSomaOpen(soma);
+      } catch (error) {
+        console.error("Erro ao buscar soma de dash_geralcsopen:", error);
+      }
+    }
 
-  const mostrarVideo = valorDiario <= 0;
+    fetchData();
+    fetchSomaOpen();
+
+    const intervalo = setInterval(() => {
+      fetchData();
+      fetchSomaOpen();
+    }, 60000);
+
+    return () => clearInterval(intervalo);
+  }, [hoje]);
 
   return (
     <div className={styles.root}>
@@ -118,7 +179,7 @@ export default function DashLastDance() {
             <thead>
               <tr>
                 <th>Lead</th>
-                <th>Company Name</th>
+                <th>Empresa</th>
                 <th>Assigned</th>
                 <th>Valor</th>
               </tr>
@@ -137,7 +198,7 @@ export default function DashLastDance() {
         </div>
         <div className={styles.meta}>
           <p className={styles.metaTitulo}>Projeção Geral</p>
-          <p className={styles.metaValor}>R$300.000,00</p>
+          <p className={styles.metaValor}>{formatarValor(somaOpen)}</p>
         </div>
       </div>
     </div>
