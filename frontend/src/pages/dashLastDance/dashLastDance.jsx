@@ -10,8 +10,7 @@ export default function DashLastDance() {
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  // 🧪 Simule a data aqui (ou deixe como null para usar a data real)
-  const dataSimulada = "2025-10-31"; // Altere para testar outras datas
+  const dataSimulada = "2025-10-31";
   const hoje = dataSimulada ? new Date(dataSimulada) : new Date();
 
   function formatarValor(valor) {
@@ -37,7 +36,7 @@ export default function DashLastDance() {
     async function fetchData() {
       try {
         const response = await fetch(
-          "http://localhost:3001/api/dash_geralcsWon"
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const data = await response.json();
 
@@ -120,8 +119,9 @@ export default function DashLastDance() {
     async function fetchSomaOpen() {
       try {
         const response = await fetch(
-          "http://localhost:3001/api/dash_geralcsopen"
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
         );
+
         const data = await response.json();
         const soma = data.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
