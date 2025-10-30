@@ -222,4 +222,4 @@ async function main() {
   }
 }
 
-export { main };
+export default main;

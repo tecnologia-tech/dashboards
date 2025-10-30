@@ -1,4 +1,0 @@
-backend/
-  ├─ index.js   
-  ├─ api.js     frontend/ (React)
-  ├─ usa fetch/axios e consome http://localhost:3001/clientes

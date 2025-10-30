@@ -43,6 +43,19 @@ const TABLES = [
   "dash_reembolso",
 ];
 
+// 🛡️ Captura erros globais para evitar crash
+process.on("uncaughtException", (err) => {
+  console.error(
+    `\n💥 Erro não tratado (uncaughtException): ${err.message || err}`
+  );
+  process.stdout.write("\x07");
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error(`\n💥 Rejeição não tratada (unhandledRejection): ${reason}`);
+  process.stdout.write("\x07");
+});
+
 async function fetchTableData(tableName) {
   const client = new Client({
     host: PGHOST,
@@ -53,60 +66,117 @@ async function fetchTableData(tableName) {
     ssl: false,
   });
 
+  client.on("error", (err) => {
+    console.error(
+      `🚨 Erro crítico no cliente PG (${tableName}): ${err.message}`
+    );
+    process.stdout.write("\x07");
+  });
+
   try {
     await client.connect();
     const result = await client.query(`SELECT * FROM ${tableName}`);
     return result.rows;
   } catch (err) {
-    console.error(`Erro ao buscar dados da tabela ${tableName}:`, err.message);
+    console.error(
+      `🚨 Erro ao buscar dados da tabela ${tableName}: ${err.message}`
+    );
+    process.stdout.write("\x07");
     return [];
   } finally {
-    await client.end().catch(() => {});
-  }
-}
-
-async function runDashModulesAndLoadData() {
-  console.log("Iniciando execução dos módulos dash_*.js");
-
-  const files = fs
-    .readdirSync(__dirname)
-    .filter((file) => file.startsWith("dash_") && file.endsWith(".js"));
-
-  for (const file of files) {
-    const modulePath = pathToFileURL(path.join(__dirname, file)).href;
-    console.log(`🔧 Executando módulo: ${file}`);
     try {
-      const dashModule = await import(modulePath);
-      if (typeof dashModule.default === "function") {
-        await dashModule.default();
-        console.log(`✅ Módulo ${file} executado com sucesso.`);
-      } else {
-        console.warn(`⚠️ Módulo ${file} não exporta uma função default.`);
-      }
+      await client.end();
     } catch (err) {
-      console.error(`❌ Erro ao executar ${file}:`, err.message || err);
+      console.warn(
+        `⚠️ Falha ao encerrar conexão PG (${tableName}): ${err.message}`
+      );
     }
   }
-  const results = {};
-
-  for (const table of TABLES) {
-    const data = await fetchTableData(table);
-    results[table] = data;
-  }
-
-  dashboardData = results;
-  console.log(
-    `[${new Date().toLocaleString()}] ✅ Dados prontos para o frontend`
-  );
 }
 
-async function loopDashModules() {
+async function runGeralcsWonLoop() {
+  const file = "dash_geralcsWon.js";
+  const modulePath = pathToFileURL(path.join(__dirname, file)).href;
+
   while (true) {
-    await runDashModulesAndLoadData();
+    console.log(
+      `[${new Date().toLocaleTimeString()}] 🔁 Executando módulo: ${file}`
+    );
+    try {
+      const dashModule = await import(modulePath + `?update=${Date.now()}`);
+      if (typeof dashModule.default === "function") {
+        await dashModule.default();
+        console.count(
+          `[${new Date().toLocaleTimeString()}] ✅ Finalizado: ${file}`
+        );
+      } else {
+        console.warn(
+          `[${new Date().toLocaleTimeString()}] ⚠️ Módulo ${file} não exporta função default`
+        );
+      }
+    } catch (err) {
+      console.error(
+        `\n🚨 ERRO no módulo ${file} às ${new Date().toLocaleTimeString()}:\n→ ${
+          err.message || err
+        }\n`
+      );
+      process.stdout.write("\x07");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 }
 
-loopDashModules();
+async function runOtherDashModulesLoop() {
+  const files = fs
+    .readdirSync(__dirname)
+    .filter(
+      (file) =>
+        file.startsWith("dash_") &&
+        file.endsWith(".js") &&
+        file !== "dash_geralcsWon.js"
+    );
+
+  while (true) {
+    for (const file of files) {
+      const modulePath = pathToFileURL(path.join(__dirname, file)).href;
+      console.log(
+        `[${new Date().toLocaleTimeString()}] ▶️ Executando módulo: ${file}`
+      );
+      try {
+        const dashModule = await import(modulePath + `?update=${Date.now()}`);
+        if (typeof dashModule.default === "function") {
+          await dashModule.default();
+          console.count(
+            `[${new Date().toLocaleTimeString()}] ✅ Finalizado: ${file}`
+          );
+        } else {
+          console.warn(
+            `[${new Date().toLocaleTimeString()}] ⚠️ Módulo ${file} não exporta função default`
+          );
+        }
+      } catch (err) {
+        console.error(
+          `\n🚨 ERRO no módulo ${file} às ${new Date().toLocaleTimeString()}:\n→ ${
+            err.message || err
+          }\n`
+        );
+        process.stdout.write("\x07");
+      }
+    }
+
+    const results = {};
+    for (const table of TABLES) {
+      const data = await fetchTableData(table);
+      results[table] = data;
+    }
+    dashboardData = results;
+    console.log(`[${new Date().toLocaleTimeString()}] 📊 Dados atualizados`);
+  }
+}
+
+console.log("🚀 Iniciando loops dos módulos...");
+Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
 app.get("/api/dashboard", (req, res) => {
   res.json(dashboardData);
