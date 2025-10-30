@@ -180,7 +180,7 @@ export default function DashLastDance() {
               <tr>
                 <th>Lead</th>
                 <th>Empresa</th>
-                <th>Assigned</th>
+                <th>Vendedor</th>
                 <th>Valor</th>
               </tr>
             </thead>
