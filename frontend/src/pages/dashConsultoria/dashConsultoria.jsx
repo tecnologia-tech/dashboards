@@ -1,6 +1,3 @@
-import stephany from "../../assets/stephany.png";
-import jenifer from "../../assets/jenifer.png";
-import jayanne from "../../assets/jayanne.png";
 import dozeP from "../../assets/dozeP.png";
 import styles from "./dashConsultoria.module.css";
 
