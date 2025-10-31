@@ -87,9 +87,23 @@ export default function DashLastDance() {
           // Último dia: mostra o restante
           valorCorrigido = restante;
         } else {
-          // Divide igualmente pelos dias restantes (inclui hoje)
-          const diasRestantesCorrigido =
-            ultimoDiaDoMes.getDate() - hoje.getDate() + 1;
+          // Corrige timezone e garante cálculo exato
+          const hojeBR = new Date(
+            hoje.getFullYear(),
+            hoje.getMonth(),
+            hoje.getDate()
+          );
+          const ultimoDiaBR = new Date(
+            hoje.getFullYear(),
+            hoje.getMonth() + 1,
+            0
+          );
+
+          const diferencaDias =
+            Math.ceil((ultimoDiaBR - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
+
+          const diasRestantesCorrigido = Math.max(diferencaDias, 1);
+
           valorCorrigido = restante / diasRestantesCorrigido;
         }
 
