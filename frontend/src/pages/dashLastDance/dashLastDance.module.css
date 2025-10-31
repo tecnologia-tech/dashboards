@@ -145,3 +145,13 @@
   object-fit: cover;
   border-radius: 10px;
 }
+.videoLoop {
+  width: 80%;              /* 🔧 aumenta a largura do vídeo */
+  max-width: 900px;        /* 🔧 limite máximo */
+  height: auto;            /* mantém proporção */
+  object-fit: cover;
+  border-radius: 20px;
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
+  display: block;
+  margin: 0 auto;          /* centraliza horizontalmente */
+}

@@ -251,15 +251,6 @@ export default function DashLastDance() {
                 e.target.muted = false;
                 e.target.volume = 1.0;
               }}
-              style={{
-                width: "50%",
-                maxWidth: "600px",
-                height: "auto",
-                borderRadius: "20px",
-                boxShadow: "0 0 25px rgba(255,255,255,0.3)",
-                display: "block",
-                margin: "0 auto",
-              }}
             />
           ) : (
             <>
