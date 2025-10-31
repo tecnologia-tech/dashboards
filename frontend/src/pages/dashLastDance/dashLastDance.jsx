@@ -96,21 +96,6 @@ export default function DashLastDance() {
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
 
         setValorDiario(valorCorrigido);
-
-        // Exibe o vídeo por 10 segundos se valorDiario <= 0
-        if (valorCorrigido <= 0) {
-          setMostrarVideo(true);
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          timeoutRef.current = setTimeout(() => {
-            setMostrarVideo(false);
-          }, 10000);
-        } else {
-          setMostrarVideo(false);
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-        }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
@@ -145,6 +130,16 @@ export default function DashLastDance() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [hoje]);
+
+  useEffect(() => {
+    if (valorDiario <= 0) {
+      setMostrarVideo(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        setMostrarVideo(false);
+      }, 10000);
+    }
+  }, [valorDiario]);
 
   return (
     <div className={styles.root}>
