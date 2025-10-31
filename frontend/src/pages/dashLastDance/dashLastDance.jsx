@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import styles from "./dashLastDance.module.css";
 import logolastdance from "../../assets/lastdance.png";
 
@@ -8,7 +8,12 @@ export default function DashLastDance() {
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
+  const [loopInfinito, setLoopInfinito] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
+
+  const ultimaLeadIdRef = useRef(null);
+  const audioRef = useRef(null);
+  const timerRef = useRef(null);
 
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
@@ -27,11 +32,6 @@ export default function DashLastDance() {
   useEffect(() => {
     async function fetchData() {
       try {
-        console.log(
-          "🕒 Data local (Brasil):",
-          hojeBR.toLocaleDateString("pt-BR")
-        );
-
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
@@ -55,6 +55,19 @@ export default function DashLastDance() {
           .slice(0, 3);
         setDados(dadosFiltrados);
 
+        // 🧠 Detecta nova lead
+        const idMaisRecente = dadosFiltrados[0]?.lead_id;
+        if (
+          ultimaLeadIdRef.current &&
+          idMaisRecente !== ultimaLeadIdRef.current &&
+          !loopInfinito
+        ) {
+          console.log("🎉 Nova lead detectada:", idMaisRecente);
+          tocarVideoEAudioTemporario();
+        }
+        ultimaLeadIdRef.current = idMaisRecente;
+
+        // 📊 Cálculos
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -83,8 +96,6 @@ export default function DashLastDance() {
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
 
-        console.log("💵 Soma hoje:", somaHoje);
-
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -108,21 +119,19 @@ export default function DashLastDance() {
           Math.ceil((ultimoDiaDoMes - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
         const diasRestantesCorrigido = Math.max(diferencaDias, 1);
 
-        console.log("📆 Dias restantes:", diasRestantesCorrigido);
-
         const valorBaseDiario =
           diasRestantesCorrigido === 1
             ? restante
             : restante / diasRestantesCorrigido;
 
         const valorFinalDiario = Math.max(valorBaseDiario - somaHoje, 0);
-
-        console.log("💰 Valor restante:", restante);
-        console.log("📊 Valor base diário:", valorBaseDiario);
-        console.log("🏁 Valor final diário:", valorFinalDiario);
-
         setValorDiario(Number(valorFinalDiario.toFixed(2)));
-        setMostrarVideo(valorFinalDiario <= 0);
+
+        // 🏁 Se atingir meta → vídeo e áudio infinito
+        if (valorFinalDiario <= 0 && !loopInfinito) {
+          setLoopInfinito(true);
+          tocarVideoEAudioInfinito();
+        }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
@@ -153,21 +162,46 @@ export default function DashLastDance() {
     }, 60000);
 
     return () => clearInterval(intervalo);
-  }, [hojeBR]);
+  }, [hojeBR, loopInfinito]);
+
+  // 🎥 Função auxiliar: vídeo/áudio por 15s
+  function tocarVideoEAudioTemporario() {
+    setMostrarVideo(true);
+
+    // toca áudio
+    const audio = new Audio("/audios/comemora.mp3");
+    audioRef.current = audio;
+    audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
+
+    // para após 15s
+    timerRef.current = setTimeout(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      setMostrarVideo(false);
+    }, 15000);
+  }
+
+  // 🎥 Função auxiliar: vídeo/áudio infinito
+  function tocarVideoEAudioInfinito() {
+    clearTimeout(timerRef.current);
+    setMostrarVideo(true);
+
+    const audio = new Audio("/audios/comemora.mp3");
+    audioRef.current = audio;
+    audio.loop = true;
+    audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
+  }
+
+  // limpeza
   useEffect(() => {
-    let audio;
-    if (mostrarVideo) {
-      audio = new Audio("/videos/hino.mp3");
-      audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
-
-      const stop = setTimeout(() => {
-        audio.pause();
-        audio.currentTime = 0;
-      }, 15000);
-
-      return () => clearTimeout(stop);
-    }
-  }, [mostrarVideo]);
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
     <div className={styles.root}>
@@ -182,8 +216,9 @@ export default function DashLastDance() {
               className={styles.videoLoop}
               src="/videos/comemora.mp4"
               autoPlay
-              muted 
+              muted
               playsInline
+              loop={loopInfinito}
             />
           ) : (
             <>
