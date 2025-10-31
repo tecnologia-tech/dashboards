@@ -1,3 +1,4 @@
+// dash_compras.js — versão corrigida e segura
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import pkg from "pg";
@@ -12,9 +13,11 @@ dotenv.config({ path: path.join(__dirname, "banco.env") });
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
+
 const MONDAY_BOARD_ID = "18206014428";
 const TABLE_NAME = "dash_compras";
 
+// ====== QUERY BASE DO MONDAY ======
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -34,6 +37,7 @@ const MONDAY_QUERY = `
   }
 `;
 
+// ====== MAPEAMENTO DE COLUNAS ======
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -61,14 +65,12 @@ async function getColumnMap() {
 
   const map = {};
   columns.forEach((col) => {
-    if (col.id && col.title) {
-      map[col.id] = col.title;
-    }
+    if (col.id && col.title) map[col.id] = col.title;
   });
-
   return map;
 }
 
+// ====== BUSCAR TODOS OS ITENS DO MONDAY ======
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
@@ -83,11 +85,7 @@ async function getMondayData() {
       },
       body: JSON.stringify({
         query: MONDAY_QUERY,
-        variables: {
-          board_id: MONDAY_BOARD_ID,
-          limit,
-          cursor,
-        },
+        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
       }),
     });
 
@@ -100,7 +98,6 @@ async function getMondayData() {
 
     const data = await response.json();
     const itemsPage = data?.data?.boards?.[0]?.items_page;
-
     if (!itemsPage) break;
 
     allItems.push(...(itemsPage.items || []));
@@ -110,6 +107,7 @@ async function getMondayData() {
   return allItems;
 }
 
+// ====== SALVAR NO POSTGRES ======
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -123,22 +121,30 @@ async function saveToPostgres(items, columnMap) {
   try {
     await client.connect();
 
-    const columnTitles = Object.values(columnMap)
-      .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
-      .map((title) => `"${title}"`);
+    // Sanitizar nomes de colunas para evitar erros de espaço/acentos
+    const cleanName = (title) =>
+      title
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "")
+        .trim();
 
-    if (columnTitles.length === 0) {
-      throw new Error("Nenhum título de coluna válido foi encontrado.");
-    }
+    const columnTitles = Object.values(columnMap)
+      .filter((title) => !!title)
+      .map((title) => `"${cleanName(title)}"`);
+
+    if (columnTitles.length === 0)
+      throw new Error("Nenhum título de coluna válido encontrado.");
 
     const createQuery = `
-  CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-    id TEXT,
-    name TEXT,
-    ${columnTitles.map((title) => `${title} TEXT`).join(", ")},
-    grupo TEXT
-  );
-`;
+      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+        id TEXT,
+        name TEXT,
+        ${columnTitles.map((title) => `${title} TEXT`).join(", ")},
+        grupo TEXT
+      );
+    `;
     await client.query(createQuery);
 
     await client.query(`DELETE FROM ${TABLE_NAME}`);
@@ -160,37 +166,45 @@ async function saveToPostgres(items, columnMap) {
       const col = {};
       (item.column_values || []).forEach((c) => {
         if (!c || !columnMap[c.id]) return;
-        col[columnMap[c.id]] = c.text ?? "";
+        const key = cleanName(columnMap[c.id]);
+        col[key] = c.text ?? "";
       });
 
       const row = [
         item.id ?? "",
         item.name ?? "",
         ...Object.values(columnMap)
-          .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
-          .map((title) => col[title] ?? ""),
+          .filter((title) => !!title)
+          .map((title) => col[cleanName(title)] ?? ""),
         item.group?.title ?? "",
       ];
 
       await client.query(insertQuery, row);
     }
   } catch (err) {
+    console.error(`Erro ao salvar ${TABLE_NAME}: ${err.message}`);
     throw err;
   } finally {
     await client.end().catch(() => {});
   }
 }
 
+// ====== EXECUÇÃO PRINCIPAL ======
 export default async function dashCompras() {
   const columnMap = await getColumnMap();
   const items = await getMondayData();
+
   if (!items.length) {
     console.log("Nenhum registro retornado do Monday");
     return [];
   }
+
   await saveToPostgres(items, columnMap);
   return items;
 }
 
-// Executa diretamente no terminal
-dashCompras();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  dashCompras().catch((e) =>
+    console.error("Erro na execução direta:", e.message)
+  );
+}
