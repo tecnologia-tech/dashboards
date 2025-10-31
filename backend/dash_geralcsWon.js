@@ -36,9 +36,7 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-// 🔹 Reutiliza conexões HTTP
 const httpsAgent = new https.Agent({ keepAlive: true });
-// 🔹 Controla paralelismo (ajuste conforme limite da API)
 const limit = pLimit(10);
 
 function sleep(ms) {
@@ -93,17 +91,42 @@ function mapLeadToRow(lead) {
   const id_primary_company = lead.primaryAccount?.id ?? "";
   const id_primary_person = lead.contacts?.[0]?.id ?? "";
   return {
-    numero: id,
-    valor,
+    data,
+    pipeline,
     empresa,
     assigned,
+    valor,
+    numero: id, // apenas referência, não é mais PK
     tag,
-    pipeline,
-    data,
     id_primary_company,
     id_primary_person,
-    lead_id: id,
+    lead_id: id, // PK verdadeira
   };
+}
+
+async function ensureTable(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS dash_geralcsWon (
+      data TIMESTAMP,
+      pipeline TEXT,
+      empresa TEXT,
+      assigned TEXT,
+      valor NUMERIC(12,2),
+      numero TEXT,
+      tag TEXT,
+      id_primary_company TEXT,
+      id_primary_person TEXT,
+      lead_id TEXT PRIMARY KEY
+    );
+  `);
+
+  // 🔹 Limpa duplicados antigos baseados em "numero"
+  await client.query(`
+    DELETE FROM dash_geralcsWon a
+    USING dash_geralcsWon b
+    WHERE a.ctid < b.ctid
+    AND a.numero = b.numero;
+  `);
 }
 
 async function upsertRows(client, rows) {
@@ -120,9 +143,9 @@ async function upsertRows(client, rows) {
   const sql = `
     INSERT INTO dash_geralcsWon (${cols.join(",")})
     VALUES ${placeholders}
-    ON CONFLICT (numero) DO UPDATE SET
+    ON CONFLICT (lead_id) DO UPDATE SET
     ${cols
-      .filter((c) => c !== "numero")
+      .filter((c) => c !== "lead_id")
       .map((c) => `${c}=EXCLUDED.${c}`)
       .join(", ")}
   `;
@@ -133,20 +156,7 @@ export default async function main() {
   const client = new Client(dbCfg);
   await client.connect();
 
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS dash_geralcsWon (
-      data TIMESTAMP,
-      pipeline TEXT,
-      empresa TEXT,
-      assigned TEXT,
-      valor NUMERIC(12,2),
-      numero TEXT PRIMARY KEY,
-      tag TEXT,
-      id_primary_company TEXT,
-      id_primary_person TEXT,
-      lead_id TEXT
-    );
-  `);
+  await ensureTable(client);
 
   const ids = await getAllLeadIds();
 
@@ -164,7 +174,7 @@ export default async function main() {
   );
 
   await Promise.all(tasks);
-  console.log(`💾 Gravando ${rows.length} leads no banco...`);
+  console.log(`💾 Gravando ${rows.length} leads (atualizando por lead_id)...`);
   await upsertRows(client, rows);
 
   await client.end();
