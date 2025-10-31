@@ -81,6 +81,7 @@ export default function DashLastDance() {
           "REPEDIDO 🏆",
           "GANHO PRODUTO 🧸",
           "GANHO FRETE 🚢",
+          "FEE MENSAL 🚀",
         ];
 
         const filtrados = data.filter((i) => pipelines.includes(i.pipeline));
