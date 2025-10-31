@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import styles from "./dashLastDance.module.css";
 import logolastdance from "../../assets/lastdance.png";
 
@@ -7,8 +7,10 @@ export default function DashLastDance() {
   const [total, setTotal] = useState(0);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
-  const [mostrarVideo, setMostrarVideo] = useState(false);
+  const [mostrarVideoTemporario, setMostrarVideoTemporario] = useState(false);
+  const [valorDiarioNegativo, setValorDiarioNegativo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
+  const timeoutRef = useRef(null);
 
   const dataSimulada = "2025-10-31";
   const hoje = dataSimulada ? new Date(dataSimulada) : new Date();
@@ -94,14 +96,15 @@ export default function DashLastDance() {
         const valorFinalDiario = valorBaseDiario - somaHoje;
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
 
-        console.log("Data simulada:", hoje.toLocaleDateString());
-        console.log("Valor restante para meta:", restante);
-        console.log("Valor base diário (forçado):", valorBaseDiario);
-        console.log("Soma hoje:", somaHoje);
-        console.log("Valor final diário:", valorFinalDiario);
-
         setValorDiario(valorCorrigido);
-        setMostrarVideo(valorCorrigido <= 0);
+        setValorDiarioNegativo(valorCorrigido <= 0);
+
+        // Exibe o vídeo por 10 segundos após cada atualização
+        setMostrarVideoTemporario(true);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          setMostrarVideoTemporario(false);
+        }, 10000);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
@@ -112,7 +115,6 @@ export default function DashLastDance() {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
         );
-
         const data = await response.json();
         const soma = data.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
@@ -132,8 +134,13 @@ export default function DashLastDance() {
       fetchSomaOpen();
     }, 60000);
 
-    return () => clearInterval(intervalo);
+    return () => {
+      clearInterval(intervalo);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [hoje]);
+
+  const mostrarVideo = mostrarVideoTemporario || valorDiarioNegativo;
 
   return (
     <div className={styles.root}>
