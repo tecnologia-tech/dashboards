@@ -18,7 +18,7 @@ const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
 
 const app = express();
 const PORT = 3001;
-
+const INTERVAL_MIN = 15; // minutos entre ciclos
 let dashboardData = {};
 
 app.use(cors());
@@ -26,7 +26,7 @@ app.use(express.json());
 
 const pool = new Pool({
   host: PGHOST,
-  port: PGPORT ? parseInt(PGPORT, 10) : undefined,
+  port: parseInt(PGPORT || "5432"),
   database: PGDATABASE,
   user: PGUSER,
   password: PGPASSWORD,
@@ -53,12 +53,12 @@ const TABLES = [
   "dash_reembolso",
 ];
 
-process.on("uncaughtException", (err) => {
-  console.error(`💥 Erro não tratado: ${err.message}`);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error(`💥 Rejeição não tratada: ${reason}`);
-});
+process.on("uncaughtException", (err) =>
+  console.error(`💥 Erro não tratado: ${err.message}`)
+);
+process.on("unhandledRejection", (reason) =>
+  console.error(`💥 Rejeição não tratada: ${reason}`)
+);
 
 async function fetchTableData(tableName) {
   const client = await pool.connect();
@@ -72,6 +72,7 @@ async function fetchTableData(tableName) {
     client.release();
   }
 }
+
 async function runGeralcsWonLoop() {
   const file = "dash_geralcsWon.js";
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
@@ -79,22 +80,22 @@ async function runGeralcsWonLoop() {
   while (true) {
     const start = Date.now();
     console.log(
-      `🔁 [${new Date().toLocaleTimeString()}] Executando ${file}...`
+      `🔁 Executando ${file} às ${new Date().toLocaleTimeString()}...`
     );
     try {
       const dashModule = await import(modulePath + `?v=${Date.now()}`);
       if (typeof dashModule.default === "function") {
         await dashModule.default();
-        const duration = ((Date.now() - start) / 1000).toFixed(2);
-        console.log(
-          `✅ [${new Date().toLocaleTimeString()}] ${file} finalizado (${duration}s)`
-        );
-      } else {
-        console.warn(`⚠️ ${file} não exporta função default`);
+        const dur = ((Date.now() - start) / 1000).toFixed(1);
+        console.log(`✅ ${file} concluído em ${dur}s`);
       }
     } catch (err) {
-      console.error(`🚨 ERRO no ${file}: ${err.message}`);
+      console.error(`🚨 Erro em ${file}: ${err.message}`);
     }
+    console.log(
+      `🕒 Aguardando ${INTERVAL_MIN} minutos para próxima execução...`
+    );
+    await new Promise((r) => setTimeout(r, INTERVAL_MIN * 60 * 1000));
   }
 }
 
@@ -110,19 +111,13 @@ async function runOtherDashModulesLoop() {
     for (const file of files) {
       const modulePath = pathToFileURL(path.join(__dirname, file)).href;
       const start = Date.now();
-      console.log(
-        `▶️ [${new Date().toLocaleTimeString()}] Iniciando ${file}...`
-      );
+      console.log(`▶️ Iniciando ${file}...`);
       try {
         const dashModule = await import(modulePath + `?v=${Date.now()}`);
         if (typeof dashModule.default === "function") {
           await dashModule.default();
-          const duration = ((Date.now() - start) / 1000).toFixed(2);
-          console.log(
-            `✅ [${new Date().toLocaleTimeString()}] ${file} finalizado (${duration}s)`
-          );
-        } else {
-          console.warn(`⚠️ ${file} não exporta função default`);
+          const dur = ((Date.now() - start) / 1000).toFixed(1);
+          console.log(`✅ ${file} finalizado (${dur}s)`);
         }
       } catch (err) {
         console.error(`🚨 Erro no ${file}: ${err.message}`);
@@ -130,27 +125,23 @@ async function runOtherDashModulesLoop() {
     }
 
     const results = {};
-    for (const table of TABLES) {
-      results[table] = await fetchTableData(table);
-    }
+    for (const table of TABLES) results[table] = await fetchTableData(table);
     dashboardData = results;
-    console.log(
-      `📊 [${new Date().toLocaleTimeString()}] Dashboard atualizado — ciclo completo finalizado`
-    );
+    console.log(`📊 Dashboard atualizado (${new Date().toLocaleTimeString()})`);
+
+    console.log(`🕒 Aguardando ${INTERVAL_MIN} minutos para próximo ciclo...`);
+    await new Promise((r) => setTimeout(r, INTERVAL_MIN * 60 * 1000));
   }
 }
+
 console.log("🚀 Iniciando loops de atualização...");
 Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
 app.get("/api/dashboard", (req, res) => res.json(dashboardData));
+TABLES.forEach((t) =>
+  app.get(`/api/${t}`, async (req, res) => res.json(await fetchTableData(t)))
+);
 
-TABLES.forEach((t) => {
-  app.get(`/api/${t}`, async (req, res) => {
-    const data = await fetchTableData(t);
-    res.json(data);
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`);
-});
+app.listen(PORT, () =>
+  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`)
+);
