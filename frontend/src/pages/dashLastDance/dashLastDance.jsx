@@ -1,20 +1,15 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import styles from "./dashLastDance.module.css";
 import logolastdance from "../../assets/lastdance.png";
-
 export default function DashLastDance() {
   const [dados, setDados] = useState([]);
   const [total, setTotal] = useState(0);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
-  const [mostrarVideoTemporario, setMostrarVideoTemporario] = useState(false);
-  const [valorDiarioNegativo, setValorDiarioNegativo] = useState(false);
+  const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
-  const timeoutRef = useRef(null);
-
   const dataSimulada = "2025-10-31";
   const hoje = dataSimulada ? new Date(dataSimulada) : new Date();
-
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -24,7 +19,6 @@ export default function DashLastDance() {
       currency: "BRL",
     });
   }
-
   function formatarValorAbreviado(valor) {
     if (valor === null || valor === undefined || isNaN(valor)) return "0K";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -33,7 +27,6 @@ export default function DashLastDance() {
     }
     return (numero / 1000).toFixed(0) + "K";
   }
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -41,19 +34,15 @@ export default function DashLastDance() {
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const data = await response.json();
-
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
-
         setDados(dadosFiltrados);
-
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
         );
         setTotal(soma);
-
         const pipelinesParaDescontar = [
           "IMPORTAÇÃO CONJUNTA 🧩",
           "CONSULTORIA LANNISTER 🦁",
@@ -61,10 +50,8 @@ export default function DashLastDance() {
           "GANHO PRODUTO 🧸",
           "GANHO FRETE 🚢",
         ];
-
         const hojeZerado = new Date(hoje);
         hojeZerado.setHours(0, 0, 0, 0);
-
         const somaHoje = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -75,41 +62,33 @@ export default function DashLastDance() {
             );
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
-
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
             const dentroDeOutubro =
               dataItem >= new Date("2025-10-01") &&
               dataItem <= new Date("2025-10-31");
-
             return (
               pipelinesParaDescontar.includes(item.pipeline) && dentroDeOutubro
             );
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
-
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
-
         const valorBaseDiario = restante / 1;
         const valorFinalDiario = valorBaseDiario - somaHoje;
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
-
+        console.log("Data simulada:", hoje.toLocaleDateString());
+        console.log("Valor restante para meta:", restante);
+        console.log("Valor base diário (forçado):", valorBaseDiario);
+        console.log("Soma hoje:", somaHoje);
+        console.log("Valor final diário:", valorFinalDiario);
         setValorDiario(valorCorrigido);
-        setValorDiarioNegativo(valorCorrigido <= 0);
-
-        // Exibe o vídeo por 10 segundos após cada atualização
-        setMostrarVideoTemporario(true);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          setMostrarVideoTemporario(false);
-        }, 10000);
+        setMostrarVideo(valorCorrigido <= 0);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
     }
-
     async function fetchSomaOpen() {
       try {
         const response = await fetch(
@@ -125,29 +104,19 @@ export default function DashLastDance() {
         console.error("Erro ao buscar soma de dash_geralcsopen:", error);
       }
     }
-
     fetchData();
     fetchSomaOpen();
-
     const intervalo = setInterval(() => {
       fetchData();
       fetchSomaOpen();
     }, 60000);
-
-    return () => {
-      clearInterval(intervalo);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    return () => clearInterval(intervalo);
   }, [hoje]);
-
-  const mostrarVideo = mostrarVideoTemporario || valorDiarioNegativo;
-
   return (
     <div className={styles.root}>
       <div className={styles.header}>
         <img src={logolastdance} alt="Logo LastDance" />
       </div>
-
       <div className={styles.dashboard}>
         <div className={styles.valor}>
           {mostrarVideo ? (
@@ -176,19 +145,14 @@ export default function DashLastDance() {
           <table className={styles.tabela}>
             <thead>
               <tr>
-                <th>Lead</th>
-                <th>Empresa</th>
-                <th>Vendedor</th>
-                <th>Valor</th>
+                <th>Lead</th> <th>Empresa</th> <th>Vendedor</th> <th>Valor</th>
               </tr>
             </thead>
             <tbody>
               {dados.map((item, index) => (
                 <tr key={index}>
-                  <td>{item.lead_id}</td>
-                  <td>{item.empresa}</td>
-                  <td>{item.assigned}</td>
-                  <td>{formatarValor(item.valor)}</td>
+                  <td>{item.lead_id}</td> <td>{item.empresa}</td>
+                  <td>{item.assigned}</td> <td>{formatarValor(item.valor)}</td>
                 </tr>
               ))}
             </tbody>
