@@ -75,7 +75,7 @@ async function fetchTableData(tableName) {
   }
 }
 
-// 🌀 Loop infinito apenas para dash_geralcsWon
+// 🌀 dash_geralcsWon roda em loop infinito, sempre reiniciando
 async function runGeralcsWonLoop() {
   const file = "dash_geralcsWon.js";
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
@@ -96,13 +96,10 @@ async function runGeralcsWonLoop() {
     } catch (err) {
       console.error(`🚨 ERRO no ${file}: ${err.message}`);
     }
-
-    // espera 10s antes de rodar de novo
-    await new Promise((r) => setTimeout(r, 10000));
   }
 }
 
-// 🔁 Loop para os outros módulos (rodam um por vez)
+// 🔁 Outros módulos: rodam um por vez, em sequência contínua, sem pausa
 async function runOtherDashModulesLoop() {
   const files = fs
     .readdirSync(__dirname)
@@ -130,20 +127,17 @@ async function runOtherDashModulesLoop() {
       }
     }
 
-    // Atualiza os dados do dashboard após rodar todos
+    // Após terminar todos, atualiza os dados e reinicia imediatamente
     const results = {};
     for (const table of TABLES) {
       results[table] = await fetchTableData(table);
     }
     dashboardData = results;
     console.log(`[${new Date().toLocaleTimeString()}] 📊 Dashboard atualizado`);
-
-    // espera 15 minutos antes de rodar tudo de novo
-    await new Promise((r) => setTimeout(r, 15 * 60 * 1000));
   }
 }
 
-// 🚀 Inicia os loops
+// 🚀 Inicia os loops paralelos
 console.log("🚀 Iniciando loops de atualização...");
 Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
