@@ -12,6 +12,7 @@ export default function DashLastDance() {
   const [somaOpen, setSomaOpen] = useState(0);
 
   const ultimaLeadIdRef = useRef(null);
+  const idsAntigosRef = useRef([]); // ✅ guarda os IDs já vistos
   const audioRef = useRef(null);
   const timerRef = useRef(null);
 
@@ -84,15 +85,18 @@ export default function DashLastDance() {
 
         setDados(recentes);
 
-        // Detecta lead nova
-        const nova = String(recentes[0]?.lead_id || "");
-        const anterior = String(ultimaLeadIdRef.current || "");
-        if (nova && nova !== anterior && !loopInfinito) {
-          ultimaLeadIdRef.current = nova;
-          console.log("🎉 Nova lead detectada:", nova);
+        // ✅ Detecta se há uma nova linha (lead_id novo)
+        const novosIds = recentes.map((r) => String(r.lead_id));
+        const antigos = idsAntigosRef.current;
+        const novos = novosIds.filter((id) => !antigos.includes(id));
+
+        if (novos.length > 0 && !loopInfinito) {
+          console.log("🎉 Novas leads detectadas:", novos);
+          idsAntigosRef.current = novosIds;
           tocarVideoEAudioTemporario();
-        } else if (!ultimaLeadIdRef.current) {
-          ultimaLeadIdRef.current = nova;
+        } else if (antigos.length === 0) {
+          // primeira vez
+          idsAntigosRef.current = novosIds;
         }
 
         // Cálculos
@@ -248,7 +252,7 @@ export default function DashLastDance() {
                 <th>Lead</th>
                 <th>Empresa</th>
                 <th>Vendedor</th>
-                <th>Pipeline</th> {/* ✅ nova coluna */}
+                <th>Pipeline</th>
                 <th>Valor</th>
               </tr>
             </thead>
@@ -258,7 +262,7 @@ export default function DashLastDance() {
                   <td>{item.lead_id}</td>
                   <td>{item.empresa}</td>
                   <td>{item.assigned}</td>
-                  <td>{item.pipeline}</td> {/* ✅ mostra pipeline */}
+                  <td>{item.pipeline}</td>
                   <td>{formatarValor(item.valor)}</td>
                 </tr>
               ))}
