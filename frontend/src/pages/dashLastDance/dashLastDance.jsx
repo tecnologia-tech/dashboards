@@ -7,8 +7,7 @@ export default function DashLastDance() {
   const [total, setTotal] = useState(0);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
-  const [mostrarVideoTemporario, setMostrarVideoTemporario] = useState(false);
-  const [valorDiarioNegativo, setValorDiarioNegativo] = useState(false);
+  const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
   const timeoutRef = useRef(null);
 
@@ -97,14 +96,21 @@ export default function DashLastDance() {
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
 
         setValorDiario(valorCorrigido);
-        setValorDiarioNegativo(valorCorrigido <= 0);
 
-        // Exibe o vídeo por 10 segundos após cada atualização
-        setMostrarVideoTemporario(true);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          setMostrarVideoTemporario(false);
-        }, 10000);
+        // Exibe o vídeo por 10 segundos se valorDiario <= 0
+        if (valorCorrigido <= 0) {
+          setMostrarVideo(true);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          timeoutRef.current = setTimeout(() => {
+            setMostrarVideo(false);
+          }, 10000);
+        } else {
+          setMostrarVideo(false);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+        }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
@@ -139,8 +145,6 @@ export default function DashLastDance() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [hoje]);
-
-  const mostrarVideo = mostrarVideoTemporario || valorDiarioNegativo;
 
   return (
     <div className={styles.root}>
