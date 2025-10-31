@@ -51,12 +51,21 @@ function extractNumeroFromLead(lead) {
   return String(lead.id ?? lead.leadId ?? "");
 }
 
-function toSQLDateFromISO(isoString) {
+// 🔹 Agora com data + hora + minuto + segundo
+function toSQLDateTimeFromISO(isoString) {
   if (!isoString || typeof isoString !== "string") return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
+  // Ajuste de fuso horário para Brasília (-3h)
   const br = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-  return br.toISOString().slice(0, 10);
+  const pad = (n) => n.toString().padStart(2, "0");
+  const datePart = `${br.getFullYear()}-${pad(br.getMonth() + 1)}-${pad(
+    br.getDate()
+  )}`;
+  const timePart = `${pad(br.getHours())}:${pad(br.getMinutes())}:${pad(
+    br.getSeconds()
+  )}`;
+  return `${datePart} ${timePart}`;
 }
 
 function parseAmountToNumber(valueObj) {
@@ -76,7 +85,7 @@ function formatTags(tags) {
 
 function mapLeadToRow(leadFull) {
   const numero = extractNumeroFromLead(leadFull);
-  const dataSQL = toSQLDateFromISO(
+  const dataSQL = toSQLDateTimeFromISO(
     leadFull.closedTime ?? leadFull.dueTime ?? leadFull.modifiedTime
   );
   const pipeline = leadFull.stageset?.name || leadFull.milestone?.name || "";
@@ -99,7 +108,7 @@ function mapLeadToRow(leadFull) {
       : "";
 
   return {
-    data: dataSQL,
+    data: dataSQL, // agora com data e hora
     pipeline,
     empresa,
     assigned,
@@ -167,7 +176,7 @@ async function safeGetLead(id, retries = 3) {
 async function ensureTable(client) {
   const createSQL = `
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
-      data DATE,
+      data TIMESTAMP,
       pipeline TEXT,
       empresa TEXT,
       assigned TEXT,
@@ -224,7 +233,7 @@ async function main() {
       if (!leads.length) break;
       allLeadIds.push(...leads.map((l) => l.id));
       page++;
-      await sleep(500); // delay entre páginas
+      await sleep(500);
     }
 
     const allRows = [];
@@ -239,7 +248,7 @@ async function main() {
         .filter((r) => r.numero);
       await upsertRows(client, rows);
       allRows.push(...rows);
-      await sleep(1000); 
+      await sleep(1000);
     }
   } catch (err) {
     console.error("💥 Erro geral no módulo dash_geralcsWon:", err.message);

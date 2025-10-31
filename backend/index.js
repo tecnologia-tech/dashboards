@@ -52,12 +52,14 @@ const TABLES = [
   "dash_onboarding",
   "dash_reembolso",
 ];
+
 process.on("uncaughtException", (err) => {
   console.error(`💥 Erro não tratado: ${err.message}`);
 });
 process.on("unhandledRejection", (reason) => {
   console.error(`💥 Rejeição não tratada: ${reason}`);
 });
+
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
@@ -75,14 +77,17 @@ async function runGeralcsWonLoop() {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
 
   while (true) {
-    const start = new Date();
-    console.log(`[${start.toLocaleTimeString()}] 🔁 Executando ${file}`);
+    const start = Date.now();
+    console.log(
+      `🔁 [${new Date().toLocaleTimeString()}] Executando ${file}...`
+    );
     try {
       const dashModule = await import(modulePath + `?v=${Date.now()}`);
       if (typeof dashModule.default === "function") {
         await dashModule.default();
+        const duration = ((Date.now() - start) / 1000).toFixed(2);
         console.log(
-          `[${new Date().toLocaleTimeString()}] ✅ Finalizado ${file}`
+          `✅ [${new Date().toLocaleTimeString()}] ${file} finalizado (${duration}s)`
         );
       } else {
         console.warn(`⚠️ ${file} não exporta função default`);
@@ -92,6 +97,7 @@ async function runGeralcsWonLoop() {
     }
   }
 }
+
 async function runOtherDashModulesLoop() {
   const files = fs
     .readdirSync(__dirname)
@@ -103,13 +109,17 @@ async function runOtherDashModulesLoop() {
   while (true) {
     for (const file of files) {
       const modulePath = pathToFileURL(path.join(__dirname, file)).href;
-      console.log(`[${new Date().toLocaleTimeString()}] ▶️ Rodando ${file}`);
+      const start = Date.now();
+      console.log(
+        `▶️ [${new Date().toLocaleTimeString()}] Iniciando ${file}...`
+      );
       try {
         const dashModule = await import(modulePath + `?v=${Date.now()}`);
         if (typeof dashModule.default === "function") {
           await dashModule.default();
+          const duration = ((Date.now() - start) / 1000).toFixed(2);
           console.log(
-            `[${new Date().toLocaleTimeString()}] ✅ ${file} finalizado`
+            `✅ [${new Date().toLocaleTimeString()}] ${file} finalizado (${duration}s)`
           );
         } else {
           console.warn(`⚠️ ${file} não exporta função default`);
@@ -118,15 +128,17 @@ async function runOtherDashModulesLoop() {
         console.error(`🚨 Erro no ${file}: ${err.message}`);
       }
     }
+
     const results = {};
     for (const table of TABLES) {
       results[table] = await fetchTableData(table);
     }
     dashboardData = results;
-    console.log(`[${new Date().toLocaleTimeString()}] 📊 Dashboard atualizado`);
+    console.log(
+      `📊 [${new Date().toLocaleTimeString()}] Dashboard atualizado — ciclo completo finalizado`
+    );
   }
 }
-
 console.log("🚀 Iniciando loops de atualização...");
 Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
