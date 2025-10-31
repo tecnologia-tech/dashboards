@@ -123,7 +123,9 @@ async function saveToPostgres(items, columnMap) {
 
   try {
     await client.connect();
+    console.log(`Conectado ao banco: ${PGDATABASE}`);
 
+    // Mapeia colunas válidas
     const columnList = Object.entries(columnMap)
       .filter(([id, title]) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
       .map(([id, title]) => ({ id, title }));
@@ -136,8 +138,9 @@ async function saveToPostgres(items, columnMap) {
       .map(({ title }) => `"${title}_text" TEXT, "${title}_value" TEXT`)
       .join(", ");
 
+    await client.query(`DROP TABLE IF EXISTS ${TABLE_NAME} CASCADE;`);
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+      CREATE TABLE ${TABLE_NAME} (
         id TEXT,
         name TEXT,
         grupo TEXT,
@@ -145,7 +148,7 @@ async function saveToPostgres(items, columnMap) {
       );
     `);
 
-    await client.query(`DELETE FROM ${TABLE_NAME}`);
+    console.log(`Tabela ${TABLE_NAME} criada com sucesso!`);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (
@@ -161,7 +164,6 @@ async function saveToPostgres(items, columnMap) {
         ].join(", ")}
       )
     `;
-
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
@@ -188,8 +190,12 @@ async function saveToPostgres(items, columnMap) {
 
       await client.query(insertQuery, row);
     }
+
+    console.log(
+      `✅ Inseridos ${items.length} registros na tabela ${TABLE_NAME}`
+    );
   } catch (err) {
-    console.error("Erro ao salvar no banco:", err);
+    console.error("❌ Erro ao salvar no banco:", err);
     throw err;
   } finally {
     await client.end().catch(() => {});
@@ -198,15 +204,18 @@ async function saveToPostgres(items, columnMap) {
 
 export default async function dashIXDelivery() {
   try {
+    console.log("▶️ Executando módulo dash_ixdelivery...");
     const columnMap = await getColumnMap();
     const items = await getMondayData();
+
     if (!items.length) {
       console.log("Nenhum registro retornado do Monday.");
       return [];
     }
+
     await saveToPostgres(items, columnMap);
   } catch (err) {
-    console.error("Erro geral:", err);
+    console.error("❌ Erro geral:", err);
     return [];
   }
 }
