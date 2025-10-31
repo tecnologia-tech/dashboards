@@ -182,7 +182,7 @@ export default function DashLastDance() {
               className={styles.videoLoop}
               src="/videos/comemora.mp4"
               autoPlay
-              muted // som do vídeo fica mudo, o áudio vem do mp3
+              muted 
               playsInline
             />
           ) : (
