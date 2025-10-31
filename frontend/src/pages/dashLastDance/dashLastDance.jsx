@@ -10,10 +10,11 @@ export default function DashLastDance() {
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  const dataSimulada = "2025-10-31";
-  const hoje = dataSimulada ? new Date(dataSimulada) : new Date();
+  // ✅ Corrige automaticamente fuso horário (Render = UTC)
+  const hoje = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+  );
 
-  // -------- FORMATADORES --------
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -24,7 +25,6 @@ export default function DashLastDance() {
     });
   }
 
-  // -------- USE EFFECT PRINCIPAL --------
   useEffect(() => {
     async function fetchData() {
       try {
@@ -33,13 +33,12 @@ export default function DashLastDance() {
         );
         const data = await response.json();
 
-        // Ordena e pega os 3 últimos registros
+        // Últimos 3 registros
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
         setDados(dadosFiltrados);
 
-        // Soma total dos 3 últimos
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -54,11 +53,7 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // ----- FILTROS -----
-        const hojeZerado = new Date(hoje);
-        hojeZerado.setHours(0, 0, 0, 0);
-
-        // Soma total de outubro (meta mensal)
+        // Soma total de outubro
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -74,43 +69,35 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // ----- CÁLCULO DO VALOR DIÁRIO -----
-        const ultimoDiaDoMes = new Date(
+        // ✅ Corrige cálculo de diferença de dias (sem bug de UTC)
+        const hojeBR = new Date(
+          hoje.getFullYear(),
+          hoje.getMonth(),
+          hoje.getDate()
+        );
+        const ultimoDiaBR = new Date(
           hoje.getFullYear(),
           hoje.getMonth() + 1,
           0
         );
-        const isUltimoDiaDoMes = hoje.getDate() === ultimoDiaDoMes.getDate();
+
+        const diferencaDias =
+          Math.ceil((ultimoDiaBR - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
+
+        const diasRestantesCorrigido = Math.max(diferencaDias, 1);
 
         let valorCorrigido;
-        if (isUltimoDiaDoMes) {
-          // Último dia: mostra o restante
-          valorCorrigido = restante;
+        if (diasRestantesCorrigido === 1) {
+          valorCorrigido = restante; // último dia → igual ao restante
         } else {
-          // Corrige timezone e garante cálculo exato
-          const hojeBR = new Date(
-            hoje.getFullYear(),
-            hoje.getMonth(),
-            hoje.getDate()
-          );
-          const ultimoDiaBR = new Date(
-            hoje.getFullYear(),
-            hoje.getMonth() + 1,
-            0
-          );
-
-          const diferencaDias =
-            Math.ceil((ultimoDiaBR - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
-
-          const diasRestantesCorrigido = Math.max(diferencaDias, 1);
-
           valorCorrigido = restante / diasRestantesCorrigido;
         }
 
         valorCorrigido = Number(valorCorrigido.toFixed(2));
 
-        console.log("Data simulada:", hoje.toLocaleDateString());
-        console.log("Valor restante para meta:", restante);
+        console.log("Data detectada (BR):", hoje.toLocaleDateString("pt-BR"));
+        console.log("Dias restantes:", diasRestantesCorrigido);
+        console.log("Valor restante:", restante);
         console.log("Valor diário calculado:", valorCorrigido);
 
         setValorDiario(valorCorrigido);
@@ -120,7 +107,6 @@ export default function DashLastDance() {
       }
     }
 
-    // Soma Open
     async function fetchSomaOpen() {
       try {
         const response = await fetch(
@@ -137,11 +123,9 @@ export default function DashLastDance() {
       }
     }
 
-    // Executa ao montar
     fetchData();
     fetchSomaOpen();
 
-    // Atualiza a cada 60s
     const intervalo = setInterval(() => {
       fetchData();
       fetchSomaOpen();
@@ -150,7 +134,6 @@ export default function DashLastDance() {
     return () => clearInterval(intervalo);
   }, [hoje]);
 
-  // -------- RENDER --------
   return (
     <div className={styles.root}>
       <div className={styles.header}>
