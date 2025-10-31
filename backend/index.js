@@ -97,7 +97,7 @@ async function runGeralcsWonLoop() {
 
   while (true) {
     const startTime = Date.now();
-    console.log(colors.cyan(`▶️  ${file} iniciado às ${hora()}`));
+    console.log(colors.cyan(`▶️  ${file} iniciado`));
 
     try {
       const dashModule = await import(modulePath + `?v=${Date.now()}`);
@@ -105,9 +105,7 @@ async function runGeralcsWonLoop() {
         await dashModule.default();
       }
       const dur = formatTime(Date.now() - startTime);
-      console.log(
-        colors.green(`✅ ${file} concluído às ${hora()} (tempo: ${dur})`)
-      );
+      console.log(colors.green(`✅ ${file} concluído (tempo: ${dur})`));
     } catch (err) {
       console.error(colors.red(`🚨 Erro em ${file}: ${err.message}`));
     }
@@ -131,7 +129,7 @@ async function runOtherDashModulesLoop() {
     for (const file of files) {
       const modulePath = pathToFileURL(path.join(__dirname, file)).href;
       const startTime = Date.now();
-      console.log(colors.magenta(`▶️  Iniciando ${file} às ${hora()}`));
+      console.log(colors.magenta(`▶️  Iniciando ${file} `));
 
       try {
         const dashModule = await import(modulePath + `?v=${Date.now()}`);
@@ -139,9 +137,7 @@ async function runOtherDashModulesLoop() {
           await dashModule.default();
         }
         const dur = formatTime(Date.now() - startTime);
-        console.log(
-          colors.green(`✅ ${file} finalizado às ${hora()} (tempo: ${dur})`)
-        );
+        console.log(colors.green(`✅ ${file} finalizado (tempo: ${dur})`));
       } catch (err) {
         console.error(colors.red(`🚨 Erro no ${file}: ${err.message}`));
       }
@@ -151,7 +147,7 @@ async function runOtherDashModulesLoop() {
     for (const table of TABLES) results[table] = await fetchTableData(table);
     dashboardData = results;
 
-    console.log(colors.cyan(`📊 Dashboard atualizado às ${hora()}`));
+    console.log(colors.cyan(`📊 Dashboard atualizado`));
     console.log(
       colors.yellow(
         `🕒 Aguardando ${INTERVAL_MIN} minutos para o próximo ciclo...\n`
