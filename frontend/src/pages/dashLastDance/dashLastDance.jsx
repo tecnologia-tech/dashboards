@@ -29,6 +29,7 @@ export default function DashLastDance() {
     });
   }
 
+  // 🔁 Função principal
   useEffect(() => {
     async function fetchData() {
       try {
@@ -37,6 +38,9 @@ export default function DashLastDance() {
         );
         const rawData = await response.json();
 
+        if (!Array.isArray(rawData) || rawData.length === 0) return;
+
+        // converte UTC → BR
         const data = rawData.map((item) => {
           const dataOriginal = new Date(item.data);
           const dataBrasil = new Date(
@@ -55,19 +59,20 @@ export default function DashLastDance() {
           .slice(0, 3);
         setDados(dadosFiltrados);
 
-        // 🧠 Detecta nova lead
-        const idMaisRecente = dadosFiltrados[0]?.lead_id;
-        if (
-          ultimaLeadIdRef.current &&
-          idMaisRecente !== ultimaLeadIdRef.current &&
-          !loopInfinito
-        ) {
-          console.log("🎉 Nova lead detectada:", idMaisRecente);
-          tocarVideoEAudioTemporario();
-        }
-        ultimaLeadIdRef.current = idMaisRecente;
+        // 🧠 DETECTAR NOVA LEAD
+        const idMaisRecente = String(dadosFiltrados[0]?.lead_id || "");
+        const idAnterior = String(ultimaLeadIdRef.current || "");
 
-        // 📊 Cálculos
+        if (idMaisRecente && idMaisRecente !== idAnterior && !loopInfinito) {
+          console.log("🎉 Nova lead detectada:", idMaisRecente);
+          ultimaLeadIdRef.current = idMaisRecente;
+          tocarVideoEAudioTemporario();
+        } else if (!ultimaLeadIdRef.current) {
+          // primeira carga — apenas define o valor inicial
+          ultimaLeadIdRef.current = idMaisRecente;
+        }
+
+        // cálculos de valores
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -127,8 +132,9 @@ export default function DashLastDance() {
         const valorFinalDiario = Math.max(valorBaseDiario - somaHoje, 0);
         setValorDiario(Number(valorFinalDiario.toFixed(2)));
 
-        // 🏁 Se atingir meta → vídeo e áudio infinito
+        // 🏁 meta batida → loop infinito
         if (valorFinalDiario <= 0 && !loopInfinito) {
+          console.log("🏁 Meta batida — ativando loop infinito!");
           setLoopInfinito(true);
           tocarVideoEAudioInfinito();
         }
@@ -159,29 +165,28 @@ export default function DashLastDance() {
     const intervalo = setInterval(() => {
       fetchData();
       fetchSomaOpen();
-    }, 60000);
+    }, 30000); // verifica a cada 30s
 
     return () => clearInterval(intervalo);
   }, [hojeBR, loopInfinito]);
 
-  // 🎥 Função auxiliar: vídeo/áudio por 15s
+  // 🎥 Funções auxiliares
   function tocarVideoEAudioTemporario() {
     setMostrarVideo(true);
+    console.log("▶️ Tocando vídeo e áudio por 15s...");
 
-    // toca áudio
     const audio = new Audio("/audios/comemora.mp3");
     audioRef.current = audio;
     audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
 
-    // para após 15s
     timerRef.current = setTimeout(() => {
+      console.log("⏹️ Encerrando comemoração temporária");
       audio.pause();
       audio.currentTime = 0;
       setMostrarVideo(false);
     }, 15000);
   }
 
-  // 🎥 Função auxiliar: vídeo/áudio infinito
   function tocarVideoEAudioInfinito() {
     clearTimeout(timerRef.current);
     setMostrarVideo(true);
@@ -189,10 +194,11 @@ export default function DashLastDance() {
     const audio = new Audio("/audios/comemora.mp3");
     audioRef.current = audio;
     audio.loop = true;
-    audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
+    audio
+      .play()
+      .catch((err) => console.error("Erro ao tocar áudio infinito:", err));
   }
 
-  // limpeza
   useEffect(() => {
     return () => {
       if (audioRef.current) {
