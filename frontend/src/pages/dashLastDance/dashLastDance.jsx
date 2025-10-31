@@ -32,11 +32,6 @@ export default function DashLastDance() {
     return (numero / 1000).toFixed(0) + "K";
   }
 
-  function calcularDiasRestantesIncluindoHoje(data) {
-    const ultimoDia = new Date(data.getFullYear(), data.getMonth() + 1, 0);
-    return ultimoDia.getDate() - data.getDate() + 1;
-  }
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -95,16 +90,14 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        const diasParaAcabarMes = calcularDiasRestantesIncluindoHoje(hoje);
-
-        const valorBaseDiario = restante / diasParaAcabarMes;
+        // 🔧 Forçando divisão por 1 para teste
+        const valorBaseDiario = restante / 1;
         const valorFinalDiario = valorBaseDiario - somaHoje;
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
 
         console.log("Data simulada:", hoje.toLocaleDateString());
-        console.log("Dias restantes:", diasParaAcabarMes);
         console.log("Valor restante para meta:", restante);
-        console.log("Valor base diário:", valorBaseDiario);
+        console.log("Valor base diário (forçado):", valorBaseDiario);
         console.log("Soma hoje:", somaHoje);
         console.log("Valor final diário:", valorFinalDiario);
 
