@@ -34,11 +34,11 @@ export default function DashLastDance() {
     const audio = new Audio("/audios/comemora.mp3");
     audio.loop = false;
     audio.volume = 1.0;
-    audio.muted = true; // começa mutado pra desbloquear autoplay
+    audio.muted = true;
     audio.play().then(() => {
       audio.pause();
       audio.currentTime = 0;
-      audio.muted = false; // pronto pra tocar quando precisar
+      audio.muted = false;
       audioRef.current = audio;
       console.log("🎧 Autoplay de áudio desbloqueado");
     });
@@ -66,9 +66,22 @@ export default function DashLastDance() {
           return { ...item, data: br };
         });
 
-        const recentes = [...data]
+        const pipelines = [
+          "IMPORTAÇÃO CONJUNTA 🧩",
+          "CONSULTORIA LANNISTER 🦁",
+          "REPEDIDO 🏆",
+          "GANHO PRODUTO 🧸",
+          "GANHO FRETE 🚢",
+        ];
+
+        // Filtra os dados apenas dos pipelines relevantes
+        const filtrados = data.filter((i) => pipelines.includes(i.pipeline));
+
+        // Ordena e pega os 3 mais recentes
+        const recentes = [...filtrados]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
+
         setDados(recentes);
 
         // Detecta lead nova
@@ -89,36 +102,21 @@ export default function DashLastDance() {
         );
         setTotal(soma);
 
-        const pipelines = [
-          "IMPORTAÇÃO CONJUNTA 🧩",
-          "CONSULTORIA LANNISTER 🦁",
-          "REPEDIDO 🏆",
-          "GANHO PRODUTO 🧸",
-          "GANHO FRETE 🚢",
-        ];
-
         const hojeZ = new Date(hojeBR);
         hojeZ.setHours(0, 0, 0, 0);
 
-        const somaHoje = data
+        const somaHoje = filtrados
           .filter((i) => {
             const di = new Date(i.data);
             di.setHours(0, 0, 0, 0);
-            return (
-              pipelines.includes(i.pipeline) &&
-              di.getTime() === hojeZ.getTime()
-            );
+            return di.getTime() === hojeZ.getTime();
           })
           .reduce((acc, i) => acc + (parseFloat(i.valor) || 0), 0);
 
-        const somaWons = data
+        const somaWons = filtrados
           .filter((i) => {
             const di = new Date(i.data);
-            return (
-              pipelines.includes(i.pipeline) &&
-              di.getMonth() === 9 &&
-              di.getFullYear() === 2025
-            );
+            return di.getMonth() === 9 && di.getFullYear() === 2025;
           })
           .reduce((acc, i) => acc + (parseFloat(i.valor) || 0), 0);
 
@@ -179,7 +177,7 @@ export default function DashLastDance() {
   function tocarVideoEAudioTemporario() {
     setMostrarVideo(true);
     if (audioRef.current) {
-      audioRef.current.loop = true; // vídeo curto, então som precisa repetir
+      audioRef.current.loop = true;
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch((e) => console.warn("Áudio bloqueado:", e));
     }
@@ -226,7 +224,7 @@ export default function DashLastDance() {
               autoPlay
               muted
               playsInline
-              loop // 👈 sempre loopa o vídeo
+              loop
             />
           ) : (
             <>
@@ -250,6 +248,7 @@ export default function DashLastDance() {
                 <th>Lead</th>
                 <th>Empresa</th>
                 <th>Vendedor</th>
+                <th>Pipeline</th> {/* ✅ nova coluna */}
                 <th>Valor</th>
               </tr>
             </thead>
@@ -259,6 +258,7 @@ export default function DashLastDance() {
                   <td>{item.lead_id}</td>
                   <td>{item.empresa}</td>
                   <td>{item.assigned}</td>
+                  <td>{item.pipeline}</td> {/* ✅ mostra pipeline */}
                   <td>{formatarValor(item.valor)}</td>
                 </tr>
               ))}
