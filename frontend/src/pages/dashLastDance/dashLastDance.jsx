@@ -11,7 +11,6 @@ export default function DashLastDance() {
   const [loopInfinito, setLoopInfinito] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  const audioRef = useRef(null);
   const timerRef = useRef(null);
   const idsAntigosRef = useRef([]);
 
@@ -29,25 +28,10 @@ export default function DashLastDance() {
     });
   }
 
-  // 🔊 cria um único elemento de áudio reutilizável
   useEffect(() => {
-    const audio = new Audio("/audios/comemora.mp3");
-    audio.loop = false;
-    audio.volume = 1.0;
-    audio.muted = true;
-    audio.play().then(() => {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.muted = false;
-      audioRef.current = audio;
-      console.log("🎧 Autoplay de áudio desbloqueado");
-    });
-
-    // Carrega histórico salvo
+    // Carrega histórico de IDs salvos
     const salvos = localStorage.getItem("lastdance_leads");
-    if (salvos) {
-      idsAntigosRef.current = JSON.parse(salvos);
-    }
+    if (salvos) idsAntigosRef.current = JSON.parse(salvos);
   }, []);
 
   useEffect(() => {
@@ -81,14 +65,13 @@ export default function DashLastDance() {
         ];
 
         const filtrados = data.filter((i) => pipelines.includes(i.pipeline));
-
         const recentes = [...filtrados]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
 
         setDados(recentes);
 
-        // ✅ Detecta lead nova de verdade (persistente entre reloads)
+        // Detecta lead nova persistente
         const novosIds = recentes.map((r) => String(r.lead_id));
         const antigos = idsAntigosRef.current;
         const novos = novosIds.filter((id) => !antigos.includes(id));
@@ -97,9 +80,8 @@ export default function DashLastDance() {
           console.log("🎉 Novas leads detectadas:", novos);
           idsAntigosRef.current = novosIds;
           localStorage.setItem("lastdance_leads", JSON.stringify(novosIds));
-          tocarVideoEAudioTemporario();
+          tocarVideoTemporario();
         } else if (antigos.length === 0) {
-          // Primeira carga (não dispara vídeo)
           idsAntigosRef.current = novosIds;
           localStorage.setItem("lastdance_leads", JSON.stringify(novosIds));
         }
@@ -148,7 +130,7 @@ export default function DashLastDance() {
         if (valorFinal <= 0 && !loopInfinito) {
           console.log("🏁 Meta batida! Loop infinito ativado");
           setLoopInfinito(true);
-          tocarVideoEAudioInfinito();
+          tocarVideoInfinito();
         }
       } catch (err) {
         console.error("Erro ao buscar dados:", err);
@@ -182,40 +164,22 @@ export default function DashLastDance() {
     return () => clearInterval(int);
   }, [hojeBR, loopInfinito]);
 
-  // --- FUNÇÕES DE ÁUDIO/VÍDEO ---
-  function tocarVideoEAudioTemporario() {
+  // --- FUNÇÕES DE VÍDEO ---
+  function tocarVideoTemporario() {
     setMostrarVideo(true);
-    if (audioRef.current) {
-      audioRef.current.loop = true;
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch((e) => console.warn("Áudio bloqueado:", e));
-    }
-
+    clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current.loop = false;
-      }
       setMostrarVideo(false);
     }, 15000);
   }
 
-  function tocarVideoEAudioInfinito() {
+  function tocarVideoInfinito() {
     clearTimeout(timerRef.current);
     setMostrarVideo(true);
-    if (audioRef.current) {
-      audioRef.current.loop = true;
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch((e) => console.warn("Áudio bloqueado:", e));
-    }
   }
 
   useEffect(() => {
-    return () => {
-      if (audioRef.current) audioRef.current.pause();
-      clearTimeout(timerRef.current);
-    };
+    return () => clearTimeout(timerRef.current);
   }, []);
 
   return (
@@ -229,11 +193,16 @@ export default function DashLastDance() {
           {mostrarVideo ? (
             <video
               className={styles.videoLoop}
-              src="/videos/comemora.mp4"
+              src="/videos/comemora.mp4" // 🔊 vídeo com som embutido
               autoPlay
-              muted
               playsInline
               loop
+              muted={false}
+              onPlay={(e) => {
+                e.target.muted = false;
+                e.target.volume = 1.0;
+              }}
+              style={{ width: "100%", height: "auto" }}
             />
           ) : (
             <>
