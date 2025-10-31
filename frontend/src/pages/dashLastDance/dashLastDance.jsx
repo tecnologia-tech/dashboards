@@ -10,9 +10,10 @@ export default function DashLastDance() {
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  // ✅ Corrige automaticamente fuso horário (Render = UTC)
+  // ✅ Força timezone do Brasil (UTC-3) — corrige bug da Render (UTC)
+  const agora = new Date();
   const hoje = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+    agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
   function formatarValor(valor) {
@@ -28,6 +29,12 @@ export default function DashLastDance() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // Loga a data local no servidor (BR)
+        console.log(
+          "🕒 Data local (Brasil):",
+          hoje.toLocaleDateString("pt-BR")
+        );
+
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
@@ -53,7 +60,7 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // Soma total de outubro
+        // --- Soma de outubro ---
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -69,7 +76,7 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // ✅ Corrige cálculo de diferença de dias (sem bug de UTC)
+        // --- Cálculo de dias restantes no mês ---
         const hojeBR = new Date(
           hoje.getFullYear(),
           hoje.getMonth(),
@@ -95,10 +102,10 @@ export default function DashLastDance() {
 
         valorCorrigido = Number(valorCorrigido.toFixed(2));
 
-        console.log("Data detectada (BR):", hoje.toLocaleDateString("pt-BR"));
-        console.log("Dias restantes:", diasRestantesCorrigido);
-        console.log("Valor restante:", restante);
-        console.log("Valor diário calculado:", valorCorrigido);
+        console.log("📅 Data simulada:", hoje.toLocaleDateString("pt-BR"));
+        console.log("📆 Dias restantes:", diasRestantesCorrigido);
+        console.log("💰 Valor restante para meta:", restante);
+        console.log("📊 Valor diário calculado:", valorCorrigido);
 
         setValorDiario(valorCorrigido);
         setMostrarVideo(valorCorrigido <= 0);
