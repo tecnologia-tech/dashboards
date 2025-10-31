@@ -1,21 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import styles from "./dashLastDance.module.css";
 import logolastdance from "../../assets/lastdance.png";
 
 export default function DashLastDance() {
   const [dados, setDados] = useState([]);
-  const [total, setTotal] = useState(0); // ✅ corrigido
+  const [total, setTotal] = useState(0);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  // ✅ Data atual no fuso do Brasil (UTC-3)
+  // Guarda os IDs das leads antigas pra comparar
+  const leadsAnterioresRef = useRef([]);
+
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
-  // ✅ Função para formatar valores monetários
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -29,17 +30,12 @@ export default function DashLastDance() {
   useEffect(() => {
     async function fetchData() {
       try {
-        console.log(
-          "🕒 Data local (Brasil):",
-          hojeBR.toLocaleDateString("pt-BR")
-        );
-
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const rawData = await response.json();
 
-        // ✅ Converte datas UTC (.000Z) para horário do Brasil (UTC-3)
+        // Converte UTC → Brasil
         const data = rawData.map((item) => {
           const dataOriginal = new Date(item.data);
           const dataBrasil = new Date(
@@ -53,13 +49,32 @@ export default function DashLastDance() {
           return { ...item, data: dataBrasil };
         });
 
-        // ✅ Últimos 3 registros
+        // Ordena por data e pega os 3 mais recentes
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
+
+        // ⚡ Detecta nova lead
+        const idsAtuais = dadosFiltrados.map((d) => d.lead_id);
+        const idsAntigos = leadsAnterioresRef.current;
+
+        const novaLead = idsAtuais.some((id) => !idsAntigos.includes(id));
+
+        if (novaLead) {
+          console.log("🎉 Nova lead detectada! Mostrando vídeo...");
+          setMostrarVideo(true);
+
+          // Oculta vídeo depois de 15 segundos
+          setTimeout(() => {
+            console.log("⏱️ Ocultando vídeo após 15s...");
+            setMostrarVideo(false);
+          }, 15000);
+        }
+
+        leadsAnterioresRef.current = idsAtuais;
         setDados(dadosFiltrados);
 
-        // ✅ Soma total (para debug)
+        // Soma total
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -74,10 +89,9 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // ✅ Soma de hoje
+        // Soma de hoje
         const hojeZerado = new Date(hojeBR);
         hojeZerado.setHours(0, 0, 0, 0);
-
         const somaHoje = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -89,16 +103,14 @@ export default function DashLastDance() {
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
 
-        console.log("💵 Soma hoje:", somaHoje);
-
-        // ✅ Soma total de outubro (sem timezone)
+        // Soma total do mês
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
             return (
               pipelinesParaDescontar.includes(item.pipeline) &&
-              dataItem.getMonth() === 9 && // outubro (0 = jan)
-              dataItem.getFullYear() === 2025
+              dataItem.getMonth() === hojeBR.getMonth() &&
+              dataItem.getFullYear() === hojeBR.getFullYear()
             );
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
@@ -106,7 +118,7 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // ✅ Cálculo dos dias restantes
+        // Dias restantes do mês
         const ultimoDiaDoMes = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
@@ -116,22 +128,13 @@ export default function DashLastDance() {
           Math.ceil((ultimoDiaDoMes - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
         const diasRestantesCorrigido = Math.max(diferencaDias, 1);
 
-        console.log("📆 Dias restantes:", diasRestantesCorrigido);
-
-        // ✅ Valor diário
         const valorBaseDiario =
           diasRestantesCorrigido === 1
             ? restante
             : restante / diasRestantesCorrigido;
 
         const valorFinalDiario = Math.max(valorBaseDiario - somaHoje, 0);
-
-        console.log("💰 Valor restante:", restante);
-        console.log("📊 Valor base diário:", valorBaseDiario);
-        console.log("🏁 Valor final diário:", valorFinalDiario);
-
         setValorDiario(Number(valorFinalDiario.toFixed(2)));
-        setMostrarVideo(valorFinalDiario <= 0);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
