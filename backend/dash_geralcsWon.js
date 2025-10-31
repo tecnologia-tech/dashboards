@@ -33,6 +33,10 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
   if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
@@ -116,35 +120,48 @@ async function callNutshellJSONRPC(method, params = {}) {
     id: String(Date.now()),
   };
 
-  try {
-    const res = await fetch(NUTSHELL_API_URL, {
-      method: "POST",
-      headers: {
-        Authorization: AUTH_HEADER,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+  const res = await fetch(NUTSHELL_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: AUTH_HEADER,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-    const json = await res.json().catch(() => null);
+  const json = await res.json().catch(() => null);
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    if (!json) {
-      throw new Error("Resposta inválida da API (não é JSON)");
-    }
-
-    if (json.error) {
-      throw new Error(`Erro da API: ${JSON.stringify(json.error)}`);
-    }
-
-    return json.result;
-  } catch (err) {
-    console.error(`❌ Erro na chamada Nutshell (${method}):`, err.message);
-    throw err;
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
+
+  if (!json) {
+    throw new Error("Resposta inválida da API (não é JSON)");
+  }
+
+  if (json.error) {
+    throw new Error(`Erro da API: ${JSON.stringify(json.error)}`);
+  }
+
+  return json.result;
+}
+
+async function safeGetLead(id, retries = 3) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await callNutshellJSONRPC("getLead", { leadId: id });
+    } catch (err) {
+      if (err.message.includes("429")) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.warn(`⏳ Aguardando ${delay}ms por limite de requisição...`);
+        await sleep(delay);
+      } else {
+        throw err;
+      }
+    }
+  }
+  console.warn(`⚠️ Falha permanente ao buscar lead ${id}`);
+  return null;
 }
 
 async function ensureTable(client) {
@@ -207,17 +224,13 @@ async function main() {
       if (!leads.length) break;
       allLeadIds.push(...leads.map((l) => l.id));
       page++;
+      await sleep(500); // delay entre páginas
     }
 
     const allRows = [];
-    for (let i = 0; i < allLeadIds.length; i += 100) {
-      const batch = allLeadIds.slice(i, i + 100);
-      const tasks = batch.map((id) =>
-        callNutshellJSONRPC("getLead", { leadId: id }).catch((err) => {
-          console.warn(`⚠️ Falha ao buscar lead ${id}: ${err.message}`);
-          return null;
-        })
-      );
+    for (let i = 0; i < allLeadIds.length; i += 25) {
+      const batch = allLeadIds.slice(i, i + 25);
+      const tasks = batch.map((id) => safeGetLead(id));
       const results = await Promise.all(tasks);
 
       const rows = results
@@ -226,6 +239,7 @@ async function main() {
         .filter((r) => r.numero);
       await upsertRows(client, rows);
       allRows.push(...rows);
+      await sleep(1000); 
     }
   } catch (err) {
     console.error("💥 Erro geral no módulo dash_geralcsWon:", err.message);
