@@ -29,7 +29,6 @@ export default function DashLastDance() {
     });
   }
 
-  // 🔁 Função principal
   useEffect(() => {
     async function fetchData() {
       try {
@@ -40,7 +39,6 @@ export default function DashLastDance() {
 
         if (!Array.isArray(rawData) || rawData.length === 0) return;
 
-        // converte UTC → BR
         const data = rawData.map((item) => {
           const dataOriginal = new Date(item.data);
           const dataBrasil = new Date(
@@ -59,20 +57,18 @@ export default function DashLastDance() {
           .slice(0, 3);
         setDados(dadosFiltrados);
 
-        // 🧠 DETECTAR NOVA LEAD
+        // 🔍 Detecta nova lead
         const idMaisRecente = String(dadosFiltrados[0]?.lead_id || "");
         const idAnterior = String(ultimaLeadIdRef.current || "");
 
         if (idMaisRecente && idMaisRecente !== idAnterior && !loopInfinito) {
-          console.log("🎉 Nova lead detectada:", idMaisRecente);
           ultimaLeadIdRef.current = idMaisRecente;
           tocarVideoEAudioTemporario();
         } else if (!ultimaLeadIdRef.current) {
-          // primeira carga — apenas define o valor inicial
           ultimaLeadIdRef.current = idMaisRecente;
         }
 
-        // cálculos de valores
+        // 💰 Cálculos
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -132,9 +128,8 @@ export default function DashLastDance() {
         const valorFinalDiario = Math.max(valorBaseDiario - somaHoje, 0);
         setValorDiario(Number(valorFinalDiario.toFixed(2)));
 
-        // 🏁 meta batida → loop infinito
+        // 🏁 Meta batida → vídeo infinito
         if (valorFinalDiario <= 0 && !loopInfinito) {
-          console.log("🏁 Meta batida — ativando loop infinito!");
           setLoopInfinito(true);
           tocarVideoEAudioInfinito();
         }
@@ -165,46 +160,59 @@ export default function DashLastDance() {
     const intervalo = setInterval(() => {
       fetchData();
       fetchSomaOpen();
-    }, 30000); // verifica a cada 30s
+    }, 30000);
 
     return () => clearInterval(intervalo);
   }, [hojeBR, loopInfinito]);
 
-  // 🎥 Funções auxiliares
+  // 🟢 Força áudio a poder ser tocado automaticamente
+  useEffect(() => {
+    const testAudio = new Audio("/audios/comemora.mp3");
+    testAudio.muted = true;
+    testAudio.play().then(() => {
+      testAudio.pause();
+      testAudio.currentTime = 0;
+      testAudio.muted = false;
+    });
+  }, []);
+
+  // 🔊 Temporário (15s)
   function tocarVideoEAudioTemporario() {
     setMostrarVideo(true);
-    console.log("▶️ Tocando vídeo e áudio por 15s...");
-
     const audio = new Audio("/audios/comemora.mp3");
     audioRef.current = audio;
-    audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
+    audio.muted = false;
+    audio
+      .play()
+      .then(() => console.log("🎵 Áudio tocando (15s)"))
+      .catch((err) => console.warn("⚠️ Áudio bloqueado:", err));
 
     timerRef.current = setTimeout(() => {
-      console.log("⏹️ Encerrando comemoração temporária");
-      audio.pause();
-      audio.currentTime = 0;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setMostrarVideo(false);
     }, 15000);
   }
 
+  // 🔁 Loop infinito
   function tocarVideoEAudioInfinito() {
     clearTimeout(timerRef.current);
     setMostrarVideo(true);
-
     const audio = new Audio("/audios/comemora.mp3");
-    audioRef.current = audio;
     audio.loop = true;
+    audioRef.current = audio;
+    audio.muted = false;
     audio
       .play()
-      .catch((err) => console.error("Erro ao tocar áudio infinito:", err));
+      .then(() => console.log("🎵 Áudio infinito tocando"))
+      .catch((err) => console.warn("⚠️ Áudio bloqueado:", err));
   }
 
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      if (audioRef.current) audioRef.current.pause();
       clearTimeout(timerRef.current);
     };
   }, []);
