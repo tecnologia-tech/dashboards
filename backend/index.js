@@ -53,11 +53,29 @@ const TABLES = [
   "dash_reembolso",
 ];
 
+// Utilitário para formatação de hora e duração
+function formatTime(ms) {
+  const s = (ms / 1000).toFixed(1);
+  return `${s}s`;
+}
+function hora() {
+  return new Date().toLocaleTimeString("pt-BR");
+}
+
+// Cores para console
+const colors = {
+  cyan: (t) => `\x1b[36m${t}\x1b[0m`,
+  green: (t) => `\x1b[32m${t}\x1b[0m`,
+  red: (t) => `\x1b[31m${t}\x1b[0m`,
+  yellow: (t) => `\x1b[33m${t}\x1b[0m`,
+  magenta: (t) => `\x1b[35m${t}\x1b[0m`,
+};
+
 process.on("uncaughtException", (err) =>
-  console.error(`💥 Erro não tratado: ${err.message}`)
+  console.error(colors.red(`💥 Erro não tratado: ${err.message}`))
 );
 process.on("unhandledRejection", (reason) =>
-  console.error(`💥 Rejeição não tratada: ${reason}`)
+  console.error(colors.red(`💥 Rejeição não tratada: ${reason}`))
 );
 
 async function fetchTableData(tableName) {
@@ -66,7 +84,7 @@ async function fetchTableData(tableName) {
     const result = await client.query(`SELECT * FROM ${tableName}`);
     return result.rows;
   } catch (err) {
-    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
+    console.error(colors.red(`🚨 Erro ao buscar ${tableName}: ${err.message}`));
     return [];
   } finally {
     client.release();
@@ -78,22 +96,24 @@ async function runGeralcsWonLoop() {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
 
   while (true) {
-    const start = Date.now();
-    console.log(
-      `🔁 Executando ${file} às ${new Date().toLocaleTimeString()}...`
-    );
+    const startTime = Date.now();
+    console.log(colors.cyan(`▶️  ${file} iniciado às ${hora()}`));
+
     try {
       const dashModule = await import(modulePath + `?v=${Date.now()}`);
       if (typeof dashModule.default === "function") {
         await dashModule.default();
-        const dur = ((Date.now() - start) / 1000).toFixed(1);
-        console.log(`✅ ${file} concluído em ${dur}s`);
       }
+      const dur = formatTime(Date.now() - startTime);
+      console.log(
+        colors.green(`✅ ${file} concluído às ${hora()} (tempo: ${dur})`)
+      );
     } catch (err) {
-      console.error(`🚨 Erro em ${file}: ${err.message}`);
+      console.error(colors.red(`🚨 Erro em ${file}: ${err.message}`));
     }
+
     console.log(
-      `🕒 Aguardando ${INTERVAL_MIN} minutos para próxima execução...`
+      colors.yellow(`🕒 Próxima execução em ${INTERVAL_MIN} minutos...\n`)
     );
     await new Promise((r) => setTimeout(r, INTERVAL_MIN * 60 * 1000));
   }
@@ -110,31 +130,39 @@ async function runOtherDashModulesLoop() {
   while (true) {
     for (const file of files) {
       const modulePath = pathToFileURL(path.join(__dirname, file)).href;
-      const start = Date.now();
-      console.log(`▶️ Iniciando ${file}...`);
+      const startTime = Date.now();
+      console.log(colors.magenta(`▶️  Iniciando ${file} às ${hora()}`));
+
       try {
         const dashModule = await import(modulePath + `?v=${Date.now()}`);
         if (typeof dashModule.default === "function") {
           await dashModule.default();
-          const dur = ((Date.now() - start) / 1000).toFixed(1);
-          console.log(`✅ ${file} finalizado (${dur}s)`);
         }
+        const dur = formatTime(Date.now() - startTime);
+        console.log(
+          colors.green(`✅ ${file} finalizado às ${hora()} (tempo: ${dur})`)
+        );
       } catch (err) {
-        console.error(`🚨 Erro no ${file}: ${err.message}`);
+        console.error(colors.red(`🚨 Erro no ${file}: ${err.message}`));
       }
     }
 
     const results = {};
     for (const table of TABLES) results[table] = await fetchTableData(table);
     dashboardData = results;
-    console.log(`📊 Dashboard atualizado (${new Date().toLocaleTimeString()})`);
 
-    console.log(`🕒 Aguardando ${INTERVAL_MIN} minutos para próximo ciclo...`);
+    console.log(colors.cyan(`📊 Dashboard atualizado às ${hora()}`));
+    console.log(
+      colors.yellow(
+        `🕒 Aguardando ${INTERVAL_MIN} minutos para o próximo ciclo...\n`
+      )
+    );
+
     await new Promise((r) => setTimeout(r, INTERVAL_MIN * 60 * 1000));
   }
 }
 
-console.log("🚀 Iniciando loops de atualização...");
+console.log(colors.cyan("🚀 Iniciando loops de atualização...\n"));
 Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
 app.get("/api/dashboard", (req, res) => res.json(dashboardData));
@@ -143,5 +171,5 @@ TABLES.forEach((t) =>
 );
 
 app.listen(PORT, () =>
-  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`)
+  console.log(colors.green(`🌐 Servidor rodando em http://localhost:${PORT}`))
 );

@@ -70,7 +70,6 @@ async function getAllLeadIds() {
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
   }
-  console.log(`📦 ${ids.length} leads encontrados.`);
   return ids;
 }
 
@@ -168,15 +167,13 @@ export default async function main() {
         rows.push(mapLeadToRow(lead));
       } catch (err) {
         if (err.message.includes("429")) await sleep(2000);
-        console.warn("⚠️ Falha em lead", id);
+        console.warn("Falha em lead", id);
       }
     })
   );
 
   await Promise.all(tasks);
-  console.log(`💾 Gravando ${rows.length} leads (atualizando por lead_id)...`);
   await upsertRows(client, rows);
 
   await client.end();
-  console.log("✅ dash_geralcsWon finalizado com sucesso!");
 }
