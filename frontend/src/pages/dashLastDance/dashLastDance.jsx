@@ -90,16 +90,12 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // 🔧 Forçando divisão por 1 para teste
-        const valorBaseDiario = restante / 1;
-        const valorFinalDiario = valorBaseDiario - somaHoje;
-        const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
+        // 🔧 Forçando valorDiario = 0 para teste
+        const valorCorrigido = 0;
 
         console.log("Data simulada:", hoje.toLocaleDateString());
         console.log("Valor restante para meta:", restante);
-        console.log("Valor base diário (forçado):", valorBaseDiario);
-        console.log("Soma hoje:", somaHoje);
-        console.log("Valor final diário:", valorFinalDiario);
+        console.log("Valor diário (forçado):", valorCorrigido);
 
         setValorDiario(valorCorrigido);
         setMostrarVideo(valorCorrigido <= 0);
