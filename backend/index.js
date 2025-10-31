@@ -52,16 +52,12 @@ const TABLES = [
   "dash_onboarding",
   "dash_reembolso",
 ];
-
-// 🧱 Proteção contra erros não tratados
 process.on("uncaughtException", (err) => {
   console.error(`💥 Erro não tratado: ${err.message}`);
 });
 process.on("unhandledRejection", (reason) => {
   console.error(`💥 Rejeição não tratada: ${reason}`);
 });
-
-// Função para buscar dados de uma tabela
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
@@ -74,8 +70,6 @@ async function fetchTableData(tableName) {
     client.release();
   }
 }
-
-// 🌀 dash_geralcsWon roda em loop infinito, sempre reiniciando
 async function runGeralcsWonLoop() {
   const file = "dash_geralcsWon.js";
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
@@ -98,8 +92,6 @@ async function runGeralcsWonLoop() {
     }
   }
 }
-
-// 🔁 Outros módulos: rodam um por vez, em sequência contínua, sem pausa
 async function runOtherDashModulesLoop() {
   const files = fs
     .readdirSync(__dirname)
@@ -126,8 +118,6 @@ async function runOtherDashModulesLoop() {
         console.error(`🚨 Erro no ${file}: ${err.message}`);
       }
     }
-
-    // Após terminar todos, atualiza os dados e reinicia imediatamente
     const results = {};
     for (const table of TABLES) {
       results[table] = await fetchTableData(table);
@@ -137,11 +127,9 @@ async function runOtherDashModulesLoop() {
   }
 }
 
-// 🚀 Inicia os loops paralelos
 console.log("🚀 Iniciando loops de atualização...");
 Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
-// 🔌 Endpoints da API
 app.get("/api/dashboard", (req, res) => res.json(dashboardData));
 
 TABLES.forEach((t) => {
