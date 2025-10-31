@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import styles from "./dashLastDance.module.css";
 import logolastdance from "../../assets/lastdance.png";
 
@@ -9,9 +9,6 @@ export default function DashLastDance() {
   const [valorDiario, setValorDiario] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
-
-  // Guarda os IDs das leads antigas pra comparar
-  const leadsAnterioresRef = useRef([]);
 
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
@@ -30,12 +27,16 @@ export default function DashLastDance() {
   useEffect(() => {
     async function fetchData() {
       try {
+        console.log(
+          "🕒 Data local (Brasil):",
+          hojeBR.toLocaleDateString("pt-BR")
+        );
+
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const rawData = await response.json();
 
-        // Converte UTC → Brasil
         const data = rawData.map((item) => {
           const dataOriginal = new Date(item.data);
           const dataBrasil = new Date(
@@ -49,32 +50,11 @@ export default function DashLastDance() {
           return { ...item, data: dataBrasil };
         });
 
-        // Ordena por data e pega os 3 mais recentes
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
-
-        // ⚡ Detecta nova lead
-        const idsAtuais = dadosFiltrados.map((d) => d.lead_id);
-        const idsAntigos = leadsAnterioresRef.current;
-
-        const novaLead = idsAtuais.some((id) => !idsAntigos.includes(id));
-
-        if (novaLead) {
-          console.log("🎉 Nova lead detectada! Mostrando vídeo...");
-          setMostrarVideo(true);
-
-          // Oculta vídeo depois de 15 segundos
-          setTimeout(() => {
-            console.log("⏱️ Ocultando vídeo após 15s...");
-            setMostrarVideo(false);
-          }, 15000);
-        }
-
-        leadsAnterioresRef.current = idsAtuais;
         setDados(dadosFiltrados);
 
-        // Soma total
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -89,9 +69,9 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // Soma de hoje
         const hojeZerado = new Date(hojeBR);
         hojeZerado.setHours(0, 0, 0, 0);
+
         const somaHoje = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -103,14 +83,15 @@ export default function DashLastDance() {
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
 
-        // Soma total do mês
+        console.log("💵 Soma hoje:", somaHoje);
+
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
             return (
               pipelinesParaDescontar.includes(item.pipeline) &&
-              dataItem.getMonth() === hojeBR.getMonth() &&
-              dataItem.getFullYear() === hojeBR.getFullYear()
+              dataItem.getMonth() === 9 &&
+              dataItem.getFullYear() === 2025
             );
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
@@ -118,7 +99,6 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // Dias restantes do mês
         const ultimoDiaDoMes = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
@@ -128,13 +108,21 @@ export default function DashLastDance() {
           Math.ceil((ultimoDiaDoMes - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
         const diasRestantesCorrigido = Math.max(diferencaDias, 1);
 
+        console.log("📆 Dias restantes:", diasRestantesCorrigido);
+
         const valorBaseDiario =
           diasRestantesCorrigido === 1
             ? restante
             : restante / diasRestantesCorrigido;
 
         const valorFinalDiario = Math.max(valorBaseDiario - somaHoje, 0);
+
+        console.log("💰 Valor restante:", restante);
+        console.log("📊 Valor base diário:", valorBaseDiario);
+        console.log("🏁 Valor final diário:", valorFinalDiario);
+
         setValorDiario(Number(valorFinalDiario.toFixed(2)));
+        setMostrarVideo(valorFinalDiario <= 0);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
@@ -166,6 +154,20 @@ export default function DashLastDance() {
 
     return () => clearInterval(intervalo);
   }, [hojeBR]);
+  useEffect(() => {
+    let audio;
+    if (mostrarVideo) {
+      audio = new Audio("/videos/hino.mp3");
+      audio.play().catch((err) => console.error("Erro ao tocar áudio:", err));
+
+      const stop = setTimeout(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }, 15000);
+
+      return () => clearTimeout(stop);
+    }
+  }, [mostrarVideo]);
 
   return (
     <div className={styles.root}>
@@ -180,8 +182,7 @@ export default function DashLastDance() {
               className={styles.videoLoop}
               src="/videos/comemora.mp4"
               autoPlay
-              muted
-              loop
+              muted // som do vídeo fica mudo, o áudio vem do mp3
               playsInline
             />
           ) : (
