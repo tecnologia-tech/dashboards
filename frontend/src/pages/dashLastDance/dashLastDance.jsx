@@ -95,15 +95,14 @@ export default function DashLastDance() {
           hoje.getMonth() + 1,
           0
         );
-        const diasRestantes = ultimoDiaMes.getDate() - hoje.getDate() + 1;
+        const diasParaAcabarMes = ultimoDiaMes.getDate() - hoje.getDate() + 1;
 
-        const valorBaseDiario = restante / diasRestantes;
+        const valorBaseDiario = restante / diasParaAcabarMes;
         const valorFinalDiario = valorBaseDiario - somaHoje;
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
 
-        // 🧪 Logs para teste
         console.log("Data simulada:", hoje.toLocaleDateString());
-        console.log("Dias restantes:", diasRestantes);
+        console.log("Dias restantes:", diasParaAcabarMes);
         console.log("Valor restante para meta:", restante);
         console.log("Valor base diário:", valorBaseDiario);
         console.log("Soma hoje:", somaHoje);
@@ -115,6 +114,7 @@ export default function DashLastDance() {
         console.error("Erro ao buscar dados:", error);
       }
     }
+
     async function fetchSomaOpen() {
       try {
         const response = await fetch(
