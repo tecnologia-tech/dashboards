@@ -13,6 +13,7 @@ export default function DashLastDance() {
   const dataSimulada = "2025-10-31";
   const hoje = dataSimulada ? new Date(dataSimulada) : new Date();
 
+  // -------- FORMATADORES --------
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -23,15 +24,7 @@ export default function DashLastDance() {
     });
   }
 
-  function formatarValorAbreviado(valor) {
-    if (valor === null || valor === undefined || isNaN(valor)) return "0K";
-    const numero = typeof valor === "string" ? parseFloat(valor) : valor;
-    if (numero >= 1000000) {
-      return (numero / 1000000).toFixed(1).replace(".0", "") + "M";
-    }
-    return (numero / 1000).toFixed(0) + "K";
-  }
-
+  // -------- USE EFFECT PRINCIPAL --------
   useEffect(() => {
     async function fetchData() {
       try {
@@ -61,22 +54,11 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
+        // ----- FILTROS -----
         const hojeZerado = new Date(hoje);
         hojeZerado.setHours(0, 0, 0, 0);
 
-        // Soma apenas dos Wons de hoje
-        const somaHoje = data
-          .filter((item) => {
-            const dataItem = new Date(item.data);
-            dataItem.setHours(0, 0, 0, 0);
-            return (
-              pipelinesParaDescontar.includes(item.pipeline) &&
-              dataItem.getTime() === hojeZerado.getTime()
-            );
-          })
-          .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
-
-        // Soma total de outubro
+        // Soma total de outubro (meta mensal)
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -92,7 +74,7 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // Último dia do mês
+        // ----- CÁLCULO DO VALOR DIÁRIO -----
         const ultimoDiaDoMes = new Date(
           hoje.getFullYear(),
           hoje.getMonth() + 1,
@@ -100,27 +82,31 @@ export default function DashLastDance() {
         );
         const isUltimoDiaDoMes = hoje.getDate() === ultimoDiaDoMes.getDate();
 
-        // Corrigido: não soma +1, evita inflar valor
-        const diasRestantes = ultimoDiaDoMes.getDate() - hoje.getDate();
+        let valorCorrigido;
+        if (isUltimoDiaDoMes) {
+          // Último dia: mostra o restante
+          valorCorrigido = restante;
+        } else {
+          // Divide igualmente pelos dias restantes (inclui hoje)
+          const diasRestantesCorrigido =
+            ultimoDiaDoMes.getDate() - hoje.getDate() + 1;
+          valorCorrigido = restante / diasRestantesCorrigido;
+        }
 
-        // Corrigido: remove subtração de somaHoje e arredonda
-        const valorCorrigido = isUltimoDiaDoMes
-          ? restante
-          : Math.max(restante / (diasRestantes || 1), 0);
+        valorCorrigido = Number(valorCorrigido.toFixed(2));
 
         console.log("Data simulada:", hoje.toLocaleDateString());
         console.log("Valor restante para meta:", restante);
-        console.log("Dias restantes:", diasRestantes);
         console.log("Valor diário calculado:", valorCorrigido);
 
-        // Arredonda para 2 casas decimais
-        setValorDiario(Number(valorCorrigido.toFixed(2)));
+        setValorDiario(valorCorrigido);
         setMostrarVideo(valorCorrigido <= 0);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       }
     }
 
+    // Soma Open
     async function fetchSomaOpen() {
       try {
         const response = await fetch(
@@ -137,9 +123,11 @@ export default function DashLastDance() {
       }
     }
 
+    // Executa ao montar
     fetchData();
     fetchSomaOpen();
 
+    // Atualiza a cada 60s
     const intervalo = setInterval(() => {
       fetchData();
       fetchSomaOpen();
@@ -148,11 +136,13 @@ export default function DashLastDance() {
     return () => clearInterval(intervalo);
   }, [hoje]);
 
+  // -------- RENDER --------
   return (
     <div className={styles.root}>
       <div className={styles.header}>
         <img src={logolastdance} alt="Logo LastDance" />
       </div>
+
       <div className={styles.dashboard}>
         <div className={styles.valor}>
           {mostrarVideo ? (
@@ -173,10 +163,12 @@ export default function DashLastDance() {
             </>
           )}
         </div>
+
         <div className={styles.valorfaltamensal}>
           <p>Contagem total:</p>
           <p>{formatarValor(faltamParaMetaMensal)}</p>
         </div>
+
         <div className={styles.tabelawon}>
           <table className={styles.tabela}>
             <thead>
@@ -199,6 +191,7 @@ export default function DashLastDance() {
             </tbody>
           </table>
         </div>
+
         <div className={styles.meta}>
           <p className={styles.metaTitulo}>Projeção Geral</p>
           <p className={styles.metaValor}>{formatarValor(somaOpen)}</p>
