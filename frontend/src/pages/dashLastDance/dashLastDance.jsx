@@ -11,13 +11,8 @@ export default function DashLastDance() {
   const [loopInfinito, setLoopInfinito] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  // controle do áudio
   const audioRef = useRef(null);
-
-  // controle de timeout do vídeo
   const timerRef = useRef(null);
-
-  // controle de quais leads já vimos
   const idsAntigosRef = useRef([]);
 
   const hojeBR = new Date(
@@ -34,7 +29,6 @@ export default function DashLastDance() {
     });
   }
 
-  // cria o elemento de áudio e tenta liberar som automaticamente
   useEffect(() => {
     const audio = new Audio("/audios/comemora.mp3");
     audio.loop = false;
@@ -52,7 +46,6 @@ export default function DashLastDance() {
         console.log("🔒 Som bloqueado, mas sem overlay de clique");
       });
 
-    // carrega histórico de leads conhecidas
     const salvos = localStorage.getItem("lastdance_leads");
     if (salvos) {
       idsAntigosRef.current = JSON.parse(salvos);
@@ -68,7 +61,7 @@ export default function DashLastDance() {
         const rawData = await response.json();
         if (!Array.isArray(rawData) || rawData.length === 0) return;
 
-        // ajusta data UTC -> BR -3
+        // ajusta data UTC -> BR (-3h)
         const data = rawData.map((item) => {
           const d = new Date(item.data);
           const br = new Date(
@@ -135,13 +128,17 @@ export default function DashLastDance() {
         const somaWons = filtrados
           .filter((i) => {
             const di = new Date(i.data);
-            return di.getMonth() === 9 && di.getFullYear() === 2025;
+            return (
+              di.getMonth() === hojeBR.getMonth() &&
+              di.getFullYear() === hojeBR.getFullYear()
+            );
           })
           .reduce((acc, i) => acc + (parseFloat(i.valor) || 0), 0);
 
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
+        // === CORREÇÃO AQUI ===
         const ultimoDia = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
@@ -150,9 +147,16 @@ export default function DashLastDance() {
         const diasRestantes =
           Math.ceil((ultimoDia - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
 
-        const valorBase =
-          diasRestantes <= 1 ? restante : restante / diasRestantes;
-        const valorFinal = Math.max(valorBase - somaHoje, 0);
+        let valorFinal;
+        if (diasRestantes <= 1) {
+          // Último dia do mês → mostra o restante total
+          valorFinal = restante;
+        } else {
+          // Dias normais → divide proporcionalmente
+          const valorBase = restante / diasRestantes;
+          valorFinal = Math.max(valorBase - somaHoje, 0);
+        }
+
         setValorDiario(Number(valorFinal.toFixed(2)));
 
         if (valorFinal <= 0 && !loopInfinito) {
