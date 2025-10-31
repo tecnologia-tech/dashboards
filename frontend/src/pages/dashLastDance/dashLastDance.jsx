@@ -40,11 +40,13 @@ export default function DashLastDance() {
         );
         const data = await response.json();
 
+        // Ordena e pega os 3 últimos registros
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
         setDados(dadosFiltrados);
 
+        // Soma total dos 3 últimos
         const soma = dadosFiltrados.reduce(
           (acc, item) => acc + (parseFloat(item.valor) || 0),
           0
@@ -62,6 +64,7 @@ export default function DashLastDance() {
         const hojeZerado = new Date(hoje);
         hojeZerado.setHours(0, 0, 0, 0);
 
+        // Soma apenas dos Wons de hoje
         const somaHoje = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -73,6 +76,7 @@ export default function DashLastDance() {
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
 
+        // Soma total de outubro
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
@@ -88,6 +92,7 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
+        // Último dia do mês
         const ultimoDiaDoMes = new Date(
           hoje.getFullYear(),
           hoje.getMonth() + 1,
@@ -95,18 +100,21 @@ export default function DashLastDance() {
         );
         const isUltimoDiaDoMes = hoje.getDate() === ultimoDiaDoMes.getDate();
 
-        const diasRestantes = ultimoDiaDoMes.getDate() - hoje.getDate() + 1;
+        // Corrigido: não soma +1, evita inflar valor
+        const diasRestantes = ultimoDiaDoMes.getDate() - hoje.getDate();
 
+        // Corrigido: remove subtração de somaHoje e arredonda
         const valorCorrigido = isUltimoDiaDoMes
           ? restante
-          : Math.max(restante / diasRestantes - somaHoje, 0);
+          : Math.max(restante / (diasRestantes || 1), 0);
 
         console.log("Data simulada:", hoje.toLocaleDateString());
         console.log("Valor restante para meta:", restante);
-        console.log("É último dia do mês?", isUltimoDiaDoMes);
+        console.log("Dias restantes:", diasRestantes);
         console.log("Valor diário calculado:", valorCorrigido);
 
-        setValorDiario(valorCorrigido);
+        // Arredonda para 2 casas decimais
+        setValorDiario(Number(valorCorrigido.toFixed(2)));
         setMostrarVideo(valorCorrigido <= 0);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
@@ -160,14 +168,14 @@ export default function DashLastDance() {
             <>
               <div className={styles.seta}>↓</div>
               <div className={styles.valorfaltadiario}>
-                {formatarValorAbreviado(valorDiario)}
+                {formatarValor(valorDiario)}
               </div>
             </>
           )}
         </div>
         <div className={styles.valorfaltamensal}>
           <p>Contagem total:</p>
-          <p>{formatarValorAbreviado(faltamParaMetaMensal)}</p>
+          <p>{formatarValor(faltamParaMetaMensal)}</p>
         </div>
         <div className={styles.tabelawon}>
           <table className={styles.tabela}>
