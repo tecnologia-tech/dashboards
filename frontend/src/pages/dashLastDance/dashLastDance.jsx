@@ -11,10 +11,9 @@ export default function DashLastDance() {
   const [loopInfinito, setLoopInfinito] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  const ultimaLeadIdRef = useRef(null);
-  const idsAntigosRef = useRef([]); // ✅ guarda os IDs já vistos
   const audioRef = useRef(null);
   const timerRef = useRef(null);
+  const idsAntigosRef = useRef([]);
 
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
@@ -43,6 +42,12 @@ export default function DashLastDance() {
       audioRef.current = audio;
       console.log("🎧 Autoplay de áudio desbloqueado");
     });
+
+    // Carrega histórico salvo
+    const salvos = localStorage.getItem("lastdance_leads");
+    if (salvos) {
+      idsAntigosRef.current = JSON.parse(salvos);
+    }
   }, []);
 
   useEffect(() => {
@@ -75,17 +80,15 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // Filtra os dados apenas dos pipelines relevantes
         const filtrados = data.filter((i) => pipelines.includes(i.pipeline));
 
-        // Ordena e pega os 3 mais recentes
         const recentes = [...filtrados]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
 
         setDados(recentes);
 
-        // ✅ Detecta se há uma nova linha (lead_id novo)
+        // ✅ Detecta lead nova de verdade (persistente entre reloads)
         const novosIds = recentes.map((r) => String(r.lead_id));
         const antigos = idsAntigosRef.current;
         const novos = novosIds.filter((id) => !antigos.includes(id));
@@ -93,10 +96,12 @@ export default function DashLastDance() {
         if (novos.length > 0 && !loopInfinito) {
           console.log("🎉 Novas leads detectadas:", novos);
           idsAntigosRef.current = novosIds;
+          localStorage.setItem("lastdance_leads", JSON.stringify(novosIds));
           tocarVideoEAudioTemporario();
         } else if (antigos.length === 0) {
-          // primeira vez
+          // Primeira carga (não dispara vídeo)
           idsAntigosRef.current = novosIds;
+          localStorage.setItem("lastdance_leads", JSON.stringify(novosIds));
         }
 
         // Cálculos
