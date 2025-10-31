@@ -13,7 +13,6 @@ export default function DashLastDance() {
 
   // controle do áudio
   const audioRef = useRef(null);
-  const [somLiberado, setSomLiberado] = useState(false); // mostra overlay se false
 
   // controle de timeout do vídeo
   const timerRef = useRef(null);
@@ -42,42 +41,23 @@ export default function DashLastDance() {
     audio.volume = 1.0;
     audioRef.current = audio;
 
-    // tenta autoplay silencioso -> pausa -> marca liberado se funcionar
     audio
       .play()
       .then(() => {
         audio.pause();
         audio.currentTime = 0;
-        setSomLiberado(true);
         console.log("🔊 Som já liberado automaticamente");
       })
       .catch(() => {
-        // não conseguiu tocar sozinho -> vai precisar 1 clique manual
-        console.log("🔒 Som bloqueado, aguardando clique para liberar");
+        console.log("🔒 Som bloqueado, mas sem overlay de clique");
       });
 
-    // carrega histórico de leads conhecidas (pra não tocar vídeo/som em F5)
+    // carrega histórico de leads conhecidas
     const salvos = localStorage.getItem("lastdance_leads");
     if (salvos) {
       idsAntigosRef.current = JSON.parse(salvos);
     }
   }, []);
-
-  // função que roda quando o usuário clicar no overlay "Ativar Som"
-  function liberarSomManualmente() {
-    if (!audioRef.current) return;
-    audioRef.current
-      .play()
-      .then(() => {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        setSomLiberado(true);
-        console.log("✅ Som liberado por interação do usuário");
-      })
-      .catch((err) => {
-        console.warn("Ainda bloqueado:", err);
-      });
-  }
 
   useEffect(() => {
     async function fetchData() {
@@ -102,7 +82,6 @@ export default function DashLastDance() {
           return { ...item, data: br };
         });
 
-        // pipelines válidos
         const pipelines = [
           "IMPORTAÇÃO CONJUNTA 🧩",
           "CONSULTORIA LANNISTER 🦁",
@@ -112,8 +91,6 @@ export default function DashLastDance() {
         ];
 
         const filtrados = data.filter((i) => pipelines.includes(i.pipeline));
-
-        // pega só os 3 mais recentes
         const recentes = [...filtrados]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
@@ -129,26 +106,15 @@ export default function DashLastDance() {
 
         if (idsQueSaoNovos.length > 0 && !loopInfinito) {
           console.log("🎉 NOVA VENDA:", idsQueSaoNovos);
-
-          // salva novo estado como baseline
           idsAntigosRef.current = novosIds;
-          localStorage.setItem(
-            "lastdance_leads",
-            JSON.stringify(novosIds)
-          );
-
-          // dispara alerta visual + som
+          localStorage.setItem("lastdance_leads", JSON.stringify(novosIds));
           tocarAlertaTemporario();
         } else if (idsAntigos.length === 0) {
-          // primeira carga da tela, só salva baseline, não toca
           idsAntigosRef.current = novosIds;
-          localStorage.setItem(
-            "lastdance_leads",
-            JSON.stringify(novosIds)
-          );
+          localStorage.setItem("lastdance_leads", JSON.stringify(novosIds));
         }
 
-        // --- CÁLCULOS numéricos abaixo ---
+        // --- CÁLCULOS ---
         const soma = recentes.reduce(
           (acc, i) => acc + (parseFloat(i.valor) || 0),
           0
@@ -181,18 +147,16 @@ export default function DashLastDance() {
           hojeBR.getMonth() + 1,
           0
         );
-
         const diasRestantes =
           Math.ceil((ultimoDia - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
 
         const valorBase =
           diasRestantes <= 1 ? restante : restante / diasRestantes;
-
         const valorFinal = Math.max(valorBase - somaHoje, 0);
         setValorDiario(Number(valorFinal.toFixed(2)));
 
         if (valorFinal <= 0 && !loopInfinito) {
-          console.log("🏁 META BATIDA! loop infinito on");
+          console.log("🏁 META BATIDA!");
           setLoopInfinito(true);
           tocarAlertaInfinito();
         }
@@ -219,29 +183,22 @@ export default function DashLastDance() {
 
     fetchData();
     fetchSomaOpen();
-
     const int = setInterval(() => {
       fetchData();
       fetchSomaOpen();
     }, 30000);
-
     return () => clearInterval(int);
   }, [hojeBR, loopInfinito]);
 
   // ---- ALERTA (VÍDEO + ÁUDIO) ----
   function playSom() {
     if (!audioRef.current) return;
-    // tenta tocar o mp3 (vai funcionar se já estiver liberado)
     audioRef.current.currentTime = 0;
-    audioRef.current.loop = true; // pra segurar durante o vídeo curto
+    audioRef.current.loop = true;
     audioRef.current
       .play()
-      .then(() => {
-        console.log("🎶 som tocando");
-      })
-      .catch((err) => {
-        console.warn("🔇 áudio bloqueado:", err);
-      });
+      .then(() => console.log("🎶 som tocando"))
+      .catch(() => console.warn("🔇 áudio bloqueado"));
   }
 
   function stopSom() {
@@ -254,7 +211,6 @@ export default function DashLastDance() {
   function tocarAlertaTemporario() {
     setMostrarVideo(true);
     playSom();
-
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       stopSom();
@@ -266,10 +222,8 @@ export default function DashLastDance() {
     clearTimeout(timerRef.current);
     setMostrarVideo(true);
     playSom();
-    // sem timeout -> fica tocando/mostrando até você dar refresh manualmente
   }
 
-  // cleanup
   useEffect(() => {
     return () => {
       clearTimeout(timerRef.current);
@@ -279,40 +233,11 @@ export default function DashLastDance() {
 
   return (
     <div className={styles.root}>
-      {/* overlay pra liberar som (aparece só se bloqueado) */}
-      {!somLiberado && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.8)",
-            color: "#fff",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "2rem",
-            fontWeight: "600",
-            zIndex: 9999,
-            textAlign: "center",
-            padding: "2rem",
-            cursor: "pointer",
-          }}
-          onClick={liberarSomManualmente}
-        >
-          <div>🔊 Clique para ativar o som das vendas</div>
-          <div style={{ fontSize: "1rem", marginTop: "1rem" }}>
-            (Depois disso você pode deixar a TV rodando sozinha)
-          </div>
-        </div>
-      )}
-
       <div className={styles.header}>
         <img src={logolastdance} alt="Logo LastDance" />
       </div>
 
       <div className={styles.dashboard}>
-        {/* BLOCO DO VÍDEO / VALOR DIÁRIO */}
         <div className={styles.valor}>
           {mostrarVideo ? (
             <video
@@ -326,7 +251,15 @@ export default function DashLastDance() {
                 e.target.muted = false;
                 e.target.volume = 1.0;
               }}
-              style={{ width: "100%", height: "auto" }}
+              style={{
+                width: "50%",
+                maxWidth: "600px",
+                height: "auto",
+                borderRadius: "20px",
+                boxShadow: "0 0 25px rgba(255,255,255,0.3)",
+                display: "block",
+                margin: "0 auto",
+              }}
             />
           ) : (
             <>
@@ -338,13 +271,11 @@ export default function DashLastDance() {
           )}
         </div>
 
-        {/* FALTAM P/ META MENSAL */}
         <div className={styles.valorfaltamensal}>
           <p>Contagem total:</p>
           <p>{formatarValor(faltamParaMetaMensal)}</p>
         </div>
 
-        {/* TABELA ULTIMAS VENDAS */}
         <div className={styles.tabelawon}>
           <table className={styles.tabela}>
             <thead>
@@ -370,7 +301,6 @@ export default function DashLastDance() {
           </table>
         </div>
 
-        {/* PROJEÇÃO GERAL */}
         <div className={styles.meta}>
           <p className={styles.metaTitulo}>Projeção Geral</p>
           <p className={styles.metaValor}>{formatarValor(somaOpen)}</p>
