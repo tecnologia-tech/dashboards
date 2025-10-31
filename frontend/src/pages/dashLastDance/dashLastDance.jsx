@@ -4,17 +4,18 @@ import logolastdance from "../../assets/lastdance.png";
 
 export default function DashLastDance() {
   const [dados, setDados] = useState([]);
+  const [total, setTotal] = useState(0); // ✅ corrigido
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  // ✅ Sempre usa horário do Brasil (UTC-3)
+  // ✅ Data atual no fuso do Brasil (UTC-3)
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
-  // Formatação padrão BRL
+  // ✅ Função para formatar valores monetários
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -38,7 +39,7 @@ export default function DashLastDance() {
         );
         const rawData = await response.json();
 
-        // 🕐 Converte datas UTC (terminadas em .000Z) para horário do Brasil (UTC-3)
+        // ✅ Converte datas UTC (.000Z) para horário do Brasil (UTC-3)
         const data = rawData.map((item) => {
           const dataOriginal = new Date(item.data);
           const dataBrasil = new Date(
@@ -52,11 +53,18 @@ export default function DashLastDance() {
           return { ...item, data: dataBrasil };
         });
 
-        // Últimos 3 registros
+        // ✅ Últimos 3 registros
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
         setDados(dadosFiltrados);
+
+        // ✅ Soma total (para debug)
+        const soma = dadosFiltrados.reduce(
+          (acc, item) => acc + (parseFloat(item.valor) || 0),
+          0
+        );
+        setTotal(soma);
 
         const pipelinesParaDescontar = [
           "IMPORTAÇÃO CONJUNTA 🧩",
@@ -66,7 +74,7 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // 🧮 Soma de hoje (data BR)
+        // ✅ Soma de hoje
         const hojeZerado = new Date(hojeBR);
         hojeZerado.setHours(0, 0, 0, 0);
 
@@ -83,13 +91,13 @@ export default function DashLastDance() {
 
         console.log("💵 Soma hoje:", somaHoje);
 
-        // 🧮 Soma total de outubro (corrigido para fuso)
+        // ✅ Soma total de outubro (sem timezone)
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
             return (
               pipelinesParaDescontar.includes(item.pipeline) &&
-              dataItem.getMonth() === 9 && // outubro
+              dataItem.getMonth() === 9 && // outubro (0 = jan)
               dataItem.getFullYear() === 2025
             );
           })
@@ -98,7 +106,7 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // 📆 Cálculo dos dias restantes
+        // ✅ Cálculo dos dias restantes
         const ultimoDiaDoMes = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
@@ -110,7 +118,7 @@ export default function DashLastDance() {
 
         console.log("📆 Dias restantes:", diasRestantesCorrigido);
 
-        // 📊 Cálculo do valor diário
+        // ✅ Valor diário
         const valorBaseDiario =
           diasRestantesCorrigido === 1
             ? restante
