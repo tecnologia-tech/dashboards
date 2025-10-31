@@ -4,17 +4,17 @@ import logolastdance from "../../assets/lastdance.png";
 
 export default function DashLastDance() {
   const [dados, setDados] = useState([]);
-  const [setTotal] = useState(0);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
 
-  // ✅ Garante que o cálculo use o horário do Brasil (UTC-3)
+  // ✅ Sempre usa horário do Brasil (UTC-3)
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
+  // Formatação padrão BRL
   function formatarValor(valor) {
     if (valor === null || valor === undefined || valor === "") return "R$0,00";
     const numero = typeof valor === "string" ? parseFloat(valor) : valor;
@@ -38,27 +38,25 @@ export default function DashLastDance() {
         );
         const rawData = await response.json();
 
-        // 🧭 Corrige datas vindas do Nutshell (Canadá → Brasil)
+        // 🕐 Converte datas UTC (terminadas em .000Z) para horário do Brasil (UTC-3)
         const data = rawData.map((item) => {
-          const dataOriginal = new Date(item.data); // Ex: 2025-10-31T00:00:00-04:00
+          const dataOriginal = new Date(item.data);
           const dataBrasil = new Date(
-            dataOriginal.getTime() + 3 * 60 * 60 * 1000
-          ); // converte para UTC-3
+            dataOriginal.getUTCFullYear(),
+            dataOriginal.getUTCMonth(),
+            dataOriginal.getUTCDate(),
+            dataOriginal.getUTCHours() - 3,
+            dataOriginal.getUTCMinutes(),
+            dataOriginal.getUTCSeconds()
+          );
           return { ...item, data: dataBrasil };
         });
 
-        // Pega os 3 últimos registros
+        // Últimos 3 registros
         const dadosFiltrados = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
         setDados(dadosFiltrados);
-
-        // Soma dos 3 últimos
-        const soma = dadosFiltrados.reduce(
-          (acc, item) => acc + (parseFloat(item.valor) || 0),
-          0
-        );
-        setTotal(soma);
 
         const pipelinesParaDescontar = [
           "IMPORTAÇÃO CONJUNTA 🧩",
@@ -68,7 +66,7 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        // 🧮 Soma de Wons de hoje (com data ajustada)
+        // 🧮 Soma de hoje (data BR)
         const hojeZerado = new Date(hojeBR);
         hojeZerado.setHours(0, 0, 0, 0);
 
@@ -85,15 +83,14 @@ export default function DashLastDance() {
 
         console.log("💵 Soma hoje:", somaHoje);
 
-        // 🧮 Soma total de outubro (com datas BR)
+        // 🧮 Soma total de outubro (corrigido para fuso)
         const somaWons = data
           .filter((item) => {
             const dataItem = new Date(item.data);
-            const dentroDeOutubro =
-              dataItem >= new Date("2025-10-01T00:00:00-03:00") &&
-              dataItem <= new Date("2025-10-31T23:59:59-03:00");
             return (
-              pipelinesParaDescontar.includes(item.pipeline) && dentroDeOutubro
+              pipelinesParaDescontar.includes(item.pipeline) &&
+              dataItem.getMonth() === 9 && // outubro
+              dataItem.getFullYear() === 2025
             );
           })
           .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
@@ -101,7 +98,7 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // 🔢 Cálculo do valor diário
+        // 📆 Cálculo dos dias restantes
         const ultimoDiaDoMes = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
@@ -113,6 +110,7 @@ export default function DashLastDance() {
 
         console.log("📆 Dias restantes:", diasRestantesCorrigido);
 
+        // 📊 Cálculo do valor diário
         const valorBaseDiario =
           diasRestantesCorrigido === 1
             ? restante
@@ -122,7 +120,6 @@ export default function DashLastDance() {
 
         console.log("💰 Valor restante:", restante);
         console.log("📊 Valor base diário:", valorBaseDiario);
-        console.log("💵 Soma hoje:", somaHoje);
         console.log("🏁 Valor final diário:", valorFinalDiario);
 
         setValorDiario(Number(valorFinalDiario.toFixed(2)));
