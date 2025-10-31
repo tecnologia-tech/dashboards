@@ -53,126 +53,106 @@ const TABLES = [
   "dash_reembolso",
 ];
 
-// 🛡️ Captura erros globais para evitar crash
+// 🧱 Proteção contra erros não tratados
 process.on("uncaughtException", (err) => {
-  console.error(
-    `\n💥 Erro não tratado (uncaughtException): ${err.message || err}`
-  );
-  process.stdout.write("\x07");
+  console.error(`💥 Erro não tratado: ${err.message}`);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error(`💥 Rejeição não tratada: ${reason}`);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error(`\n💥 Rejeição não tratada (unhandledRejection): ${reason}`);
-  process.stdout.write("\x07");
-});
-
+// Função para buscar dados de uma tabela
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
     const result = await client.query(`SELECT * FROM ${tableName}`);
     return result.rows;
   } catch (err) {
-    console.error(
-      `🚨 Erro ao buscar dados da tabela ${tableName}: ${err.message}`
-    );
-    process.stdout.write("\x07");
+    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
     return [];
   } finally {
     client.release();
   }
 }
 
+// 🌀 Loop infinito apenas para dash_geralcsWon
 async function runGeralcsWonLoop() {
   const file = "dash_geralcsWon.js";
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
 
   while (true) {
-    console.log(
-      `[${new Date().toLocaleTimeString()}] 🔁 Executando módulo: ${file}`
-    );
+    const start = new Date();
+    console.log(`[${start.toLocaleTimeString()}] 🔁 Executando ${file}`);
     try {
-      const dashModule = await import(modulePath + `?update=${Date.now()}`);
+      const dashModule = await import(modulePath + `?v=${Date.now()}`);
       if (typeof dashModule.default === "function") {
         await dashModule.default();
-        console.count(
-          `[${new Date().toLocaleTimeString()}] ✅ Finalizado: ${file}`
+        console.log(
+          `[${new Date().toLocaleTimeString()}] ✅ Finalizado ${file}`
         );
       } else {
-        console.warn(
-          `[${new Date().toLocaleTimeString()}] ⚠️ Módulo ${file} não exporta função default`
-        );
+        console.warn(`⚠️ ${file} não exporta função default`);
       }
     } catch (err) {
-      console.error(
-        `\n🚨 ERRO no módulo ${file} às ${new Date().toLocaleTimeString()}:\n→ ${
-          err.message || err
-        }\n`
-      );
-      process.stdout.write("\x07");
+      console.error(`🚨 ERRO no ${file}: ${err.message}`);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    // espera 10s antes de rodar de novo
+    await new Promise((r) => setTimeout(r, 10000));
   }
 }
 
+// 🔁 Loop para os outros módulos (rodam um por vez)
 async function runOtherDashModulesLoop() {
   const files = fs
     .readdirSync(__dirname)
     .filter(
-      (file) =>
-        file.startsWith("dash_") &&
-        file.endsWith(".js") &&
-        file !== "dash_geralcsWon.js"
+      (f) =>
+        f.startsWith("dash_") && f.endsWith(".js") && f !== "dash_geralcsWon.js"
     );
 
   while (true) {
     for (const file of files) {
       const modulePath = pathToFileURL(path.join(__dirname, file)).href;
-      console.log(
-        `[${new Date().toLocaleTimeString()}] ▶️ Executando módulo: ${file}`
-      );
+      console.log(`[${new Date().toLocaleTimeString()}] ▶️ Rodando ${file}`);
       try {
-        const dashModule = await import(modulePath + `?update=${Date.now()}`);
+        const dashModule = await import(modulePath + `?v=${Date.now()}`);
         if (typeof dashModule.default === "function") {
           await dashModule.default();
-          console.count(
-            `[${new Date().toLocaleTimeString()}] ✅ Finalizado: ${file}`
+          console.log(
+            `[${new Date().toLocaleTimeString()}] ✅ ${file} finalizado`
           );
         } else {
-          console.warn(
-            `[${new Date().toLocaleTimeString()}] ⚠️ Módulo ${file} não exporta função default`
-          );
+          console.warn(`⚠️ ${file} não exporta função default`);
         }
       } catch (err) {
-        console.error(
-          `\n🚨 ERRO no módulo ${file} às ${new Date().toLocaleTimeString()}:\n→ ${
-            err.message || err
-          }\n`
-        );
-        process.stdout.write("\x07");
+        console.error(`🚨 Erro no ${file}: ${err.message}`);
       }
     }
 
+    // Atualiza os dados do dashboard após rodar todos
     const results = {};
     for (const table of TABLES) {
-      const data = await fetchTableData(table);
-      results[table] = data;
+      results[table] = await fetchTableData(table);
     }
     dashboardData = results;
-    console.log(`[${new Date().toLocaleTimeString()}] 📊 Dados atualizados`);
+    console.log(`[${new Date().toLocaleTimeString()}] 📊 Dashboard atualizado`);
+
+    // espera 15 minutos antes de rodar tudo de novo
+    await new Promise((r) => setTimeout(r, 15 * 60 * 1000));
   }
 }
 
-console.log("🚀 Iniciando loops dos módulos...");
+// 🚀 Inicia os loops
+console.log("🚀 Iniciando loops de atualização...");
 Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
 
-app.get("/api/dashboard", (req, res) => {
-  res.json(dashboardData);
-});
+// 🔌 Endpoints da API
+app.get("/api/dashboard", (req, res) => res.json(dashboardData));
 
-TABLES.forEach((tableName) => {
-  app.get(`/api/${tableName}`, async (req, res) => {
-    const data = await fetchTableData(tableName);
+TABLES.forEach((t) => {
+  app.get(`/api/${t}`, async (req, res) => {
+    const data = await fetchTableData(t);
     res.json(data);
   });
 });
