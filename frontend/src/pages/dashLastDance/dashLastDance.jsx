@@ -29,6 +29,21 @@ export default function DashLastDance() {
     });
   }
 
+  // 🔊 cria um único elemento de áudio reutilizável
+  useEffect(() => {
+    const audio = new Audio("/audios/comemora.mp3");
+    audio.loop = false;
+    audio.volume = 1.0;
+    audio.muted = true; // começa mutado pra desbloquear autoplay
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false; // pronto pra tocar quando precisar
+      audioRef.current = audio;
+      console.log("🎧 Autoplay de áudio desbloqueado");
+    });
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -36,46 +51,45 @@ export default function DashLastDance() {
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const rawData = await response.json();
-
         if (!Array.isArray(rawData) || rawData.length === 0) return;
 
         const data = rawData.map((item) => {
-          const dataOriginal = new Date(item.data);
-          const dataBrasil = new Date(
-            dataOriginal.getUTCFullYear(),
-            dataOriginal.getUTCMonth(),
-            dataOriginal.getUTCDate(),
-            dataOriginal.getUTCHours() - 3,
-            dataOriginal.getUTCMinutes(),
-            dataOriginal.getUTCSeconds()
+          const d = new Date(item.data);
+          const br = new Date(
+            d.getUTCFullYear(),
+            d.getUTCMonth(),
+            d.getUTCDate(),
+            d.getUTCHours() - 3,
+            d.getUTCMinutes(),
+            d.getUTCSeconds()
           );
-          return { ...item, data: dataBrasil };
+          return { ...item, data: br };
         });
 
-        const dadosFiltrados = [...data]
+        const recentes = [...data]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
-        setDados(dadosFiltrados);
+        setDados(recentes);
 
-        // 🔍 Detecta nova lead
-        const idMaisRecente = String(dadosFiltrados[0]?.lead_id || "");
-        const idAnterior = String(ultimaLeadIdRef.current || "");
-
-        if (idMaisRecente && idMaisRecente !== idAnterior && !loopInfinito) {
-          ultimaLeadIdRef.current = idMaisRecente;
+        // Detecta lead nova
+        const nova = String(recentes[0]?.lead_id || "");
+        const anterior = String(ultimaLeadIdRef.current || "");
+        if (nova && nova !== anterior && !loopInfinito) {
+          ultimaLeadIdRef.current = nova;
+          console.log("🎉 Nova lead detectada:", nova);
           tocarVideoEAudioTemporario();
         } else if (!ultimaLeadIdRef.current) {
-          ultimaLeadIdRef.current = idMaisRecente;
+          ultimaLeadIdRef.current = nova;
         }
 
-        // 💰 Cálculos
-        const soma = dadosFiltrados.reduce(
-          (acc, item) => acc + (parseFloat(item.valor) || 0),
+        // Cálculos
+        const soma = recentes.reduce(
+          (acc, i) => acc + (parseFloat(i.valor) || 0),
           0
         );
         setTotal(soma);
 
-        const pipelinesParaDescontar = [
+        const pipelines = [
           "IMPORTAÇÃO CONJUNTA 🧩",
           "CONSULTORIA LANNISTER 🦁",
           "REPEDIDO 🏆",
@@ -83,131 +97,111 @@ export default function DashLastDance() {
           "GANHO FRETE 🚢",
         ];
 
-        const hojeZerado = new Date(hojeBR);
-        hojeZerado.setHours(0, 0, 0, 0);
+        const hojeZ = new Date(hojeBR);
+        hojeZ.setHours(0, 0, 0, 0);
 
         const somaHoje = data
-          .filter((item) => {
-            const dataItem = new Date(item.data);
-            dataItem.setHours(0, 0, 0, 0);
+          .filter((i) => {
+            const di = new Date(i.data);
+            di.setHours(0, 0, 0, 0);
             return (
-              pipelinesParaDescontar.includes(item.pipeline) &&
-              dataItem.getTime() === hojeZerado.getTime()
+              pipelines.includes(i.pipeline) &&
+              di.getTime() === hojeZ.getTime()
             );
           })
-          .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+          .reduce((acc, i) => acc + (parseFloat(i.valor) || 0), 0);
 
         const somaWons = data
-          .filter((item) => {
-            const dataItem = new Date(item.data);
+          .filter((i) => {
+            const di = new Date(i.data);
             return (
-              pipelinesParaDescontar.includes(item.pipeline) &&
-              dataItem.getMonth() === 9 &&
-              dataItem.getFullYear() === 2025
+              pipelines.includes(i.pipeline) &&
+              di.getMonth() === 9 &&
+              di.getFullYear() === 2025
             );
           })
-          .reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+          .reduce((acc, i) => acc + (parseFloat(i.valor) || 0), 0);
 
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        const ultimoDiaDoMes = new Date(
+        const ultimoDia = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
           0
         );
-        const diferencaDias =
-          Math.ceil((ultimoDiaDoMes - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
-        const diasRestantesCorrigido = Math.max(diferencaDias, 1);
+        const diasRestantes =
+          Math.ceil((ultimoDia - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
 
-        const valorBaseDiario =
-          diasRestantesCorrigido === 1
-            ? restante
-            : restante / diasRestantesCorrigido;
+        const valorBase =
+          diasRestantes <= 1 ? restante : restante / diasRestantes;
+        const valorFinal = Math.max(valorBase - somaHoje, 0);
+        setValorDiario(Number(valorFinal.toFixed(2)));
 
-        const valorFinalDiario = Math.max(valorBaseDiario - somaHoje, 0);
-        setValorDiario(Number(valorFinalDiario.toFixed(2)));
-
-        // 🏁 Meta batida → vídeo infinito
-        if (valorFinalDiario <= 0 && !loopInfinito) {
+        if (valorFinal <= 0 && !loopInfinito) {
+          console.log("🏁 Meta batida! Loop infinito ativado");
           setLoopInfinito(true);
           tocarVideoEAudioInfinito();
         }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
+      } catch (err) {
+        console.error("Erro ao buscar dados:", err);
       }
     }
 
     async function fetchSomaOpen() {
       try {
-        const response = await fetch(
+        const r = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
         );
-        const data = await response.json();
+        const data = await r.json();
         const soma = data.reduce(
-          (acc, item) => acc + (parseFloat(item.valor) || 0),
+          (acc, i) => acc + (parseFloat(i.valor) || 0),
           0
         );
         setSomaOpen(soma);
-      } catch (error) {
-        console.error("Erro ao buscar soma de dash_geralcsopen:", error);
+      } catch (e) {
+        console.error("Erro ao buscar somaOpen:", e);
       }
     }
 
     fetchData();
     fetchSomaOpen();
 
-    const intervalo = setInterval(() => {
+    const int = setInterval(() => {
       fetchData();
       fetchSomaOpen();
     }, 30000);
 
-    return () => clearInterval(intervalo);
+    return () => clearInterval(int);
   }, [hojeBR, loopInfinito]);
 
-  // 🟢 Força áudio a poder ser tocado automaticamente
-  useEffect(() => {
-    const testAudio = new Audio("/audios/comemora.mp3");
-    testAudio.muted = true;
-    testAudio.play().then(() => {
-      testAudio.pause();
-      testAudio.currentTime = 0;
-      testAudio.muted = false;
-    });
-  }, []);
-
-  // 🔊 Temporário (15s)
+  // --- FUNÇÕES DE ÁUDIO/VÍDEO ---
   function tocarVideoEAudioTemporario() {
     setMostrarVideo(true);
-    const audio = new Audio("/audios/comemora.mp3");
-    audioRef.current = audio;
-    audio.muted = false;
-    audio
-      .play()
-      .then(() => console.log("🎵 Áudio tocando (15s)"))
-      .catch((err) => console.warn("⚠️ Áudio bloqueado:", err));
+    if (audioRef.current) {
+      audioRef.current.loop = true; // vídeo curto, então som precisa repetir
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((e) => console.warn("Áudio bloqueado:", e));
+    }
 
     timerRef.current = setTimeout(() => {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+        audioRef.current.loop = false;
       }
       setMostrarVideo(false);
     }, 15000);
   }
 
-  // 🔁 Loop infinito
   function tocarVideoEAudioInfinito() {
     clearTimeout(timerRef.current);
     setMostrarVideo(true);
-    const audio = new Audio("/audios/comemora.mp3");
-    audio.loop = true;
-    audioRef.current = audio;
-    audio.muted = false;
-    audio
-      .play()
-      .then(() => console.log("🎵 Áudio infinito tocando"))
-      .catch((err) => console.warn("⚠️ Áudio bloqueado:", err));
+    if (audioRef.current) {
+      audioRef.current.loop = true;
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((e) => console.warn("Áudio bloqueado:", e));
+    }
   }
 
   useEffect(() => {
@@ -232,7 +226,7 @@ export default function DashLastDance() {
               autoPlay
               muted
               playsInline
-              loop={loopInfinito}
+              loop // 👈 sempre loopa o vídeo
             />
           ) : (
             <>
@@ -260,8 +254,8 @@ export default function DashLastDance() {
               </tr>
             </thead>
             <tbody>
-              {dados.map((item, index) => (
-                <tr key={index}>
+              {dados.map((item, i) => (
+                <tr key={i}>
                   <td>{item.lead_id}</td>
                   <td>{item.empresa}</td>
                   <td>{item.assigned}</td>
