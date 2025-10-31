@@ -90,7 +90,6 @@ export default function DashLastDance() {
         const restante = 1300000 - somaWons;
         setFaltamParaMetaMensal(restante);
 
-        // 🔧 Forçando divisão por 1 para teste
         const valorBaseDiario = restante / 1;
         const valorFinalDiario = valorBaseDiario - somaHoje;
         const valorCorrigido = isNaN(valorFinalDiario) ? 0 : valorFinalDiario;
