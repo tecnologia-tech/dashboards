@@ -17,7 +17,7 @@ const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
   process.env;
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 let dashboardData = {};
 
 app.use(cors());
@@ -53,8 +53,7 @@ const TABLES = [
 ];
 
 function formatTime(ms) {
-  const s = (ms / 1000).toFixed(1);
-  return `${s}s`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 function hora() {
   return new Date().toLocaleTimeString("pt-BR");
@@ -91,7 +90,6 @@ async function fetchTableData(tableName) {
 async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
-
   console.log(colors.cyan(`▶️  Iniciando ${file}...`));
 
   try {
@@ -150,7 +148,16 @@ app.listen(PORT, () =>
   console.log(colors.green(`🌐 Servidor rodando em http://localhost:${PORT}`))
 );
 
-(async () => {
+(async function main() {
   await updateDashboardCache();
-  runSequentialLoop();
+  console.log(colors.cyan("🚀 Iniciando loop principal..."));
+  while (true) {
+    try {
+      await runSequentialLoop();
+    } catch (err) {
+      console.error(colors.red(`💥 Loop caiu: ${err.message}`));
+      console.log(colors.yellow("🔁 Reiniciando loop em 5s..."));
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+  }
 })();
