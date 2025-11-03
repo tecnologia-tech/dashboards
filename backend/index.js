@@ -18,7 +18,6 @@ const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
 
 const app = express();
 const PORT = 3001;
-const INTERVAL_MIN = 15; // minutos entre ciclos
 let dashboardData = {};
 
 app.use(cors());
@@ -53,7 +52,6 @@ const TABLES = [
   "dash_reembolso",
 ];
 
-// Utilitário para formatação de hora e duração
 function formatTime(ms) {
   const s = (ms / 1000).toFixed(1);
   return `${s}s`;
@@ -62,7 +60,6 @@ function hora() {
   return new Date().toLocaleTimeString("pt-BR");
 }
 
-// Cores para console
 const colors = {
   cyan: (t) => `\x1b[36m${t}\x1b[0m`,
   green: (t) => `\x1b[32m${t}\x1b[0m`,
@@ -91,75 +88,58 @@ async function fetchTableData(tableName) {
   }
 }
 
-async function runGeralcsWonLoop() {
-  const file = "dash_geralcsWon.js";
+async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
+  const start = Date.now();
 
-  while (true) {
-    const startTime = Date.now();
-    console.log(colors.cyan(`▶️  ${file} iniciado`));
+  console.log(colors.cyan(`▶️  Iniciando ${file}...`));
 
-    try {
-      const dashModule = await import(modulePath + `?v=${Date.now()}`);
-      if (typeof dashModule.default === "function") {
-        await dashModule.default();
-      }
-      const dur = formatTime(Date.now() - startTime);
-      console.log(colors.green(`✅ ${file} concluído (tempo: ${dur})`));
-    } catch (err) {
-      console.error(colors.red(`🚨 Erro em ${file}: ${err.message}`));
+  try {
+    const dashModule = await import(modulePath + `?v=${Date.now()}`);
+    if (typeof dashModule.default === "function") {
+      await dashModule.default();
     }
-
-    console.log(
-      colors.yellow(`🕒 Próxima execução em ${INTERVAL_MIN} minutos...\n`)
-    );
-    await new Promise((r) => setTimeout(r, INTERVAL_MIN * 60 * 1000));
+    const dur = formatTime(Date.now() - start);
+    console.log(colors.green(`✅ ${file} concluído (${dur})`));
+  } catch (err) {
+    console.error(colors.red(`🚨 Erro em ${file}: ${err.message}`));
   }
 }
 
-async function runOtherDashModulesLoop() {
-  const files = fs
+async function runSequentialLoop() {
+  const dashFiles = fs
     .readdirSync(__dirname)
     .filter(
       (f) =>
         f.startsWith("dash_") && f.endsWith(".js") && f !== "dash_geralcsWon.js"
-    );
+    )
+    .sort((a, b) => a.localeCompare(b));
+
+  console.log(colors.cyan("🚀 Iniciando execução sequencial infinita...\n"));
+  let ciclo = 1;
 
   while (true) {
-    for (const file of files) {
-      const modulePath = pathToFileURL(path.join(__dirname, file)).href;
-      const startTime = Date.now();
-      console.log(colors.magenta(`▶️  Iniciando ${file} `));
+    console.log(colors.yellow(`🧭 Iniciando ciclo #${ciclo}`));
 
-      try {
-        const dashModule = await import(modulePath + `?v=${Date.now()}`);
-        if (typeof dashModule.default === "function") {
-          await dashModule.default();
-        }
-        const dur = formatTime(Date.now() - startTime);
-        console.log(colors.green(`✅ ${file} finalizado (tempo: ${dur})`));
-      } catch (err) {
-        console.error(colors.red(`🚨 Erro no ${file}: ${err.message}`));
-      }
+    for (const file of dashFiles) {
+      await runModule("dash_geralcsWon.js");
+      console.log(colors.magenta(`▶️  Agora: ${file}`));
+      await runModule(file);
     }
 
-    const results = {};
-    for (const table of TABLES) results[table] = await fetchTableData(table);
-    dashboardData = results;
-
-    console.log(colors.cyan(`📊 Dashboard atualizado`));
-    console.log(
-      colors.yellow(
-        `🕒 Aguardando ${INTERVAL_MIN} minutos para o próximo ciclo...\n`
-      )
-    );
-
-    await new Promise((r) => setTimeout(r, INTERVAL_MIN * 60 * 1000));
+    console.log(colors.yellow(`🔁 Ciclo #${ciclo} completo! Reiniciando...\n`));
+    ciclo++;
   }
 }
 
-console.log(colors.cyan("🚀 Iniciando loops de atualização...\n"));
-Promise.all([runGeralcsWonLoop(), runOtherDashModulesLoop()]);
+async function updateDashboardCache() {
+  const results = {};
+  for (const table of TABLES) {
+    results[table] = await fetchTableData(table);
+  }
+  dashboardData = results;
+  console.log(colors.cyan(`📊 Dashboard atualizado às ${hora()}`));
+}
 
 app.get("/api/dashboard", (req, res) => res.json(dashboardData));
 TABLES.forEach((t) =>
@@ -169,3 +149,8 @@ TABLES.forEach((t) =>
 app.listen(PORT, () =>
   console.log(colors.green(`🌐 Servidor rodando em http://localhost:${PORT}`))
 );
+
+(async () => {
+  await updateDashboardCache();
+  runSequentialLoop();
+})();
