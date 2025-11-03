@@ -24,46 +24,25 @@ async function callRPC(method, params) {
     id: 1,
     accountName: ACCOUNT_NAME,
   };
-
-  console.log(`📡 Enviando RPC → ${method}`);
-  console.log("🌐 Endpoint:", NUTSHELL_API_URL);
-  console.log("📤 Corpo:", JSON.stringify(body, null, 2));
-
+  console.log(`📡 Chamando RPC → ${method}`);
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
-    headers: {
-      Authorization: AUTH_HEADER,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
     body: JSON.stringify(body),
     agent: httpsAgent,
   });
-
-  console.log("📥 Status HTTP:", res.status);
   const text = await res.text();
-  console.log("📩 Resposta:", text);
-
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error("❌ Resposta não é JSON");
-  }
-
-  if (data.error) {
-    console.error("❌ Erro RPC:", data.error);
-    throw new Error(JSON.stringify(data.error));
-  }
-
+  console.log("📩 Resposta bruta:", text);
+  const data = JSON.parse(text);
+  if (data.error) throw new Error(JSON.stringify(data.error));
   return data.result;
 }
 
 async function getLeadsOpen() {
   console.log("🔍 Buscando leads com status 'Open'...");
-  const leads = await callRPC("findLeads", {
-    query: { status: 0 },
-    limit: 10,
-    page: 1,
+  const leads = await callRPC("Lead.find", {
+    query: { isDeleted: false, status: "Open" },
+    limit: 100,
   });
   console.log(`📊 Leads retornadas: ${leads?.length || 0}`);
   return leads || [];

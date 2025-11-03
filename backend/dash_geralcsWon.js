@@ -26,6 +26,14 @@ const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+const dbCfg = {
+  host: PGHOST,
+  port: Number(PGPORT || 5432),
+  database: PGDATABASE,
+  user: PGUSER,
+  password: PGPASSWORD,
+  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
+};
 
 async function callRPC(method, params) {
   const body = {
@@ -35,47 +43,25 @@ async function callRPC(method, params) {
     id: 1,
     accountName: ACCOUNT_NAME,
   };
-
-  console.log(`📡 Enviando requisição RPC → ${method}`);
-  console.log("🌐 Endpoint:", NUTSHELL_API_URL);
-  console.log("📤 Corpo enviado:", JSON.stringify(body, null, 2));
-
+  console.log(`📡 Chamando RPC → ${method}`);
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
-    headers: {
-      Authorization: AUTH_HEADER,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
     body: JSON.stringify(body),
     agent: httpsAgent,
   });
-
-  console.log("📥 Status HTTP:", res.status);
   const text = await res.text();
   console.log("📩 Resposta bruta:", text);
-
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    console.log("❌ Erro ao parsear JSON da resposta.");
-    throw new Error("Resposta não é JSON.");
-  }
-
-  if (data.error) {
-    console.error("❌ Erro RPC detectado:", data.error);
-    throw new Error(JSON.stringify(data.error));
-  }
-
+  const data = JSON.parse(text);
+  if (data.error) throw new Error(JSON.stringify(data.error));
   return data.result;
 }
 
 async function getLeadsWon() {
   console.log("🔍 Buscando leads com status 'Won'...");
-  const leads = await callRPC("findLeads", {
-    query: { status: 10 },
-    limit: 10,
-    page: 1,
+  const leads = await callRPC("Lead.find", {
+    query: { isDeleted: false, status: "Won" },
+    limit: 100,
   });
   console.log(`📊 Leads retornadas: ${leads?.length || 0}`);
   return leads || [];
