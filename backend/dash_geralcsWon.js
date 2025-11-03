@@ -1,3 +1,4 @@
+// dash_geralcsWon.js
 import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
@@ -6,6 +7,7 @@ import pLimit from "p-limit";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
+// Configurações do ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "banco.env") });
@@ -36,176 +38,112 @@ const dbCfg = {
 };
 
 const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(5);
+const limit = pLimit(10);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function callRPC(method, params = {}, attempt = 1) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    const res = await fetch(NUTSHELL_API_URL, {
-      method: "POST",
-      agent: httpsAgent,
-      headers: {
-        Authorization: AUTH_HEADER,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    const json = await res.json().catch(() => null);
-    if (!json || json.error) {
-      throw new Error(
-        `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
-      );
-    }
-    return json.result;
-  } catch (err) {
-    if (attempt < 3) {
-      const wait = 2000 * attempt;
-      console.warn(
-        `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
-          wait / 1000
-        }s`
-      );
-      await sleep(wait);
-      return callRPC(method, params, attempt + 1);
-    } else {
-      throw err;
-    }
+async function callRPC(method, params = {}) {
+  const res = await fetch(NUTSHELL_API_URL, {
+    method: "POST",
+    agent: httpsAgent,
+    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!json || json.error) {
+    throw new Error(
+      `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
+    );
   }
+  return json.result;
 }
 
 async function getAllLeadIds() {
   const ids = [];
   for (let page = 1; ; page++) {
-    const leads = await callRPC("findLeads", {
-      query: { status: 10 }, 
-      page,
-      limit: 100,
-    });
-    if (!Array.isArray(leads) || leads.length === 0) break;
-    ids.push(...leads.map((l) => l.id));
-    await sleep(200); 
+    try {
+      const leads = await callRPC("findLeads", {
+        query: { status: 10 }, // status=10 é para Leads "Won"
+        page,
+        limit: 100,
+      });
+
+      if (!Array.isArray(leads) || leads.length === 0) break;
+
+      ids.push(...leads.map((l) => l.id));
+    } catch (error) {
+      if (error.message.includes("429")) await sleep(2000); // Em caso de rate limit (erro 429)
+      console.error("Erro ao buscar leads:", error);
+      break;
+    }
   }
-  console.log(`📥 Total de leads encontrados: ${ids.length}`);
+  console.log(`📦 ${ids.length} leads encontrados.`);
   return ids;
 }
 
 function mapLeadToRow(lead) {
-  const id = String(lead.id ?? lead.leadId);
-  const valor = Number(lead.value?.amount ?? 0);
-  const empresa = lead.primaryAccount?.name ?? "";
-  const assigned = lead.assignee?.name ?? "";
-  const tag = Array.isArray(lead.tags)
-    ? lead.tags.map((t) => t.name).join(" | ")
-    : "";
-  const pipeline = lead.stageset?.name ?? "";
-  const data =
-    lead.closedTime ??
-    lead.dueTime ??
-    lead.modifiedTime ??
-    new Date().toISOString();
-  const id_primary_company = lead.primaryAccount?.id ?? "";
-  const id_primary_person = lead.contacts?.[0]?.id ?? "";
-
   return {
-    data,
-    pipeline,
-    empresa,
-    assigned,
-    valor,
-    numero: id,
-    tag,
-    id_primary_company,
-    id_primary_person,
-    lead_id: id,
+    id: lead.id,
+    name: lead.name,
+    description: lead.description,
+    status: lead.status,
+    value: lead.value ? lead.value.amount : null,
+    currency: lead.value ? lead.value.currency : null,
   };
 }
 
-async function ensureTable(client) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS dash_geralcsWon (
-      data TIMESTAMP,
-      pipeline TEXT,
-      empresa TEXT,
-      assigned TEXT,
-      valor NUMERIC(12,2),
-      numero TEXT,
-      tag TEXT,
-      id_primary_company TEXT,
-      id_primary_person TEXT,
-      lead_id TEXT PRIMARY KEY
-    );
-  `);
-
-  await client.query(`
-    DELETE FROM dash_geralcsWon a
-    USING dash_geralcsWon b
-    WHERE a.ctid < b.ctid
-    AND a.numero = b.numero;
-  `);
-}
-
-async function upsertRows(client, rows, batchSize = 500) {
-  if (!rows.length) return;
-  const cols = Object.keys(rows[0]);
-
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const vals = batch.flatMap((r) => cols.map((c) => r[c]));
-    const placeholders = batch
+async function upsertRows(client, rows) {
+  const query = `
+    INSERT INTO leads (id, name, description, status, value, currency)
+    VALUES ${rows
       .map(
-        (_, i) =>
-          `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
+        (row) =>
+          `(${row.id}, '${row.name}', '${row.description}', ${row.status}, ${row.value}, '${row.currency}')`
       )
-      .join(",");
+      .join(", ")}
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      description = EXCLUDED.description,
+      status = EXCLUDED.status,
+      value = EXCLUDED.value,
+      currency = EXCLUDED.currency;
+  `;
 
-    const sql = `
-      INSERT INTO dash_geralcsWon (${cols.join(",")})
-      VALUES ${placeholders}
-      ON CONFLICT (lead_id) DO UPDATE SET
-      ${cols
-        .filter((c) => c !== "lead_id")
-        .map((c) => `${c}=EXCLUDED.${c}`)
-        .join(", ")}
-    `;
-    await client.query(sql, vals);
-    console.log(
-      `✅ Inseridos ${batch.length} registros (batch ${i / batchSize + 1})`
-    );
-  }
+  await client.query(query);
+  console.log("Dados inseridos/atualizados com sucesso.");
 }
 
-export default async function main() {
+// Função principal que será chamada no index.js
+export async function main() {
   const client = new Client(dbCfg);
-  await client.connect();
-  await ensureTable(client);
 
-  const ids = await getAllLeadIds();
-  const rows = [];
+  try {
+    await client.connect();
+    console.log("Conectado ao banco de dados.");
 
-  const tasks = ids.map((id) =>
-    limit(async () => {
+    const leadIds = await getAllLeadIds();
+    if (leadIds.length === 0) {
+      console.log("Nenhum lead 'Won' encontrado.");
+      return;
+    }
+
+    const rows = [];
+    for (const id of leadIds) {
       try {
         const lead = await callRPC("getLead", { leadId: id });
         rows.push(mapLeadToRow(lead));
       } catch (err) {
-        console.warn(`⚠️ Falha em lead ${id}: ${err.message}`);
-        if (err.message.includes("429")) await sleep(3000);
+        console.warn(`Falha ao recuperar o lead com ID ${id}: ${err.message}`);
       }
-    })
-  );
+    }
 
-  await Promise.all(tasks);
-  console.log(`📊 Leads processados com sucesso: ${rows.length}`);
-  await upsertRows(client, rows);
-  await client.end();
-  console.log("🏁 dash_geralcsWon.js concluído com sucesso!");
+    await upsertRows(client, rows);
+  } catch (err) {
+    console.error("Erro no processo:", err);
+  } finally {
+    await client.end();
+    console.log("Conexão com o banco de dados encerrada.");
+  }
 }
