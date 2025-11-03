@@ -2,6 +2,7 @@ import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import https from "https";
+import pLimit from "p-limit";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
@@ -21,11 +22,10 @@ const {
   NUTSHELL_API_URL,
 } = process.env;
 
-const ACCOUNT_NAME = "metodo12p";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
 const dbCfg = {
   host: PGHOST,
   port: Number(PGPORT || 5432),
@@ -35,81 +35,177 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-async function callRPC(method, params = {}) {
-  const res = await fetch(NUTSHELL_API_URL, {
-    method: "POST",
-    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method,
-      params,
-      id: 1,
-      accountName: ACCOUNT_NAME,
-    }),
-    agent: httpsAgent,
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.result;
+const httpsAgent = new https.Agent({ keepAlive: true });
+const limit = pLimit(5);
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-async function getStatusIdByName(name) {
-  const statuses = await callRPC("getLeadStatuses");
-  const found = statuses.find(
-    (s) => s.name.toLowerCase() === name.toLowerCase()
-  );
-  if (!found) throw new Error(`Status "${name}" não encontrado no Nutshell`);
-  return found.id;
-}
+async function callRPC(method, params = {}, attempt = 1) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-async function getLeads(statusName) {
-  const statusId = await getStatusIdByName(statusName);
-  const leads = [];
-  let page = 1,
-    limit = 100,
-    fetched;
-  do {
-    const res = await callRPC("findLeads", {
-      query: { status: statusId },
-      page,
-      limit,
+    const res = await fetch(NUTSHELL_API_URL, {
+      method: "POST",
+      agent: httpsAgent,
+      headers: {
+        Authorization: AUTH_HEADER,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
+      signal: controller.signal,
     });
-    fetched = res.length;
-    leads.push(...res);
-    page++;
-  } while (fetched === limit);
-  return leads;
+    clearTimeout(timeout);
+
+    const json = await res.json().catch(() => null);
+    if (!json || json.error) {
+      throw new Error(
+        `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
+      );
+    }
+    return json.result;
+  } catch (err) {
+    if (attempt < 3) {
+      const wait = 2000 * attempt;
+      console.warn(
+        `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
+          wait / 1000
+        }s`
+      );
+      await sleep(wait);
+      return callRPC(method, params, attempt + 1);
+    } else {
+      throw err;
+    }
+  }
 }
 
-async function saveToDatabase(leads) {
-  const client = new Client(dbCfg);
-  await client.connect();
-  for (const lead of leads) {
-    await client.query(
-      `INSERT INTO dash_geralcswon (lead_id, name, date_closed, value, status)
-       VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (lead_id) DO UPDATE
-       SET name=EXCLUDED.name,date_closed=EXCLUDED.date_closed,value=EXCLUDED.value,status=EXCLUDED.status`,
-      [
-        lead.id,
-        lead.name,
-        lead.dateClosed ? new Date(lead.dateClosed) : null,
-        lead.value?.amount || 0,
-        "Won",
-      ]
+async function getAllLeadIds() {
+  const ids = [];
+  for (let page = 1; ; page++) {
+    const leads = await callRPC("findLeads", {
+      query: { status: 10 }, 
+      page,
+      limit: 100,
+    });
+    if (!Array.isArray(leads) || leads.length === 0) break;
+    ids.push(...leads.map((l) => l.id));
+    await sleep(200); 
+  }
+  console.log(`📥 Total de leads encontrados: ${ids.length}`);
+  return ids;
+}
+
+function mapLeadToRow(lead) {
+  const id = String(lead.id ?? lead.leadId);
+  const valor = Number(lead.value?.amount ?? 0);
+  const empresa = lead.primaryAccount?.name ?? "";
+  const assigned = lead.assignee?.name ?? "";
+  const tag = Array.isArray(lead.tags)
+    ? lead.tags.map((t) => t.name).join(" | ")
+    : "";
+  const pipeline = lead.stageset?.name ?? "";
+  const data =
+    lead.closedTime ??
+    lead.dueTime ??
+    lead.modifiedTime ??
+    new Date().toISOString();
+  const id_primary_company = lead.primaryAccount?.id ?? "";
+  const id_primary_person = lead.contacts?.[0]?.id ?? "";
+
+  return {
+    data,
+    pipeline,
+    empresa,
+    assigned,
+    valor,
+    numero: id,
+    tag,
+    id_primary_company,
+    id_primary_person,
+    lead_id: id,
+  };
+}
+
+async function ensureTable(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS dash_geralcsWon (
+      data TIMESTAMP,
+      pipeline TEXT,
+      empresa TEXT,
+      assigned TEXT,
+      valor NUMERIC(12,2),
+      numero TEXT,
+      tag TEXT,
+      id_primary_company TEXT,
+      id_primary_person TEXT,
+      lead_id TEXT PRIMARY KEY
+    );
+  `);
+
+  await client.query(`
+    DELETE FROM dash_geralcsWon a
+    USING dash_geralcsWon b
+    WHERE a.ctid < b.ctid
+    AND a.numero = b.numero;
+  `);
+}
+
+async function upsertRows(client, rows, batchSize = 500) {
+  if (!rows.length) return;
+  const cols = Object.keys(rows[0]);
+
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const vals = batch.flatMap((r) => cols.map((c) => r[c]));
+    const placeholders = batch
+      .map(
+        (_, i) =>
+          `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
+      )
+      .join(",");
+
+    const sql = `
+      INSERT INTO dash_geralcsWon (${cols.join(",")})
+      VALUES ${placeholders}
+      ON CONFLICT (lead_id) DO UPDATE SET
+      ${cols
+        .filter((c) => c !== "lead_id")
+        .map((c) => `${c}=EXCLUDED.${c}`)
+        .join(", ")}
+    `;
+    await client.query(sql, vals);
+    console.log(
+      `✅ Inseridos ${batch.length} registros (batch ${i / batchSize + 1})`
     );
   }
-  await client.end();
 }
 
-(async () => {
-  console.log("▶️ Executando dash_geralcsWon.js...");
-  try {
-    const leads = await getLeads("Won");
-    console.log(`🔍 ${leads.length} leads “Won” encontradas.`);
-    if (leads.length > 0) await saveToDatabase(leads);
-  } catch (err) {
-    console.error("🚨 Erro geral em dash_geralcsWon:", err.message);
-  }
-  console.log("🏁 dash_geralcsWon concluído.");
-})();
+export default async function main() {
+  const client = new Client(dbCfg);
+  await client.connect();
+  await ensureTable(client);
+
+  const ids = await getAllLeadIds();
+  const rows = [];
+
+  const tasks = ids.map((id) =>
+    limit(async () => {
+      try {
+        const lead = await callRPC("getLead", { leadId: id });
+        rows.push(mapLeadToRow(lead));
+      } catch (err) {
+        console.warn(`⚠️ Falha em lead ${id}: ${err.message}`);
+        if (err.message.includes("429")) await sleep(3000);
+      }
+    })
+  );
+
+  await Promise.all(tasks);
+  console.log(`📊 Leads processados com sucesso: ${rows.length}`);
+  await upsertRows(client, rows);
+  await client.end();
+  console.log("🏁 dash_geralcsWon.js concluído com sucesso!");
+}
