@@ -63,7 +63,11 @@ const TABLES = fs
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
+    console.log(colors.cyan(`🔄 Buscando dados da tabela ${tableName}...`));
     const result = await client.query(`SELECT * FROM ${tableName}`);
+    console.log(
+      colors.green(`✅ Dados da tabela ${tableName} obtidos com sucesso.`)
+    );
     return result.rows;
   } catch (err) {
     console.error(colors.red(`🚨 Erro ao buscar ${tableName}: ${err.message}`));
@@ -115,6 +119,8 @@ async function runSequentialLoop() {
     ];
 
     await Promise.allSettled(nutshellTasks);
+    console.log("Ciclo 1 completado.");
+
     for (let i = 0; i < dashFiles.length; i += 4) {
       const currentBatch = dashFiles.slice(i, i + 4);
       console.log(
@@ -123,6 +129,7 @@ async function runSequentialLoop() {
 
       const tasks = currentBatch.map((f) => runModule(f));
       await Promise.allSettled(tasks);
+      console.log("Batch completado");
       await sleep(2000);
     }
 
