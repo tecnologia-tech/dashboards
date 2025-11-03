@@ -2,7 +2,6 @@ import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import https from "https";
-import pLimit from "p-limit";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
@@ -26,134 +25,94 @@ const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 
-const TABLE_NAME = "dash_geralcsWon";
-const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(12);
+const dbCfg = {
+  host: PGHOST,
+  port: Number(PGPORT || 5432),
+  database: PGDATABASE,
+  user: PGUSER,
+  password: PGPASSWORD,
+  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
+};
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
-async function fetchLeads(limit = 500) {
-  const res = await fetch(`${NUTSHELL_API_URL}/v1/json`, {
+async function callRPC(method, params) {
+  const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
     headers: {
       Authorization: AUTH_HEADER,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      method: "findLeads",
-      params: { query: {}, limit },
-    }),
+    body: JSON.stringify({ method, params }),
     agent: httpsAgent,
   });
 
   if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`Erro ao buscar leads: ${res.status} - ${err}`);
+    const text = await res.text().catch(() => "");
+    throw new Error(`Erro ${res.status}: ${text}`);
   }
 
   const data = await res.json();
-  const leads = data?.result?.leads || [];
-  return leads.filter(
-    (l) => l.status?.name?.toLowerCase() === "won" && l.isDeleted === false
-  );
+  if (data.error) throw new Error(data.error.message);
+  return data.result;
 }
 
-async function getLeadDetails(id) {
-  try {
-    const res = await fetch(`${NUTSHELL_API_URL}/v1/json`, {
-      method: "POST",
-      headers: {
-        Authorization: AUTH_HEADER,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ method: "getLead", params: { leadId: id } }),
-      agent: httpsAgent,
+async function getLeadsWon() {
+  const allLeads = [];
+  let page = 1;
+  const limit = 100;
+  let fetched;
+
+  do {
+    const leads = await callRPC("findLeads", {
+      query: { status: 10 },
+      page,
+      limit,
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.result || null;
-  } catch {
-    return null;
-  }
+
+    fetched = leads.length;
+    allLeads.push(...leads);
+    page++;
+  } while (fetched === limit);
+
+  return allLeads;
 }
 
-async function saveToPostgres(leads) {
-  const client = new Client({
-    host: PGHOST,
-    port: Number(PGPORT || 5432),
-    database: PGDATABASE,
-    user: PGUSER,
-    password: PGPASSWORD,
-    ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-  });
+async function saveToDatabase(leads) {
+  const client = new Client(dbCfg);
   await client.connect();
-  await client.query(`
-    DROP TABLE IF EXISTS ${TABLE_NAME};
-    CREATE TABLE ${TABLE_NAME} (
-      id TEXT PRIMARY KEY,
-      nome TEXT,
-      cliente TEXT,
-      criacao TIMESTAMP,
-      status TEXT,
-      valor NUMERIC,
-      owner TEXT,
-      fechamento TIMESTAMP
-    );
-  `);
-
-  const insertQuery = `
-    INSERT INTO ${TABLE_NAME} (id, nome, cliente, criacao, status, valor, owner, fechamento)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-    ON CONFLICT (id) DO UPDATE SET
-      nome = EXCLUDED.nome,
-      cliente = EXCLUDED.cliente,
-      criacao = EXCLUDED.criacao,
-      status = EXCLUDED.status,
-      valor = EXCLUDED.valor,
-      owner = EXCLUDED.owner,
-      fechamento = EXCLUDED.fechamento;
-  `;
 
   for (const lead of leads) {
-    await client.query(insertQuery, [
-      lead.id ?? "",
-      lead.name ?? "",
-      lead.account?.name ?? "",
-      lead.createdTime ? new Date(lead.createdTime) : null,
-      lead.status?.name ?? "",
-      lead.value?.amount ?? 0,
-      lead.owner?.name ?? "",
-      lead.closeTime ? new Date(lead.closeTime) : null,
-    ]);
+    await client.query(
+      `INSERT INTO dash_geralcswon (lead_id, name, date_closed, value, status)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (lead_id) DO UPDATE
+       SET name = EXCLUDED.name, date_closed = EXCLUDED.date_closed,
+           value = EXCLUDED.value, status = EXCLUDED.status`,
+      [
+        lead.id,
+        lead.name,
+        lead.dateClosed ? new Date(lead.dateClosed) : null,
+        lead.value ? lead.value.amount : 0,
+        "Won",
+      ]
+    );
   }
 
-  console.log(`✅ ${leads.length} registros atualizados em ${TABLE_NAME}`);
-  await client.end().catch(() => {});
+  await client.end();
 }
 
-export default async function dashGeralCsWon() {
-  const start = Date.now();
+(async () => {
   console.log("▶️ Executando dash_geralcsWon.js...");
   try {
-    const leads = await fetchLeads(1000);
+    const leads = await getLeadsWon();
     console.log(`🔍 ${leads.length} leads “Won” encontradas.`);
-    const detailed = await Promise.allSettled(
-      leads.map((lead) => limit(() => getLeadDetails(lead.id)))
-    );
-    const validLeads = detailed
-      .filter((r) => r.status === "fulfilled" && r.value)
-      .map((r) => r.value);
-    if (validLeads.length > 0) await saveToPostgres(validLeads);
-    console.log(
-      `🏁 dash_geralcsWon concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
-    );
+    if (leads.length > 0) {
+      await saveToDatabase(leads);
+      console.log(`💾 ${leads.length} registros salvos em dash_geralcsWon.`);
+    }
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsWon:", err.message);
-  } finally {
-    await sleep(1000);
   }
-}
+  console.log("🏁 dash_geralcsWon concluído.");
+})();
