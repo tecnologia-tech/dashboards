@@ -78,6 +78,41 @@ async function getColumnMap() {
   });
   return map;
 }
+async function getMondayData() {
+  const allItems = [];
+  let cursor = null;
+  const limit = 50;
+  let page = 1;
+
+  do {
+    const res = await fetch("https://api.monday.com/v2", {
+      method: "POST",
+      headers: {
+        Authorization: MONDAY_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: MONDAY_QUERY,
+        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Erro HTTP ${res.status} - ${text}`);
+    }
+
+    const data = await res.json();
+    const pageData = data?.data?.boards?.[0]?.items_page;
+    if (!pageData) break;
+
+    allItems.push(...(pageData.items || []));
+    cursor = pageData.cursor;
+    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
+  } while (cursor);
+
+  return allItems;
+}
 
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
