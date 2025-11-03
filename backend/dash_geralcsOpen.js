@@ -23,6 +23,7 @@ async function getOpenLeads() {
     params: { query: { status: 0 }, limit: 100 },
     id: 1,
   };
+
   console.log("📡 Enviando para:", NUTSHELL_API_URL);
   console.log("📦 Corpo:", JSON.stringify(body, null, 2));
 
@@ -42,8 +43,10 @@ async function getOpenLeads() {
 
   const data = JSON.parse(text);
   if (data.error) throw new Error(JSON.stringify(data.error));
-  console.log("📊 Total retornado:", data.result?.leads?.length ?? 0);
-  return data.result?.leads ?? [];
+
+  const leads = data.result || [];
+  console.log("📊 Total retornado:", leads.length);
+  return leads;
 }
 
 (async () => {
