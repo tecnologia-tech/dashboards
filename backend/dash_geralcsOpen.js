@@ -1,4 +1,3 @@
-import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import https from "https";
@@ -9,32 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-const {
-  PGHOST,
-  PGPORT,
-  PGDATABASE,
-  PGUSER,
-  PGPASSWORD,
-  PGSSLMODE,
-  NUTSHELL_USERNAME,
-  NUTSHELL_API_TOKEN,
-  NUTSHELL_API_URL,
-} = process.env;
+const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
 
 const ACCOUNT_NAME = "metodo12p";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
-const dbCfg = {
-  host: PGHOST,
-  port: Number(PGPORT || 5432),
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
-
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function callRPC(method, params) {
@@ -46,6 +25,10 @@ async function callRPC(method, params) {
     accountName: ACCOUNT_NAME,
   };
 
+  console.log(`📡 Enviando RPC → ${method}`);
+  console.log("🌐 Endpoint:", NUTSHELL_API_URL);
+  console.log("📤 Corpo:", JSON.stringify(body, null, 2));
+
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
     headers: {
@@ -56,71 +39,41 @@ async function callRPC(method, params) {
     agent: httpsAgent,
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Erro HTTP ${res.status}: ${text}`);
+  console.log("📥 Status HTTP:", res.status);
+  const text = await res.text();
+  console.log("📩 Resposta:", text);
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("❌ Resposta não é JSON");
   }
 
-  const data = await res.json();
-  if (data.error) throw new Error(`Erro RPC: ${JSON.stringify(data.error)}`);
+  if (data.error) {
+    console.error("❌ Erro RPC:", data.error);
+    throw new Error(JSON.stringify(data.error));
+  }
+
   return data.result;
 }
 
 async function getLeadsOpen() {
-  const allLeads = [];
-  let page = 1;
-  const limit = 100;
-  let fetched;
-
-  do {
-    const leads = await callRPC("findLeads", {
-      query: { status: 0 },
-      page,
-      limit,
-    });
-    fetched = leads.length;
-    allLeads.push(...leads);
-    page++;
-  } while (fetched === limit);
-
-  return allLeads;
-}
-
-async function saveToDatabase(leads) {
-  const client = new Client(dbCfg);
-  await client.connect();
-
-  for (const lead of leads) {
-    await client.query(
-      `INSERT INTO dash_geralcsopen (lead_id, name, date_created, value, status)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (lead_id) DO UPDATE
-       SET name = EXCLUDED.name,
-           date_created = EXCLUDED.date_created,
-           value = EXCLUDED.value,
-           status = EXCLUDED.status`,
-      [
-        lead.id,
-        lead.name,
-        lead.dateCreated ? new Date(lead.dateCreated) : null,
-        lead.value ? lead.value.amount : 0,
-        "Open",
-      ]
-    );
-  }
-
-  await client.end();
+  console.log("🔍 Buscando leads com status 'Open'...");
+  const leads = await callRPC("findLeads", {
+    query: { status: 0 },
+    limit: 10,
+    page: 1,
+  });
+  console.log(`📊 Leads retornadas: ${leads?.length || 0}`);
+  return leads || [];
 }
 
 (async () => {
   console.log("▶️ Executando dash_geralcsOpen.js...");
   try {
     const leads = await getLeadsOpen();
-    console.log(`🔍 ${leads.length} leads “Open” encontradas.`);
-    if (leads.length > 0) {
-      await saveToDatabase(leads);
-      console.log(`💾 ${leads.length} registros salvos em dash_geralcsOpen.`);
-    }
+    console.log(`✅ Leads recebidas: ${leads.length}`);
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsOpen:", err.message);
   }

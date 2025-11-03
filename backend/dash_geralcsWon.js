@@ -25,16 +25,6 @@ const ACCOUNT_NAME = "metodo12p";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
-const dbCfg = {
-  host: PGHOST,
-  port: Number(PGPORT || 5432),
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
-
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function callRPC(method, params) {
@@ -46,6 +36,10 @@ async function callRPC(method, params) {
     accountName: ACCOUNT_NAME,
   };
 
+  console.log(`📡 Enviando requisição RPC → ${method}`);
+  console.log("🌐 Endpoint:", NUTSHELL_API_URL);
+  console.log("📤 Corpo enviado:", JSON.stringify(body, null, 2));
+
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
     headers: {
@@ -56,71 +50,42 @@ async function callRPC(method, params) {
     agent: httpsAgent,
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Erro HTTP ${res.status}: ${text}`);
+  console.log("📥 Status HTTP:", res.status);
+  const text = await res.text();
+  console.log("📩 Resposta bruta:", text);
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.log("❌ Erro ao parsear JSON da resposta.");
+    throw new Error("Resposta não é JSON.");
   }
 
-  const data = await res.json();
-  if (data.error) throw new Error(`Erro RPC: ${JSON.stringify(data.error)}`);
+  if (data.error) {
+    console.error("❌ Erro RPC detectado:", data.error);
+    throw new Error(JSON.stringify(data.error));
+  }
+
   return data.result;
 }
 
 async function getLeadsWon() {
-  const allLeads = [];
-  let page = 1;
-  const limit = 100;
-  let fetched;
-
-  do {
-    const leads = await callRPC("findLeads", {
-      query: { status: 10 },
-      page,
-      limit,
-    });
-    fetched = leads.length;
-    allLeads.push(...leads);
-    page++;
-  } while (fetched === limit);
-
-  return allLeads;
-}
-
-async function saveToDatabase(leads) {
-  const client = new Client(dbCfg);
-  await client.connect();
-
-  for (const lead of leads) {
-    await client.query(
-      `INSERT INTO dash_geralcswon (lead_id, name, date_closed, value, status)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (lead_id) DO UPDATE
-       SET name = EXCLUDED.name,
-           date_closed = EXCLUDED.date_closed,
-           value = EXCLUDED.value,
-           status = EXCLUDED.status`,
-      [
-        lead.id,
-        lead.name,
-        lead.dateClosed ? new Date(lead.dateClosed) : null,
-        lead.value ? lead.value.amount : 0,
-        "Won",
-      ]
-    );
-  }
-
-  await client.end();
+  console.log("🔍 Buscando leads com status 'Won'...");
+  const leads = await callRPC("findLeads", {
+    query: { status: 10 },
+    limit: 10,
+    page: 1,
+  });
+  console.log(`📊 Leads retornadas: ${leads?.length || 0}`);
+  return leads || [];
 }
 
 (async () => {
   console.log("▶️ Executando dash_geralcsWon.js...");
   try {
     const leads = await getLeadsWon();
-    console.log(`🔍 ${leads.length} leads “Won” encontradas.`);
-    if (leads.length > 0) {
-      await saveToDatabase(leads);
-      console.log(`💾 ${leads.length} registros salvos em dash_geralcsWon.`);
-    }
+    console.log(`✅ Leads recebidas: ${leads.length}`);
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsWon:", err.message);
   }
