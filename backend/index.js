@@ -55,12 +55,15 @@ const TABLES = [
 function formatTime(ms) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
+
 function hora() {
   return new Date().toLocaleTimeString("pt-BR");
 }
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
+
 const colors = {
   cyan: (t) => `\x1b[36m${t}\x1b[0m`,
   green: (t) => `\x1b[32m${t}\x1b[0m`,
@@ -118,15 +121,25 @@ async function runSequentialLoop() {
   let ciclo = 1;
 
   while (true) {
+    const cicloStart = Date.now();
     console.log(colors.yellow(`🧭 Iniciando ciclo #${ciclo}`));
 
-    for (const file of dashFiles) {
+    for (let i = 0; i < dashFiles.length; i += 2) {
+      const currentFiles = dashFiles.slice(i, i + 2);
       await runModule("dash_geralcsWon.js");
       await sleep(3000);
-      console.log(colors.magenta(`▶️  Agora: ${file}`));
-      await runModule(file);
-      await sleep(3000);
+      for (const file of currentFiles) {
+        console.log(colors.magenta(`▶️  Agora: ${file}`));
+        await runModule(file);
+        await sleep(3000);
+      }
     }
+
+    const cicloEnd = Date.now();
+    const cicloDuration = formatTime(cicloEnd - cicloStart);
+    console.log(
+      colors.green(`✅ Ciclo #${ciclo} concluído em ${cicloDuration}`)
+    );
 
     console.log(
       colors.yellow(`🔁 Ciclo #${ciclo} completo! Reiniciando em 5s...\n`)
