@@ -97,15 +97,14 @@ async function saveToPostgres(items, columnMap) {
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
     await client.query(`
-      DROP TABLE IF EXISTS ${TABLE_NAME};
-CREATE TABLE ${TABLE_NAME} (
-
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        ${colDefs},
-        grupo TEXT
-      );
-    `);
+  DROP TABLE IF EXISTS ${TABLE_NAME};
+  CREATE TABLE ${TABLE_NAME} (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    ${colDefs},
+    grupo TEXT
+  );
+`);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns

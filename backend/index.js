@@ -46,7 +46,9 @@ function formatTime(ms) {
 }
 
 function hora() {
-  return new Date().toLocaleTimeString("pt-BR");
+  return new Date().toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  });
 }
 
 function sleep(ms) {
