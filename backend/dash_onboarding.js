@@ -35,15 +35,6 @@ const MONDAY_QUERY = `
   }
 `;
 
-function cleanName(title) {
-  return title
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9_]/g, "")
-    .trim();
-}
-
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -57,7 +48,7 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
-  const res = await fetch("https://api.monday.com/v2", {
+  const response = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
       Authorization: MONDAY_API_KEY,
@@ -66,16 +57,14 @@ async function getColumnMap() {
     body: JSON.stringify({ query, variables }),
   });
 
-  const data = await res.json();
+  const data = await response.json();
   const columns = data?.data?.boards?.[0]?.columns || [];
 
   const map = {};
-  columns.forEach((col) => {
-    if (col.id && col.title) {
-      const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}_${col.id}`;
-    }
-  });
+  for (const col of columns) {
+    if (col.id && col.title) map[col.id] = col.title;
+  }
+
   return map;
 }
 
@@ -83,10 +72,9 @@ async function getMondayData() {
   const allItems = [];
   let cursor = null;
   const limit = 50;
-  let page = 1;
 
   do {
-    const res = await fetch("https://api.monday.com/v2", {
+    const response = await fetch("https://api.monday.com/v2", {
       method: "POST",
       headers: {
         Authorization: MONDAY_API_KEY,
@@ -98,17 +86,19 @@ async function getMondayData() {
       }),
     });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Erro HTTP ${res.status} - ${text}`);
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(
+        `Erro na requisição: ${response.status} ${response.statusText} - ${text}`
+      );
     }
 
-    const data = await res.json();
-    const pageData = data?.data?.boards?.[0]?.items_page;
-    if (!pageData) break;
+    const data = await response.json();
+    const page = data?.data?.boards?.[0]?.items_page;
+    if (!page) break;
 
-    allItems.push(...(pageData.items || []));
-    cursor = pageData.cursor;
+    allItems.push(...(page.items || []));
+    cursor = page.cursor;
   } while (cursor);
 
   return allItems;
@@ -126,50 +116,53 @@ async function saveToPostgres(items, columnMap) {
 
   try {
     await client.connect();
-    console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    const columns = Object.values(columnMap);
-    const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
+    const validColumns = Object.values(columnMap)
+      .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+      .map((title) => `"${title}"`);
 
+    if (validColumns.length === 0) {
+      throw new Error("Nenhum título de coluna válido encontrado.");
+    }
+
+  
+    await client.query(`DROP TABLE IF EXISTS ${TABLE_NAME};`);
     await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
-  );
-`);
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT,
+        name TEXT,
+        ${validColumns.map((t) => `${t} TEXT`).join(", ")},
+        grupo TEXT
+      );
+    `);
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, ${columns
-      .map((c) => `"${c}"`)
-      .join(", ")}, grupo)
-      VALUES (${[
-        "$1",
-        "$2",
-        ...columns.map((_, i) => `$${i + 3}`),
-        `$${columns.length + 3}`,
-      ].join(", ")})
-      ON CONFLICT (id) DO UPDATE SET
-      ${columns
-        .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(["grupo = EXCLUDED.grupo"])
-        .join(", ")}
+      INSERT INTO ${TABLE_NAME} (
+        id, name, ${validColumns.join(", ")}, grupo
+      ) VALUES (
+        ${[
+          "$1",
+          "$2",
+          ...validColumns.map((_, i) => `$${i + 3}`),
+          `$${validColumns.length + 3}`,
+        ].join(", ")}
+      )
     `;
 
     let inserted = 0;
     for (const item of items) {
       const col = {};
-      (item.column_values || []).forEach((c) => {
-        if (!c || !columnMap[c.id]) return;
+      for (const c of item.column_values || []) {
+        if (!c?.id || !columnMap[c.id]) continue;
         col[columnMap[c.id]] = c.text ?? "";
-      });
+      }
 
       const row = [
         item.id ?? "",
         item.name ?? "",
-        ...columns.map((t) => col[t] ?? ""),
+        ...Object.values(columnMap)
+          .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
+          .map((title) => col[title] ?? ""),
         item.group?.title ?? "",
       ];
 
@@ -177,31 +170,27 @@ async function saveToPostgres(items, columnMap) {
       inserted++;
     }
 
-    console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
+    console.log(`✅ Inseridos ${inserted} registros na tabela ${TABLE_NAME}`);
   } catch (err) {
-    console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
+    console.error("❌ Erro ao salvar no banco:", err.message);
+    throw err;
   } finally {
     await client.end().catch(() => {});
   }
 }
 
 export default async function dashOnboarding() {
-  const start = Date.now();
-  console.log("▶️ Executando dash_onboarding.js...");
   try {
+    console.log("▶️ Executando módulo dash_onboarding...");
     const columnMap = await getColumnMap();
     const items = await getMondayData();
     if (!items.length) {
-      console.log("Nenhum registro retornado do Monday.");
+      console.log("Nenhum item retornado do Monday.");
       return [];
     }
     await saveToPostgres(items, columnMap);
-    console.log(
-      `🏁 dash_onboarding concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
-    );
+    console.log("✅ dash_onboarding.js concluído com sucesso!");
   } catch (err) {
-    console.error("🚨 Erro geral em dash_onboarding:", err.message);
+    console.error("Erro geral:", err);
   }
 }
