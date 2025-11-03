@@ -61,11 +61,9 @@ async function getColumnMap() {
   const columns = data?.data?.boards?.[0]?.columns || [];
 
   const map = {};
-  columns.forEach((col) => {
-    if (col.id && col.title) {
-      map[col.id] = col.title;
-    }
-  });
+  for (const col of columns) {
+    if (col.id && col.title) map[col.id] = col.title;
+  }
 
   return map;
 }
@@ -84,11 +82,7 @@ async function getMondayData() {
       },
       body: JSON.stringify({
         query: MONDAY_QUERY,
-        variables: {
-          board_id: MONDAY_BOARD_ID,
-          limit,
-          cursor,
-        },
+        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
       }),
     });
 
@@ -100,11 +94,11 @@ async function getMondayData() {
     }
 
     const data = await response.json();
-    const itemsPage = data?.data?.boards?.[0]?.items_page;
-    if (!itemsPage) break;
+    const page = data?.data?.boards?.[0]?.items_page;
+    if (!page) break;
 
-    allItems.push(...(itemsPage.items || []));
-    cursor = itemsPage.cursor;
+    allItems.push(...(page.items || []));
+    cursor = page.cursor;
   } while (cursor);
 
   return allItems;
@@ -113,7 +107,7 @@ async function getMondayData() {
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
-    port: PGPORT ? parseInt(PGPORT, 10) : undefined,
+    port: PGPORT ? parseInt(PGPORT, 10) : 5432,
     database: PGDATABASE,
     user: PGUSER,
     password: PGPASSWORD,
@@ -123,45 +117,45 @@ async function saveToPostgres(items, columnMap) {
   try {
     await client.connect();
 
-    const columnTitles = Object.values(columnMap)
+    const validColumns = Object.values(columnMap)
       .filter((title) => !!title && /^[a-zA-Z0-9_À-ÿ\s]+$/.test(title))
       .map((title) => `"${title}"`);
 
-    if (columnTitles.length === 0) {
-      throw new Error("Nenhum título de coluna válido foi encontrado.");
+    if (validColumns.length === 0) {
+      throw new Error("Nenhum título de coluna válido encontrado.");
     }
 
-    const createQuery = `
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+  
+    await client.query(`DROP TABLE IF EXISTS ${TABLE_NAME};`);
+    await client.query(`
+      CREATE TABLE ${TABLE_NAME} (
         id TEXT,
         name TEXT,
-        ${columnTitles.map((title) => `${title} TEXT`).join(", ")},
+        ${validColumns.map((t) => `${t} TEXT`).join(", ")},
         grupo TEXT
       );
-    `;
-    await client.query(createQuery);
-
-    await client.query(`DELETE FROM ${TABLE_NAME}`);
+    `);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (
-        id, name, ${columnTitles.join(", ")}, grupo
+        id, name, ${validColumns.join(", ")}, grupo
       ) VALUES (
         ${[
           "$1",
           "$2",
-          ...columnTitles.map((_, i) => `$${i + 3}`),
-          `$${columnTitles.length + 3}`,
+          ...validColumns.map((_, i) => `$${i + 3}`),
+          `$${validColumns.length + 3}`,
         ].join(", ")}
       )
     `;
 
+    let inserted = 0;
     for (const item of items) {
       const col = {};
-      (item.column_values || []).forEach((c) => {
-        if (!c || !columnMap[c.id]) return;
+      for (const c of item.column_values || []) {
+        if (!c?.id || !columnMap[c.id]) continue;
         col[columnMap[c.id]] = c.text ?? "";
-      });
+      }
 
       const row = [
         item.id ?? "",
@@ -173,9 +167,12 @@ async function saveToPostgres(items, columnMap) {
       ];
 
       await client.query(insertQuery, row);
+      inserted++;
     }
+
+    console.log(`✅ Inseridos ${inserted} registros na tabela ${TABLE_NAME}`);
   } catch (err) {
-    console.error("Erro ao salvar no banco:", err);
+    console.error("❌ Erro ao salvar no banco:", err.message);
     throw err;
   } finally {
     await client.end().catch(() => {});
@@ -184,16 +181,16 @@ async function saveToPostgres(items, columnMap) {
 
 export default async function dashOnboarding() {
   try {
+    console.log("▶️ Executando módulo dash_onboarding...");
     const columnMap = await getColumnMap();
     const items = await getMondayData();
     if (!items.length) {
-      console.log("Nenhum item retornado");
+      console.log("Nenhum item retornado do Monday.");
       return [];
     }
     await saveToPostgres(items, columnMap);
-    return items;
+    console.log("✅ dash_onboarding.js concluído com sucesso!");
   } catch (err) {
-    console.error("Erro:", err);
-    return [];
+    console.error("Erro geral:", err);
   }
 }
