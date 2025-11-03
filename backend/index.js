@@ -58,7 +58,9 @@ function formatTime(ms) {
 function hora() {
   return new Date().toLocaleTimeString("pt-BR");
 }
-
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 const colors = {
   cyan: (t) => `\x1b[36m${t}\x1b[0m`,
   green: (t) => `\x1b[32m${t}\x1b[0m`,
@@ -113,7 +115,6 @@ async function runSequentialLoop() {
     )
     .sort((a, b) => a.localeCompare(b));
 
-  console.log(colors.cyan("🚀 Iniciando execução sequencial infinita...\n"));
   let ciclo = 1;
 
   while (true) {
@@ -121,12 +122,17 @@ async function runSequentialLoop() {
 
     for (const file of dashFiles) {
       await runModule("dash_geralcsWon.js");
+      await sleep(3000);
       console.log(colors.magenta(`▶️  Agora: ${file}`));
       await runModule(file);
+      await sleep(3000);
     }
 
-    console.log(colors.yellow(`🔁 Ciclo #${ciclo} completo! Reiniciando...\n`));
+    console.log(
+      colors.yellow(`🔁 Ciclo #${ciclo} completo! Reiniciando em 5s...\n`)
+    );
     ciclo++;
+    await sleep(5000);
   }
 }
 
@@ -151,13 +157,5 @@ app.listen(PORT, () =>
 (async function main() {
   await updateDashboardCache();
   console.log(colors.cyan("🚀 Iniciando loop principal..."));
-  while (true) {
-    try {
-      await runSequentialLoop();
-    } catch (err) {
-      console.error(colors.red(`💥 Loop caiu: ${err.message}`));
-      console.log(colors.yellow("🔁 Reiniciando loop em 5s..."));
-      await new Promise((r) => setTimeout(r, 5000));
-    }
-  }
+  await runSequentialLoop();
 })();
