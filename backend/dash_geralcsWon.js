@@ -44,7 +44,12 @@ async function fetchLeads(limit = 500) {
     body: JSON.stringify({
       method: "findLeads",
       params: {
-        query: { isDeleted: false, "status.name": "Won" },
+        query: {
+          conditions: [
+            { field: "isDeleted", operator: "=", value: false },
+            { field: "status.name", operator: "=", value: "Won" },
+          ],
+        },
         limit,
       },
     }),
