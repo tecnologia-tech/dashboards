@@ -24,71 +24,54 @@ const {
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
-const dbCfg = {
-  host: PGHOST,
-  port: Number(PGPORT || 5432),
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
-
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function getWonLeads() {
-  const url = `${NUTSHELL_API_URL}/leads?status=Won`;
-  console.log("📡 Requisição →", url);
+  // 🔧 monta URL correta da REST API (sem /json)
+  const baseUrl = NUTSHELL_API_URL.replace(/\/json$/, "");
+  const url = `${baseUrl}/leads?status=Won`;
+  console.log("🔗 URL final da requisição:", url);
+  console.log("🔑 Token:", NUTSHELL_API_TOKEN ? "[OK]" : "[FALTANDO]");
+  console.log("👤 Usuário:", NUTSHELL_USERNAME);
+  console.log("🌍 Endpoint base:", baseUrl);
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
-    agent: httpsAgent,
-  });
+  const headers = {
+    Authorization: AUTH_HEADER,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  console.log("📬 Headers usados:", headers);
 
+  const res = await fetch(url, { method: "GET", headers, agent: httpsAgent });
+
+  console.log("📥 Status HTTP:", res.status, res.statusText);
   const text = await res.text();
-  console.log("📥 Resposta bruta:", text);
+  console.log("📦 Corpo bruto recebido:", text);
+
   if (!res.ok) throw new Error(`Erro HTTP ${res.status}: ${text}`);
 
-  const data = JSON.parse(text);
-  return Array.isArray(data) ? data : data.leads || [];
-}
-
-async function saveToDatabase(leads) {
-  const client = new Client(dbCfg);
-  await client.connect();
-
-  for (const lead of leads) {
-    await client.query(
-      `INSERT INTO dash_geralcswon (lead_id, name, date_closed, value, status)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (lead_id) DO UPDATE
-       SET name = EXCLUDED.name,
-           date_closed = EXCLUDED.date_closed,
-           value = EXCLUDED.value,
-           status = EXCLUDED.status`,
-      [
-        lead.id,
-        lead.name,
-        lead.dateClosed ? new Date(lead.dateClosed) : null,
-        lead.value ? lead.value.amount : 0,
-        "Won",
-      ]
-    );
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    console.error("❌ Erro ao parsear JSON:", e.message);
+    throw new Error("Resposta não é JSON válida.");
   }
 
-  await client.end();
+  console.log(
+    "📊 Tipo de resposta:",
+    Array.isArray(data) ? "Array" : typeof data
+  );
+  if (Array.isArray(data)) console.log(`📈 Total de leads: ${data.length}`);
+
+  return Array.isArray(data) ? data : data.leads || [];
 }
 
 (async () => {
   console.log("▶️ Executando dash_geralcsWon.js...");
   try {
     const leads = await getWonLeads();
-    console.log(`📊 ${leads.length} leads “Won” encontradas.`);
-    if (leads.length > 0) {
-      await saveToDatabase(leads);
-      console.log(`💾 ${leads.length} registros salvos em dash_geralcswon.`);
-    }
+    console.log(`✅ Leads recebidas: ${leads.length}`);
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsWon:", err.message);
   }
