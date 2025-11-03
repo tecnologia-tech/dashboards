@@ -130,7 +130,9 @@ async function saveToPostgres(items, columnMap) {
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+CREATE TABLE ${TABLE_NAME} (
+
         id TEXT PRIMARY KEY,
         name TEXT,
         ${colDefs},
@@ -140,8 +142,8 @@ async function saveToPostgres(items, columnMap) {
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
-        .map((c) => `"${c}"`)
-        .join(", ")}, grupo)
+      .map((c) => `"${c}"`)
+      .join(", ")}, grupo)
       VALUES (${[
         "$1",
         "$2",
@@ -151,7 +153,7 @@ async function saveToPostgres(items, columnMap) {
       ON CONFLICT (id) DO UPDATE SET
       ${columns
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(['grupo = EXCLUDED.grupo'])
+        .concat(["grupo = EXCLUDED.grupo"])
         .join(", ")}
     `;
 

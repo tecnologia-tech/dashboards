@@ -133,7 +133,9 @@ async function saveToPostgres(items, columnMap) {
       .join(", ");
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+CREATE TABLE ${TABLE_NAME} (
+
         id TEXT PRIMARY KEY,
         name TEXT,
         grupo TEXT,
@@ -143,8 +145,8 @@ async function saveToPostgres(items, columnMap) {
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, grupo, ${columns
-        .flatMap((c) => [`"${c}_text"`, `"${c}_value"`])
-        .join(", ")})
+      .flatMap((c) => [`"${c}_text"`, `"${c}_value"`])
+      .join(", ")})
       VALUES (${[
         "$1",
         "$2",
@@ -157,7 +159,7 @@ async function saveToPostgres(items, columnMap) {
           `"${c}_text" = EXCLUDED."${c}_text"`,
           `"${c}_value" = EXCLUDED."${c}_value"`,
         ])
-        .concat(['grupo = EXCLUDED.grupo'])
+        .concat(["grupo = EXCLUDED.grupo"])
         .join(", ")}
     `;
 
@@ -210,7 +212,9 @@ export default async function dashIXDelivery() {
     }
     await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_ixdelivery concluído em ${((Date.now() - start) / 1000).toFixed(1)}s`
+      `🏁 dash_ixdelivery concluído em ${((Date.now() - start) / 1000).toFixed(
+        1
+      )}s`
     );
   } catch (err) {
     console.error("🚨 Erro geral em dash_ixdelivery:", err.message);

@@ -88,7 +88,9 @@ async function saveToPostgres(leads) {
 
   try {
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+CREATE TABLE ${TABLE_NAME} (
+
         id TEXT PRIMARY KEY,
         nome TEXT,
         cliente TEXT,

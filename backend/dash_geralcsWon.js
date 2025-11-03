@@ -30,7 +30,7 @@ const TABLE_NAME = "dash_geralcsWon";
 
 const httpsAgent = new https.Agent({ keepAlive: true });
 
-const limit = pLimit(12); 
+const limit = pLimit(12);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -90,7 +90,9 @@ async function saveToPostgres(leads) {
   await client.connect();
 
   await client.query(`
-    CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+    DROP TABLE IF EXISTS ${TABLE_NAME};
+CREATE TABLE ${TABLE_NAME} (
+
       id TEXT PRIMARY KEY,
       nome TEXT,
       cliente TEXT,
@@ -117,7 +119,7 @@ async function saveToPostgres(leads) {
   `;
 
   let count = 0;
-  const batchSize = 100;  
+  const batchSize = 100;
 
   for (let i = 0; i < leads.length; i += batchSize) {
     const batch = leads.slice(i, i + batchSize);
