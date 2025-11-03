@@ -16,13 +16,18 @@ const AUTH_HEADER =
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function getOpenLeads() {
-  const url = `${NUTSHELL_API_URL}/leads/find`;
+  const url = `${NUTSHELL_API_URL}/json`;
   console.log("🔗 URL final:", url);
   console.log("📬 Método: POST");
   console.log("🔑 Token:", NUTSHELL_API_TOKEN ? "[OK]" : "[FALTANDO]");
   console.log("👤 Usuário:", NUTSHELL_USERNAME);
 
-  const body = JSON.stringify({ status: "Open" });
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "findEntities",
+    params: { type: "Lead", query: { status: "Open" }, limit: 100 },
+    id: 1,
+  });
   console.log("📦 Corpo da requisição:", body);
 
   const headers = {
@@ -45,23 +50,16 @@ async function getOpenLeads() {
   if (!res.ok) throw new Error(`Erro HTTP ${res.status}: ${text}`);
 
   const data = JSON.parse(text);
-  console.log(
-    "📊 Tipo de resposta:",
-    Array.isArray(data) ? "Array" : typeof data
-  );
-  console.log(
-    "📈 Total de leads retornadas:",
-    data.length || (data.leads?.length ?? 0)
-  );
-
-  return Array.isArray(data) ? data : data.leads || [];
+  if (data.error) throw new Error(JSON.stringify(data.error));
+  console.log("📈 Total de resultados:", data.result?.entities?.length ?? 0);
+  return data.result?.entities || [];
 }
 
 (async () => {
   console.log("▶️ Executando dash_geralcsOpen.js...");
   try {
     const leads = await getOpenLeads();
-    console.log(`✅ Leads recebidas: ${leads.length}`);
+    console.log(`✅ Leads “Open” recebidas: ${leads.length}`);
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsOpen:", err.message);
   }
