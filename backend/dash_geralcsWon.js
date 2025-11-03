@@ -8,51 +8,42 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
+const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN } = process.env;
 
+const NUTSHELL_API_URL = "https://app.nutshell.com/api/v1/json";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function getWonLeads() {
-  const url = `${NUTSHELL_API_URL}/json`;
-  console.log("🔗 URL final:", url);
-  console.log("📬 Método: POST");
-  console.log("🔑 Token:", NUTSHELL_API_TOKEN ? "[OK]" : "[FALTANDO]");
-  console.log("👤 Usuário:", NUTSHELL_USERNAME);
-
-  const body = JSON.stringify({
+  const body = {
     jsonrpc: "2.0",
-    method: "findEntities",
-    params: { type: "Lead", query: { status: "Won" }, limit: 100 },
+    method: "findLeads",
+    params: { query: { status: 10 }, limit: 100 },
     id: 1,
-  });
-  console.log("📦 Corpo da requisição:", body);
-
-  const headers = {
-    Authorization: AUTH_HEADER,
-    "Content-Type": "application/json",
-    Accept: "application/json",
   };
-  console.log("📬 Headers usados:", headers);
+  console.log("📡 Enviando para:", NUTSHELL_API_URL);
+  console.log("📦 Corpo:", JSON.stringify(body, null, 2));
 
-  const res = await fetch(url, {
+  const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
-    headers,
-    body,
+    headers: {
+      Authorization: AUTH_HEADER,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
     agent: httpsAgent,
   });
+
   console.log("📥 Status HTTP:", res.status, res.statusText);
   const text = await res.text();
-  console.log("📦 Corpo bruto recebido:", text);
-
-  if (!res.ok) throw new Error(`Erro HTTP ${res.status}: ${text}`);
+  console.log("📦 Resposta bruta:", text);
 
   const data = JSON.parse(text);
   if (data.error) throw new Error(JSON.stringify(data.error));
-  console.log("📈 Total de resultados:", data.result?.entities?.length ?? 0);
-  return data.result?.entities || [];
+  console.log("📊 Total retornado:", data.result?.leads?.length ?? 0);
+  return data.result?.leads ?? [];
 }
 
 (async () => {
