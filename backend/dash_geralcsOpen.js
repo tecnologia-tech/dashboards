@@ -16,12 +16,14 @@ const AUTH_HEADER =
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 async function getOpenLeads() {
-  const baseUrl = NUTSHELL_API_URL.replace(/\/json$/, "");
-  const url = `${baseUrl}/leads?status=Open`;
-  console.log("🔗 URL final da requisição:", url);
+  const url = `${NUTSHELL_API_URL}/leads/find`;
+  console.log("🔗 URL final:", url);
+  console.log("📬 Método: POST");
   console.log("🔑 Token:", NUTSHELL_API_TOKEN ? "[OK]" : "[FALTANDO]");
   console.log("👤 Usuário:", NUTSHELL_USERNAME);
-  console.log("🌍 Endpoint base:", baseUrl);
+
+  const body = JSON.stringify({ status: "Open" });
+  console.log("📦 Corpo da requisição:", body);
 
   const headers = {
     Authorization: AUTH_HEADER,
@@ -30,27 +32,27 @@ async function getOpenLeads() {
   };
   console.log("📬 Headers usados:", headers);
 
-  const res = await fetch(url, { method: "GET", headers, agent: httpsAgent });
-
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body,
+    agent: httpsAgent,
+  });
   console.log("📥 Status HTTP:", res.status, res.statusText);
   const text = await res.text();
   console.log("📦 Corpo bruto recebido:", text);
 
   if (!res.ok) throw new Error(`Erro HTTP ${res.status}: ${text}`);
 
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    console.error("❌ Erro ao parsear JSON:", e.message);
-    throw new Error("Resposta não é JSON válida.");
-  }
-
+  const data = JSON.parse(text);
   console.log(
     "📊 Tipo de resposta:",
     Array.isArray(data) ? "Array" : typeof data
   );
-  if (Array.isArray(data)) console.log(`📈 Total de leads: ${data.length}`);
+  console.log(
+    "📈 Total de leads retornadas:",
+    data.length || (data.leads?.length ?? 0)
+  );
 
   return Array.isArray(data) ? data : data.leads || [];
 }
