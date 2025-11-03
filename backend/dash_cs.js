@@ -110,7 +110,6 @@ async function getMondayData() {
 
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
-    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
 
   return allItems;
