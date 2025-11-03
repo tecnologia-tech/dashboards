@@ -118,8 +118,9 @@ async function runSequentialLoop() {
       runModule("dash_geralcsOpen.js"),
     ];
 
-    await Promise.allSettled(nutshellTasks);
-    console.log("Ciclo 1 completado.");
+    // Logando o estado das promessas
+    const nutshellResults = await Promise.allSettled(nutshellTasks);
+    console.log("Resultados do ciclo 1:", nutshellResults);
 
     for (let i = 0; i < dashFiles.length; i += 4) {
       const currentBatch = dashFiles.slice(i, i + 4);
@@ -128,8 +129,9 @@ async function runSequentialLoop() {
       );
 
       const tasks = currentBatch.map((f) => runModule(f));
-      await Promise.allSettled(tasks);
-      console.log("Batch completado");
+      const batchResults = await Promise.allSettled(tasks);
+      console.log("Resultados do batch:", batchResults);
+
       await sleep(2000);
     }
 
