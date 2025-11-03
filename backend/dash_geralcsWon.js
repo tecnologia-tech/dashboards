@@ -44,6 +44,7 @@ function sleep(ms) {
 
 async function callRPC(method, params = {}, attempt = 1) {
   try {
+    console.log(`🔄 Iniciando RPC: ${method} (tentativa ${attempt})`);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -65,6 +66,7 @@ async function callRPC(method, params = {}, attempt = 1) {
         `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
       );
     }
+    console.log(`✅ RPC ${method} executado com sucesso!`);
     return json.result;
   } catch (err) {
     if (attempt < 3) {
@@ -77,6 +79,7 @@ async function callRPC(method, params = {}, attempt = 1) {
       await sleep(wait);
       return callRPC(method, params, attempt + 1);
     } else {
+      console.error(`🚨 RPC ${method} falhou após ${attempt} tentativas`);
       throw err;
     }
   }
@@ -84,17 +87,21 @@ async function callRPC(method, params = {}, attempt = 1) {
 
 async function getAllLeadIds() {
   const ids = [];
+  console.log("🔄 Buscando todos os IDs dos leads...");
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
-      query: { status: 10 }, 
+      query: { status: 10 },
       page,
       limit: 100,
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
-    await sleep(200); 
+    console.log(
+      `📥 Página ${page} de leads processada. Total até agora: ${ids.length}`
+    );
+    await sleep(200);
   }
-  console.log(`📥 Total de leads encontrados: ${ids.length}`);
+  console.log(`📊 Total de leads encontrados: ${ids.length}`);
   return ids;
 }
 
@@ -130,6 +137,7 @@ function mapLeadToRow(lead) {
 }
 
 async function ensureTable(client) {
+  console.log("🔄 Verificando a existência da tabela...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
       data TIMESTAMP,
@@ -151,6 +159,7 @@ async function ensureTable(client) {
     WHERE a.ctid < b.ctid
     AND a.numero = b.numero;
   `);
+  console.log("✅ Tabela verificada/atualizada com sucesso.");
 }
 
 async function upsertRows(client, rows, batchSize = 500) {
@@ -184,6 +193,7 @@ async function upsertRows(client, rows, batchSize = 500) {
 }
 
 export default async function main() {
+  console.log("🔄 Iniciando o processo...");
   const client = new Client(dbCfg);
   await client.connect();
   await ensureTable(client);
@@ -194,6 +204,7 @@ export default async function main() {
   const tasks = ids.map((id) =>
     limit(async () => {
       try {
+        console.log(`🔄 Buscando informações do lead ID: ${id}`);
         const lead = await callRPC("getLead", { leadId: id });
         rows.push(mapLeadToRow(lead));
       } catch (err) {
