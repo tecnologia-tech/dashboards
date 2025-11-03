@@ -21,11 +21,10 @@ const {
   NUTSHELL_API_URL,
 } = process.env;
 
-const ACCOUNT_NAME = "metodo12p";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
 const dbCfg = {
   host: PGHOST,
   port: Number(PGPORT || 5432),
@@ -35,43 +34,61 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-async function callRPC(method, params) {
-  const body = {
-    jsonrpc: "2.0",
-    method,
-    params,
-    id: 1,
-    accountName: ACCOUNT_NAME,
-  };
-  console.log(`📡 Chamando RPC → ${method}`);
-  const res = await fetch(NUTSHELL_API_URL, {
-    method: "POST",
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
+async function getWonLeads() {
+  const url = `${NUTSHELL_API_URL}/leads?status=Won`;
+  console.log("📡 Requisição →", url);
+
+  const res = await fetch(url, {
+    method: "GET",
     headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
     agent: httpsAgent,
   });
+
   const text = await res.text();
-  console.log("📩 Resposta bruta:", text);
+  console.log("📥 Resposta bruta:", text);
+  if (!res.ok) throw new Error(`Erro HTTP ${res.status}: ${text}`);
+
   const data = JSON.parse(text);
-  if (data.error) throw new Error(JSON.stringify(data.error));
-  return data.result;
+  return Array.isArray(data) ? data : data.leads || [];
 }
 
-async function getLeadsWon() {
-  console.log("🔍 Buscando leads com status 'Won'...");
-  const leads = await callRPC("Lead.find", {
-    query: { isDeleted: false, status: "Won" },
-    limit: 100,
-  });
-  console.log(`📊 Leads retornadas: ${leads?.length || 0}`);
-  return leads || [];
+async function saveToDatabase(leads) {
+  const client = new Client(dbCfg);
+  await client.connect();
+
+  for (const lead of leads) {
+    await client.query(
+      `INSERT INTO dash_geralcswon (lead_id, name, date_closed, value, status)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (lead_id) DO UPDATE
+       SET name = EXCLUDED.name,
+           date_closed = EXCLUDED.date_closed,
+           value = EXCLUDED.value,
+           status = EXCLUDED.status`,
+      [
+        lead.id,
+        lead.name,
+        lead.dateClosed ? new Date(lead.dateClosed) : null,
+        lead.value ? lead.value.amount : 0,
+        "Won",
+      ]
+    );
+  }
+
+  await client.end();
 }
 
 (async () => {
   console.log("▶️ Executando dash_geralcsWon.js...");
   try {
-    const leads = await getLeadsWon();
-    console.log(`✅ Leads recebidas: ${leads.length}`);
+    const leads = await getWonLeads();
+    console.log(`📊 ${leads.length} leads “Won” encontradas.`);
+    if (leads.length > 0) {
+      await saveToDatabase(leads);
+      console.log(`💾 ${leads.length} registros salvos em dash_geralcswon.`);
+    }
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsWon:", err.message);
   }
