@@ -21,6 +21,7 @@ const {
   NUTSHELL_API_URL,
 } = process.env;
 
+const ACCOUNT_NAME = "metodo12p";
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
@@ -38,7 +39,13 @@ async function callRPC(method, params = {}) {
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
     headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
-    body: JSON.stringify({ method, params }),
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method,
+      params,
+      id: 1,
+      accountName: ACCOUNT_NAME,
+    }),
     agent: httpsAgent,
   });
   const data = await res.json();
