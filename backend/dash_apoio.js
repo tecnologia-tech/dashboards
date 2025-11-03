@@ -57,38 +57,6 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
-  const response = await fetch("https://api.monday.com/v2", {
-    method: "POST",
-    headers: {
-      Authorization: MONDAY_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const data = await response.json();
-  const columns = data?.data?.boards?.[0]?.columns || [];
-
-  const map = {};
-  columns.forEach((col) => {
-    if (col.id && col.title) map[col.id] = cleanName(col.title);
-  });
-  return map;
-}
-
-async function getColumnMap() {
-  const query = `
-    query ($board_id: ID!) {
-      boards(ids: [$board_id]) {
-        columns {
-          id
-          title
-        }
-      }
-    }
-  `;
-  const variables = { board_id: MONDAY_BOARD_ID };
-
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
