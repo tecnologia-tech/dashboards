@@ -24,7 +24,7 @@ const {
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 const dbCfg = {
   host: PGHOST,
   port: Number(PGPORT || 5432),
@@ -34,83 +34,73 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
-async function callRPC(method, params) {
+async function callRPC(method, params = {}) {
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
-    headers: {
-      Authorization: AUTH_HEADER,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
     body: JSON.stringify({ method, params }),
     agent: httpsAgent,
   });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Erro ${res.status}: ${text}`);
-  }
-
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   return data.result;
 }
 
-async function getLeadsOpen() {
-  const allLeads = [];
-  let page = 1;
-  const limit = 100;
-  let fetched;
+async function getStatusIdByName(name) {
+  const statuses = await callRPC("getLeadStatuses");
+  const found = statuses.find(
+    (s) => s.name.toLowerCase() === name.toLowerCase()
+  );
+  if (!found) throw new Error(`Status "${name}" não encontrado no Nutshell`);
+  return found.id;
+}
 
+async function getLeads(statusName) {
+  const statusId = await getStatusIdByName(statusName);
+  const leads = [];
+  let page = 1,
+    limit = 100,
+    fetched;
   do {
-    const leads = await callRPC("findLeads", {
-      query: { status: 0 },
+    const res = await callRPC("findLeads", {
+      query: { status: statusId },
       page,
       limit,
     });
-
-    fetched = leads.length;
-    allLeads.push(...leads);
+    fetched = res.length;
+    leads.push(...res);
     page++;
   } while (fetched === limit);
-
-  return allLeads;
+  return leads;
 }
 
 async function saveToDatabase(leads) {
   const client = new Client(dbCfg);
   await client.connect();
-
   for (const lead of leads) {
     await client.query(
       `INSERT INTO dash_geralcsopen (lead_id, name, date_created, value, status)
-       VALUES ($1, $2, $3, $4, $5)
+       VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (lead_id) DO UPDATE
-       SET name = EXCLUDED.name, date_created = EXCLUDED.date_created,
-           value = EXCLUDED.value, status = EXCLUDED.status`,
+       SET name=EXCLUDED.name,date_created=EXCLUDED.date_created,value=EXCLUDED.value,status=EXCLUDED.status`,
       [
         lead.id,
         lead.name,
         lead.dateCreated ? new Date(lead.dateCreated) : null,
-        lead.value ? lead.value.amount : 0,
+        lead.value?.amount || 0,
         "Open",
       ]
     );
   }
-
   await client.end();
 }
 
 (async () => {
   console.log("▶️ Executando dash_geralcsOpen.js...");
   try {
-    const leads = await getLeadsOpen();
-    console.log(`🔍 ${leads.length} leads abertas encontradas.`);
-    if (leads.length > 0) {
-      await saveToDatabase(leads);
-      console.log(`💾 ${leads.length} registros salvos em dash_geralcsOpen.`);
-    }
+    const leads = await getLeads("Open");
+    console.log(`🔍 ${leads.length} leads “Open” encontradas.`);
+    if (leads.length > 0) await saveToDatabase(leads);
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsOpen:", err.message);
   }
