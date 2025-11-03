@@ -1,4 +1,4 @@
-import { Client } from "pg";
+import { Client, Pool } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import https from "https";
@@ -36,7 +36,7 @@ const dbCfg = {
 };
 
 const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(5);
+const limit = pLimit(10); // Aumente o limite para maior concorrência, dependendo da carga
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -68,7 +68,7 @@ async function callRPC(method, params = {}, attempt = 1) {
     return json.result;
   } catch (err) {
     if (attempt < 3) {
-      const wait = 2000 * attempt;
+      const wait = 1000 * attempt; // Reduzi o tempo de espera entre tentativas
       console.warn(
         `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
           wait / 1000
@@ -93,7 +93,7 @@ async function getAllLeadIds() {
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
-    await sleep(200);
+    await sleep(100); // Reduzi o tempo de espera
   }
   return ids;
 }
@@ -181,7 +181,7 @@ async function upsertRows(client, rows, batchSize = 500) {
 }
 
 export default async function main() {
-  const client = new Client(dbCfg);
+  const client = new Pool(dbCfg); // Usando Pool para melhorar o desempenho
   await client.connect();
   await ensureTable(client);
 
@@ -195,7 +195,7 @@ export default async function main() {
         rows.push(mapLeadToRow(lead));
       } catch (err) {
         console.warn(`⚠️ Falha em lead ${id}: ${err.message}`);
-        if (err.message.includes("429")) await sleep(3000);
+        if (err.message.includes("429")) await sleep(2000);
       }
     })
   );
