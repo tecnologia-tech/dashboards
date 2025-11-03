@@ -76,40 +76,39 @@ async function getColumnMap() {
   return map;
 }
 
-async function getMondayData() {
-  const allItems = [];
-  let cursor = null;
-  const limit = 50;
-  let page = 1;
-
-  do {
-    const res = await fetch("https://api.monday.com/v2", {
-      method: "POST",
-      headers: {
-        Authorization: MONDAY_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: MONDAY_QUERY,
-        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Erro HTTP ${res.status} - ${text}`);
+async function getColumnMap() {
+  const query = `
+    query ($board_id: ID!) {
+      boards(ids: [$board_id]) {
+        columns {
+          id
+          title
+        }
+      }
     }
+  `;
+  const variables = { board_id: MONDAY_BOARD_ID };
 
-    const data = await res.json();
-    const pageData = data?.data?.boards?.[0]?.items_page;
-    if (!pageData) break;
+  const res = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      Authorization: MONDAY_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
 
-    allItems.push(...(pageData.items || []));
-    cursor = pageData.cursor;
-    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
-  } while (cursor);
+  const data = await res.json();
+  const columns = data?.data?.boards?.[0]?.columns || [];
 
-  return allItems;
+  const map = {};
+  columns.forEach((col) => {
+    if (col.id && col.title) {
+      const safeName = cleanName(col.title);
+      map[col.id] = `${safeName}_${col.id}`;
+    }
+  });
+  return map;
 }
 
 async function saveToPostgres(items, columnMap) {

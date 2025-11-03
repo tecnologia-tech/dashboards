@@ -71,7 +71,10 @@ async function getColumnMap() {
 
   const map = {};
   columns.forEach((col) => {
-    if (col.id && col.title) map[col.id] = cleanName(col.title);
+    if (col.id && col.title) {
+      const safeName = cleanName(col.title);
+      map[col.id] = `${safeName}_${col.id}`;
+    }
   });
   return map;
 }
