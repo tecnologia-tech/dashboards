@@ -43,15 +43,7 @@ async function fetchLeads(limit = 500) {
     },
     body: JSON.stringify({
       method: "findLeads",
-      params: {
-        query: {
-          conditions: [
-            { field: "isDeleted", operator: "=", value: false },
-            { field: "status.name", operator: "=", value: "Won" },
-          ],
-        },
-        limit,
-      },
+      params: { query: {}, limit },
     }),
     agent: httpsAgent,
   });
@@ -62,7 +54,10 @@ async function fetchLeads(limit = 500) {
   }
 
   const data = await res.json();
-  return data?.result?.leads || [];
+  const leads = data?.result?.leads || [];
+  return leads.filter(
+    (l) => l.status?.name?.toLowerCase() === "won" && l.isDeleted === false
+  );
 }
 
 async function getLeadDetails(id) {
