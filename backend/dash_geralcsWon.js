@@ -27,9 +27,7 @@ const AUTH_HEADER =
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 
 const TABLE_NAME = "dash_geralcsWon";
-
 const httpsAgent = new https.Agent({ keepAlive: true });
-
 const limit = pLimit(12);
 
 function sleep(ms) {
@@ -37,20 +35,18 @@ function sleep(ms) {
 }
 
 async function fetchLeads(limit = 500) {
-  const res = await fetch(`${NUTSHELL_API_URL}/api/v1/leads/search`, {
+  const res = await fetch(`${NUTSHELL_API_URL}/v1/json`, {
     method: "POST",
     headers: {
       Authorization: AUTH_HEADER,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      query: {
-        conditions: [
-          { field: "isDeleted", operator: "=", value: false },
-          { field: "status.name", operator: "=", value: "Won" },
-        ],
+      method: "findLeads",
+      params: {
+        query: { isDeleted: false, "status.name": "Won" },
+        limit,
       },
-      limit,
     }),
     agent: httpsAgent,
   });
@@ -61,17 +57,23 @@ async function fetchLeads(limit = 500) {
   }
 
   const data = await res.json();
-  return data?.results || [];
+  return data?.result?.leads || [];
 }
 
 async function getLeadDetails(id) {
   try {
-    const res = await fetch(`${NUTSHELL_API_URL}/api/v1/lead/${id}`, {
-      headers: { Authorization: AUTH_HEADER },
+    const res = await fetch(`${NUTSHELL_API_URL}/v1/json`, {
+      method: "POST",
+      headers: {
+        Authorization: AUTH_HEADER,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ method: "getLead", params: { leadId: id } }),
       agent: httpsAgent,
     });
     if (!res.ok) return null;
-    return await res.json();
+    const data = await res.json();
+    return data?.result || null;
   } catch {
     return null;
   }
@@ -86,13 +88,10 @@ async function saveToPostgres(leads) {
     password: PGPASSWORD,
     ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
   });
-
   await client.connect();
-
   await client.query(`
     DROP TABLE IF EXISTS ${TABLE_NAME};
-CREATE TABLE ${TABLE_NAME} (
-
+    CREATE TABLE ${TABLE_NAME} (
       id TEXT PRIMARY KEY,
       nome TEXT,
       cliente TEXT,
@@ -105,9 +104,8 @@ CREATE TABLE ${TABLE_NAME} (
   `);
 
   const insertQuery = `
-    INSERT INTO ${TABLE_NAME} (
-      id, nome, cliente, criacao, status, valor, owner, fechamento
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    INSERT INTO ${TABLE_NAME} (id, nome, cliente, criacao, status, valor, owner, fechamento)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     ON CONFLICT (id) DO UPDATE SET
       nome = EXCLUDED.nome,
       cliente = EXCLUDED.cliente,
@@ -118,57 +116,41 @@ CREATE TABLE ${TABLE_NAME} (
       fechamento = EXCLUDED.fechamento;
   `;
 
-  let count = 0;
-  const batchSize = 100;
-
-  for (let i = 0; i < leads.length; i += batchSize) {
-    const batch = leads.slice(i, i + batchSize);
-    const queries = batch.map((lead) =>
-      client.query(insertQuery, [
-        lead.id ?? "",
-        lead.name ?? "",
-        lead.account?.name ?? "",
-        lead.createdTime ? new Date(lead.createdTime) : null,
-        lead.status?.name ?? "",
-        lead.value?.amount ?? 0,
-        lead.owner?.name ?? "",
-        lead.closeTime ? new Date(lead.closeTime) : null,
-      ])
-    );
-
-    await Promise.allSettled(queries);
-    count += batch.length;
+  for (const lead of leads) {
+    await client.query(insertQuery, [
+      lead.id ?? "",
+      lead.name ?? "",
+      lead.account?.name ?? "",
+      lead.createdTime ? new Date(lead.createdTime) : null,
+      lead.status?.name ?? "",
+      lead.value?.amount ?? 0,
+      lead.owner?.name ?? "",
+      lead.closeTime ? new Date(lead.closeTime) : null,
+    ]);
   }
 
-  console.log(`✅ ${count} registros atualizados em ${TABLE_NAME}`);
+  console.log(`✅ ${leads.length} registros atualizados em ${TABLE_NAME}`);
   await client.end().catch(() => {});
 }
 
 export default async function dashGeralCsWon() {
   const start = Date.now();
   console.log("▶️ Executando dash_geralcsWon.js...");
-
   try {
     const leads = await fetchLeads(1000);
     console.log(`🔍 ${leads.length} leads “Won” encontradas.`);
-
     const detailed = await Promise.allSettled(
       leads.map((lead) => limit(() => getLeadDetails(lead.id)))
     );
-
     const validLeads = detailed
       .filter((r) => r.status === "fulfilled" && r.value)
       .map((r) => r.value);
-
-    if (validLeads.length === 0) {
-      console.log("Nenhum lead válido retornado do Nutshell.");
-      return [];
-    }
-
-    await saveToPostgres(validLeads);
-
-    const duration = ((Date.now() - start) / 1000).toFixed(1);
-    console.log(`🏁 dash_geralcsWon concluído em ${duration}s`);
+    if (validLeads.length > 0) await saveToPostgres(validLeads);
+    console.log(
+      `🏁 dash_geralcsWon concluído em ${((Date.now() - start) / 1000).toFixed(
+        1
+      )}s`
+    );
   } catch (err) {
     console.error("🚨 Erro geral em dash_geralcsWon:", err.message);
   } finally {
