@@ -82,23 +82,23 @@ async function getAllLeadIds() {
   return ids;
 }
 
-// Função para salvar os dados na tabela dash_geralcswon (ou qualquer outra tabela específica)
+// Função para salvar os dados na tabela dash_geralcsopen (ou qualquer outra tabela específica)
 async function saveToPostgres(leadIds) {
   const client = new Client(dbCfg);
   try {
     await client.connect(); // Conectar ao banco de dados PostgreSQL
     console.log("🔄 Conectado ao banco de dados PostgreSQL");
 
-    // Inserir dados na tabela dash_geralcswon
+    // Inserir dados na tabela dash_geralcsopen
     for (const leadId of leadIds) {
       const query = `
-        INSERT INTO public.dash_geralcswon (lead_id, data)
+        INSERT INTO public.dash_geralcsopen (lead_id, data)
         VALUES ($1, CURRENT_TIMESTAMP) 
         ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id e data (timestamp atual)
       await client.query(query, [leadId]); // Inserir leadId e data na tabela
     }
 
-    console.log(`📦 ${leadIds.length} leads salvos na tabela dash_geralcswon.`);
+    console.log(`📦 ${leadIds.length} leads salvos na tabela dash_geralcsopen.`);
   } catch (err) {
     console.error("🚨 Erro ao salvar dados no PostgreSQL:", err.message);
   } finally {
@@ -116,7 +116,7 @@ export default async function dashGeralcsOpen() {
     const leadIds = await getAllLeadIds();
     console.log(`📦 ${leadIds.length} leads 'open' encontrados.`);
 
-    // Salva os dados na tabela dash_geralcswon
+    // Salva os dados na tabela dash_geralcsopen
     await saveToPostgres(leadIds); // Chama a função para salvar os dados no PostgreSQL
     console.log(
       `🏁 dash_geralcsOpen concluído em ${((Date.now() - start) / 1000).toFixed(
