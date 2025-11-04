@@ -56,6 +56,7 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
+  console.log("🔍 Buscando as colunas do board...");
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -66,7 +67,10 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
+  console.log("📊 Dados das colunas recebidos:", data);
+
   const columns = data?.data?.boards?.[0]?.columns || [];
+  console.log("📑 Colunas extraídas:", columns);
 
   const map = {};
   columns.forEach((col) => {
@@ -84,6 +88,7 @@ async function getMondayData() {
   const limit = 50;
   let page = 1;
 
+  console.log("🔄 Iniciando o carregamento dos itens do board...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -103,11 +108,14 @@ async function getMondayData() {
     }
 
     const data = await res.json();
+    console.log("📊 Dados da página recebidos:", data);
+
     const pageData = data?.data?.boards?.[0]?.items_page;
     if (!pageData) break;
 
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
+    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
 
   return allItems;
@@ -124,35 +132,43 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
+    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
+
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
     const columns = Object.values(columnMap);
-    const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
+    const colDefs = columns
+      .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
+      .join(", ");
 
+    console.log("📑 Criando tabela no banco...");
     await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
-  );
-`);
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        ${colDefs},
+        grupo TEXT
+      );
+    `);
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, ${columns
-      .map((c) => `"${c}"`)
-      .join(", ")}, grupo)
+      INSERT INTO ${TABLE_NAME} (id, name, grupo, ${columns
+      .flatMap((c) => [`"${c}_text"`, `"${c}_value"`])
+      .join(", ")})
       VALUES (${[
         "$1",
         "$2",
-        ...columns.map((_, i) => `$${i + 3}`),
-        `$${columns.length + 3}`,
+        "$3",
+        ...columns.flatMap((_, i) => [`$${i * 2 + 4}`, `$${i * 2 + 5}`]),
       ].join(", ")})
       ON CONFLICT (id) DO UPDATE SET
       ${columns
-        .map((c) => `"${c}" = EXCLUDED."${c}"`)
+        .flatMap((c) => [
+          `"${c}_text" = EXCLUDED."${c}_text"`,
+          `"${c}_value" = EXCLUDED."${c}_value"`,
+        ])
         .concat(["grupo = EXCLUDED.grupo"])
         .join(", ")}
     `;
@@ -161,17 +177,28 @@ async function saveToPostgres(items, columnMap) {
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c || !columnMap[c.id]) return;
-        col[columnMap[c.id]] = c.text ?? "";
+        if (!c?.id || !columnMap[c.id]) return;
+        const title = columnMap[c.id];
+        col[title] = {
+          text: c.text ?? "",
+          value:
+            typeof c.value === "object"
+              ? JSON.stringify(c.value)
+              : c.value ?? "",
+        };
       });
 
       const row = [
         item.id ?? "",
         item.name ?? "",
-        ...columns.map((t) => col[t] ?? ""),
         item.group?.title ?? "",
+        ...columns.flatMap((t) => {
+          const c = col[t] || {};
+          return [c.text ?? "", c.value ?? ""];
+        }),
       ];
 
+      console.log("📥 Inserindo linha:", row);
       await client.query(insertQuery, row);
       count++;
     }
@@ -183,6 +210,7 @@ async function saveToPostgres(items, columnMap) {
     await client.end().catch(() => {});
   }
 }
+
 export default async function dashFornecedores() {
   const start = Date.now();
   console.log("▶️ Executando dash_fornecedores.js...");
@@ -200,5 +228,7 @@ export default async function dashFornecedores() {
         1000
       ).toFixed(1)}s`
     );
-  } catch (err) {}
+  } catch (err) {
+    console.error("🚨 Erro geral em dash_fornecedores:", err.message);
+  }
 }

@@ -4,10 +4,12 @@ import pkg from "pg";
 const { Client } = pkg;
 import path from "path";
 import { fileURLToPath } from "url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
+
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
@@ -20,14 +22,18 @@ const MONDAY_QUERY = `
         cursor
         items {
           id
-          name   column_values {
+          name
+          group { title }
+          column_values {
             id
-            text          }
+            text
+          }
         }
       }
     }
   }
 `;
+
 function cleanName(title) {
   return title
     .normalize("NFD")
@@ -36,6 +42,7 @@ function cleanName(title) {
     .replace(/[^a-zA-Z0-9_]/g, "")
     .trim();
 }
+
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -49,6 +56,7 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
+  console.log("🔄 Buscando mapeamento das colunas do board...");
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -59,8 +67,9 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
-  const columns = data?.data?.boards?.[0]?.columns || [];
+  console.log("📊 Dados das colunas recebidos:", data);
 
+  const columns = data?.data?.boards?.[0]?.columns || [];
   const map = {};
   columns.forEach((col) => {
     if (col.id && col.title) {
@@ -70,12 +79,14 @@ async function getColumnMap() {
   });
   return map;
 }
+
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
   const limit = 50;
   let page = 1;
 
+  console.log("🔄 Iniciando a coleta de dados do board...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -100,9 +111,12 @@ async function getMondayData() {
 
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
+    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
+
   return allItems;
 }
+
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -114,27 +128,41 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
+    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
+
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
+
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
+
+    console.log("📑 Criando ou verificando a tabela...");
     await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
-  );
-`);
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        ${colDefs},
+        grupo TEXT
+      );
+    `);
+
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
       .map((c) => `"${c}"`)
-      .join(", ")})
-      VALUES (${["$1", "$2", ...columns.map((_, i) => `$${i + 3}`)].join(
-        ", "
-      )})   ON CONFLICT (id) DO UPDATE SET
-      ${columns.map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ")} `;
+      .join(", ")}, grupo)
+      VALUES (${[
+        "$1",
+        "$2",
+        ...columns.map((_, i) => `$${i + 3}`),
+        `$${columns.length + 3}`,
+      ].join(", ")})
+      ON CONFLICT (id) DO UPDATE SET
+      ${columns
+        .map((c) => `"${c}" = EXCLUDED."${c}"`)
+        .concat(["grupo = EXCLUDED.grupo"])
+        .join(", ")}
+    `;
 
     let count = 0;
     for (const item of items) {
@@ -148,8 +176,10 @@ async function saveToPostgres(items, columnMap) {
         item.id ?? "",
         item.name ?? "",
         ...columns.map((t) => col[t] ?? ""),
+        item.group?.title ?? "",
       ];
 
+      console.log(`📥 Inserindo linha:`, row);
       await client.query(insertQuery, row);
       count++;
     }
@@ -158,9 +188,11 @@ async function saveToPostgres(items, columnMap) {
   } catch (err) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
-    await client.end().catch(() => {});
+    await client.end();
+    console.log("🔌 Conexão com o banco de dados encerrada.");
   }
 }
+
 export default async function dashICP() {
   const start = Date.now();
   console.log("▶️ Executando dash_icp.js...");

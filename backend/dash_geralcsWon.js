@@ -5,9 +5,11 @@ import https from "https";
 import pLimit from "p-limit";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
+
 const {
   PGHOST,
   PGPORT,
@@ -19,9 +21,11 @@ const {
   NUTSHELL_API_TOKEN,
   NUTSHELL_API_URL,
 } = process.env;
+
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
+
 const dbCfg = {
   host: PGHOST,
   port: Number(PGPORT || 5432),
@@ -30,17 +34,22 @@ const dbCfg = {
   password: PGPASSWORD,
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
+
 const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(10); // Aumente o limite para maior concorrência, dependendo da carga
+const limit = pLimit(10); // Limite de concorrência
+
+// Função para esperar (usada para controlar o tempo entre tentativas)
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// Função para fazer chamadas RPC ao Nutshell com reintentos
 async function callRPC(method, params = {}, attempt = 1) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
 
+    console.log(`🔄 Chamando RPC para o método ${method}...`);
     const res = await fetch(NUTSHELL_API_URL, {
       method: "POST",
       agent: httpsAgent,
@@ -51,6 +60,7 @@ async function callRPC(method, params = {}, attempt = 1) {
       body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
       signal: controller.signal,
     });
+
     clearTimeout(timeout);
 
     const json = await res.json().catch(() => null);
@@ -59,25 +69,29 @@ async function callRPC(method, params = {}, attempt = 1) {
         `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
       );
     }
+    console.log(`✅ Resposta recebida do método ${method}`);
     return json.result;
   } catch (err) {
     if (attempt < 3) {
-      const wait = 1000 * attempt; // Reduzi o tempo de espera entre tentativas
+      const wait = 1000 * attempt; // Aumenta o tempo de espera entre as tentativas
       console.warn(
         `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
           wait / 1000
         }s`
       );
       await sleep(wait);
-      return callRPC(method, params, attempt + 1);
+      return callRPC(method, params, attempt + 1); // Tenta novamente
     } else {
       console.error(`🚨 RPC ${method} falhou após ${attempt} tentativas`);
       throw err;
     }
   }
 }
+
+// Função para obter todos os IDs de leads
 async function getAllLeadIds() {
   const ids = [];
+  console.log("🔄 Buscando todos os IDs de leads...");
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
       query: { status: 10 },
@@ -86,10 +100,13 @@ async function getAllLeadIds() {
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
-    await sleep(100); // Reduzi o tempo de espera
+    await sleep(100); // Tempo de espera entre requisições
   }
+  console.log(`✅ Total de ${ids.length} leads encontrados.`);
   return ids;
 }
+
+// Função para mapear os dados do lead para o formato de linha
 function mapLeadToRow(lead) {
   const id = String(lead.id ?? lead.leadId);
   const valor = Number(lead.value?.amount ?? 0);
@@ -120,7 +137,10 @@ function mapLeadToRow(lead) {
     lead_id: id,
   };
 }
+
+// Função para garantir que a tabela exista no banco
 async function ensureTable(client) {
+  console.log("📑 Verificando e criando a tabela se necessário...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
       data TIMESTAMP,
@@ -136,14 +156,17 @@ async function ensureTable(client) {
  );
   `);
 
+  // Remove registros duplicados (com o mesmo número)
   await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
     WHERE a.ctid < b.ctid
     AND a.numero = b.numero;
   `);
+  console.log("✅ Tabela verificada e duplicados removidos.");
 }
 
+// Função para realizar o upsert dos dados no banco
 async function upsertRows(client, rows, batchSize = 500) {
   if (!rows.length) return;
   const cols = Object.keys(rows[0]);
@@ -167,33 +190,40 @@ async function upsertRows(client, rows, batchSize = 500) {
         .map((c) => `${c}=EXCLUDED.${c}`)
         .join(", ")}
     `;
+    console.log(`🔄 Inserindo batch de ${batch.length} registros...`);
     await client.query(sql, vals);
   }
+  console.log(`✅ Upsert de ${rows.length} registros concluído.`);
 }
 
 export default async function main() {
   const client = new Pool(dbCfg); // Usando Pool para melhorar o desempenho
+  console.log("🔗 Conectando ao banco de dados...");
   await client.connect();
   await ensureTable(client);
 
   const ids = await getAllLeadIds();
   const rows = [];
 
+  // Processando os leads em paralelo com o limite de concorrência
   const tasks = ids.map((id) =>
     limit(async () => {
       try {
+        console.log(`🔄 Processando lead ID ${id}...`);
         const lead = await callRPC("getLead", { leadId: id });
         rows.push(mapLeadToRow(lead));
       } catch (err) {
-        console.warn(`⚠️ Falha em lead ${id}: ${err.message}`);
-        if (err.message.includes("429")) await sleep(2000);
+        console.warn(`⚠️ Falha ao processar lead ${id}: ${err.message}`);
+        if (err.message.includes("429")) await sleep(2000); // Delay em caso de excesso de requisições
       }
     })
   );
 
   await Promise.all(tasks);
-  console.log(`📊 Leads processados com sucesso: ${rows.length}`);
+
+  console.log(`📊 ${rows.length} leads processados com sucesso.`);
   await upsertRows(client, rows);
+
   await client.end();
-  console.log("🏁 dash_geralcsWon.js concluído com sucesso!");
+  console.log("🏁 Processamento de dash_geralcsWon concluído!");
 }

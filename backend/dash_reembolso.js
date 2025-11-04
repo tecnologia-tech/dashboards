@@ -1,20 +1,23 @@
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
-import path from "path";
 import { fileURLToPath } from "url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Carregar variáveis de ambiente
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-const MONDAY_BOARD_ID = "8182800749";
-const TABLE_NAME = "dash_reembolso";
+const MONDAY_BOARD_ID = "8182800749"; // Substitua pelo seu ID de board do Monday
+const TABLE_NAME = "dash_reembolso"; // Tabela de destino no banco PostgreSQL
 
+// Query do Monday.com para buscar os dados
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -34,6 +37,7 @@ const MONDAY_QUERY = `
   }
 `;
 
+// Função para limpar o nome da coluna
 function cleanName(title) {
   return title
     .normalize("NFD")
@@ -43,6 +47,7 @@ function cleanName(title) {
     .trim();
 }
 
+// Função para mapear as colunas do Monday
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -76,6 +81,7 @@ async function getColumnMap() {
   return map;
 }
 
+// Função para buscar dados do Monday
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
@@ -106,8 +112,11 @@ async function getMondayData() {
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
   } while (cursor);
+
   return allItems;
 }
+
+// Função para salvar dados no PostgreSQL
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -117,22 +126,25 @@ async function saveToPostgres(items, columnMap) {
     password: PGPASSWORD,
     ssl: false,
   });
+
   try {
     await client.connect();
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    const columns = [...new Set(Object.values(columnMap))];
+    // Obter o mapeamento de colunas
+    const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
+    // Criar a tabela se não existir
     await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
-  );
-`);
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        ${colDefs},
+        grupo TEXT
+      );
+    `);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
@@ -173,19 +185,25 @@ async function saveToPostgres(items, columnMap) {
   } catch (err) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
-    await client.end().catch(() => {});
+    await client.end();
+    console.log("🔌 Conexão com o banco de dados encerrada.");
   }
 }
+
+// Função principal para executar o processo de ETL
 export default async function dashReembolso() {
   const start = Date.now();
   console.log("▶️ Executando dash_reembolso.js...");
+
   try {
     const columnMap = await getColumnMap();
     const items = await getMondayData();
+
     if (!items.length) {
       console.log("Nenhum registro retornado do Monday.");
       return [];
     }
+
     await saveToPostgres(items, columnMap);
     console.log(
       `🏁 dash_reembolso concluído em ${((Date.now() - start) / 1000).toFixed(

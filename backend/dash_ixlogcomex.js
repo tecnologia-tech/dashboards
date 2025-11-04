@@ -4,6 +4,7 @@ import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
 import { fileURLToPath } from "url";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -56,6 +57,8 @@ async function getColumnMap() {
     }
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
+
+  console.log("🔄 Buscando mapeamento das colunas do board...");
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -66,6 +69,8 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
+  console.log("📊 Dados das colunas recebidos:", data);
+
   const columns = data?.data?.boards?.[0]?.columns || [];
   const map = {};
   columns.forEach((col) => {
@@ -83,6 +88,7 @@ async function getMondayData() {
   const limit = 50;
   let page = 1;
 
+  console.log("🔄 Iniciando a coleta de dados do board...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -100,11 +106,14 @@ async function getMondayData() {
       const text = await res.text().catch(() => "");
       throw new Error(`Erro HTTP ${res.status} - ${text}`);
     }
+
     const data = await res.json();
     const pageData = data?.data?.boards?.[0]?.items_page;
     if (!pageData) break;
+
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
+    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
 
   return allItems;
@@ -121,7 +130,9 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
+    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
+
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
     const columns = Object.values(columnMap);
@@ -129,15 +140,16 @@ async function saveToPostgres(items, columnMap) {
       .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
       .join(", ");
 
+    console.log("📑 Criando ou verificando a tabela...");
     await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
-  );
-`);
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        ${colDefs},
+        grupo TEXT
+      );
+    `);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, grupo, ${columns
@@ -184,16 +196,20 @@ async function saveToPostgres(items, columnMap) {
         }),
       ];
 
+      console.log(`📥 Inserindo linha:`, row);
       await client.query(insertQuery, row);
       inserted++;
     }
+
     console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
-    await client.end().catch(() => {});
+    await client.end();
+    console.log("🔌 Conexão com o banco de dados encerrada.");
   }
 }
+
 export default async function dashIXLogComex() {
   const start = Date.now();
   console.log("▶️ Executando dash_ixlogcomex.js...");

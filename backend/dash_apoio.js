@@ -42,6 +42,7 @@ function cleanName(title) {
     .replace(/[^a-zA-Z0-9_]/g, "")
     .trim();
 }
+
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -55,6 +56,7 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
+  console.log("🔍 Buscando colunas do board...");
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -65,7 +67,10 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
+  console.log("📊 Dados de colunas recebidos:", data);
+
   const columns = data?.data?.boards?.[0]?.columns || [];
+  console.log("📑 Colunas extraídas:", columns);
 
   const map = {};
   columns.forEach((col) => {
@@ -76,12 +81,14 @@ async function getColumnMap() {
   });
   return map;
 }
+
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
   const limit = 50;
   let page = 1;
 
+  console.log("🔄 Iniciando carregamento de itens do board...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -101,6 +108,8 @@ async function getMondayData() {
     }
 
     const data = await res.json();
+    console.log("📊 Dados da página recebidos:", data);
+
     const pageData = data?.data?.boards?.[0]?.items_page;
     if (!pageData) break;
 
@@ -123,21 +132,23 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
+    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
+
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
     await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
-  );
-`);
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        ${colDefs},
+        grupo TEXT
+      );
+    `);
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
@@ -171,6 +182,7 @@ async function saveToPostgres(items, columnMap) {
         item.group?.title ?? "",
       ];
 
+      console.log("📥 Inserindo linha:", row);
       await client.query(insertQuery, row);
       inserted++;
     }
@@ -182,6 +194,7 @@ async function saveToPostgres(items, columnMap) {
     await client.end().catch(() => {});
   }
 }
+
 export default async function dashApoio() {
   const start = Date.now();
   console.log("▶️ Executando dash_apoio.js...");

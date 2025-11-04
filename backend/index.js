@@ -27,17 +27,10 @@ const pool = new Pool({
   user: PGUSER,
   password: PGPASSWORD,
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-  max: 5,
+  max: 5, // Limita o número de conexões simultâneas
 });
 
-const colors = {
-  cyan: (t) => `\x1b[36m${t}\x1b[0m`,
-  green: (t) => `\x1b[32m${t}\x1b[0m`,
-  red: (t) => `\x1b[31m${t}\x1b[0m`,
-  yellow: (t) => `\x1b[33m${t}\x1b[0m`,
-  magenta: (t) => `\x1b[35m${t}\x1b[0m`,
-};
-
+// Função para formatação do tempo
 function formatTime(ms) {
   const s = (ms / 1000).toFixed(1);
   const min = Math.floor(s / 60);
@@ -45,55 +38,57 @@ function formatTime(ms) {
   return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
 }
 
+// Função para pegar o horário atual no Brasil
 function hora() {
   return new Date().toLocaleTimeString("pt-BR", {
     timeZone: "America/Sao_Paulo",
   });
 }
 
+// Função para criar pausa
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// Função para obter os arquivos das tabelas
 const TABLES = fs
   .readdirSync(__dirname)
   .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
   .map((f) => f.replace(".js", ""));
 
+// Função para buscar dados de uma tabela
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
-    console.log(colors.cyan(`🔄 Buscando dados da tabela ${tableName}...`));
+    console.log(`🔄 Buscando dados da tabela ${tableName}...`);
     const result = await client.query(`SELECT * FROM ${tableName}`);
-    console.log(
-      colors.green(`✅ Dados da tabela ${tableName} obtidos com sucesso.`)
-    );
+    console.log(`✅ Dados da tabela ${tableName} obtidos com sucesso.`);
     return result.rows;
   } catch (err) {
-    console.error(colors.red(`🚨 Erro ao buscar ${tableName}: ${err.message}`));
+    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
     return [];
   } finally {
     client.release();
   }
 }
 
+// Função para rodar um módulo
 async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
   try {
-    console.log(colors.cyan(`▶️ Iniciando ${file}...`));
+    console.log(`▶️ Iniciando ${file}...`);
     const mod = await import(modulePath + `?v=${Date.now()}`);
     if (typeof mod.default === "function") {
       await mod.default();
     }
-    console.log(
-      colors.green(`✅ ${file} concluído (${formatTime(Date.now() - start)})`)
-    );
+    console.log(`✅ ${file} concluído (${formatTime(Date.now() - start)})`);
   } catch (err) {
-    console.error(colors.red(`❌ Erro em ${file}: ${err.message}`));
+    console.error(`❌ Erro em ${file}: ${err.message}`);
   }
 }
 
+// Função para rodar um loop sequencial
 async function runSequentialLoop() {
   const dashFiles = fs
     .readdirSync(__dirname)
@@ -109,9 +104,7 @@ async function runSequentialLoop() {
 
   while (true) {
     const cicloStart = Date.now();
-    console.log(
-      colors.yellow(`\n🧭 Iniciando ciclo #${ciclo} às ${hora()}...\n`)
-    );
+    console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...`);
 
     const nutshellTasks = [
       runModule("dash_geralcsWon.js"),
@@ -122,11 +115,10 @@ async function runSequentialLoop() {
     const nutshellResults = await Promise.allSettled(nutshellTasks);
     console.log("Resultados do ciclo 1:", nutshellResults);
 
+    // Executando em batches de 4 módulos
     for (let i = 0; i < dashFiles.length; i += 4) {
       const currentBatch = dashFiles.slice(i, i + 4);
-      console.log(
-        colors.magenta(`⚙️  Rodando batch: ${currentBatch.join(", ")}`)
-      );
+      console.log(`⚙️  Rodando batch: ${currentBatch.join(", ")}`);
 
       const tasks = currentBatch.map((f) => runModule(f));
       const batchResults = await Promise.allSettled(tasks);
@@ -137,19 +129,16 @@ async function runSequentialLoop() {
 
     const cicloEnd = Date.now();
     console.log(
-      colors.green(
-        `\n✅ Ciclo #${ciclo} concluído em ${formatTime(cicloEnd - cicloStart)}`
-      )
+      `✅ Ciclo #${ciclo} concluído em ${formatTime(cicloEnd - cicloStart)}`
     );
 
-    console.log(
-      colors.cyan(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...\n`)
-    );
+    console.log(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...`);
     ciclo++;
     await sleep(60000);
   }
 }
 
+// Rota para coletar os dados de todas as tabelas
 app.get("/api/dashboard", async (req, res) => {
   const data = {};
   for (const t of TABLES) {
@@ -158,15 +147,16 @@ app.get("/api/dashboard", async (req, res) => {
   res.json(data);
 });
 
+// Rota dinâmica para as tabelas
 TABLES.forEach((t) =>
   app.get(`/api/${t}`, async (req, res) => res.json(await fetchTableData(t)))
 );
 
 app.listen(PORT, () => {
-  console.log(colors.green(`🌐 Servidor rodando em http://localhost:${PORT}`));
+  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`);
 });
 
 (async function main() {
-  console.log(colors.cyan("🚀 Iniciando ciclo paralelo otimizado..."));
+  console.log("🚀 Iniciando ciclo paralelo otimizado...");
   await runSequentialLoop(); // Garantindo que o ciclo seja executado infinitamente
 })();

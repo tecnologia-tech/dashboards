@@ -3,9 +3,11 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import fetch from "node-fetch";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
+
 const {
   PGHOST,
   PGPORT,
@@ -21,6 +23,7 @@ const {
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
+
 const dbCfg = {
   host: PGHOST,
   port: Number(PGPORT || 5432),
@@ -30,6 +33,7 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
+// Extract lead number from URL or lead name
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
   if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
@@ -48,8 +52,8 @@ function toSQLDateFromISO(isoString) {
   if (!isoString || typeof isoString !== "string") return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
-  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-  return br.toISOString().slice(0, 10);
+  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000); // Adjust to Brazil timezone
+  return br.toISOString().slice(0, 10); // Return only the date part
 }
 
 function parseAmountToNumber(valueObj) {
@@ -88,8 +92,6 @@ function mapLeadToRow(leadFull, accountMap) {
   const empresa =
     leadFull.primaryAccount?.name ??
     accountMap[leadFull.primaryAccount?.id] ??
-    leadFull.primaryC?.name ??
-    leadFull.primaryAccountName ??
     "";
 
   return {
@@ -105,6 +107,8 @@ function mapLeadToRow(leadFull, accountMap) {
     lead_id: String(leadFull.id ?? leadFull.leadId),
   };
 }
+
+// Call Nutshell API using JSON-RPC
 async function callNutshellJSONRPC(method, params = {}) {
   const payload = {
     jsonrpc: "2.0",
@@ -112,6 +116,7 @@ async function callNutshellJSONRPC(method, params = {}) {
     params,
     id: String(Date.now()),
   };
+  console.log(`🔄 Chamando método ${method}...`);
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
     headers: {
@@ -123,10 +128,13 @@ async function callNutshellJSONRPC(method, params = {}) {
   const json = await res.json();
   if (!res.ok || json.error)
     throw new Error(JSON.stringify(json.error || json));
+  console.log(`✅ Resposta do método ${method}:`, json.result);
   return json.result;
 }
 
+// Ensure the table exists
 async function ensureTable(client) {
+  console.log("📑 Verificando e criando a tabela se necessário...");
   await client.query(`DROP TABLE IF EXISTS dash_geralcsopen`);
   await client.query(`
     CREATE TABLE dash_geralcsopen (
@@ -141,8 +149,10 @@ async function ensureTable(client) {
       id_primary_person TEXT,
       lead_id TEXT );
   `);
+  console.log("✅ Tabela criada ou verificada.");
 }
 
+// Upsert rows into the database
 async function upsertRows(client, rows) {
   if (!rows || rows.length === 0) return;
   const cols = Object.keys(rows[0]);
@@ -162,37 +172,42 @@ async function upsertRows(client, rows) {
       ${cols
         .filter((c) => c !== "numero")
         .map((c) => `${c} = EXCLUDED.${c}`)
-        .join(", ")};
-  `;
+        .join(", ")};`;
 
+  console.log("📥 Iniciando upsert de dados...");
   try {
     await client.query("BEGIN;");
     await client.query("SET LOCAL lock_timeout = '10s';");
     await client.query(insertSQL, params);
     await client.query("COMMIT;");
+    console.log(`✅ ${rows.length} registros upserted.`);
   } catch (err) {
     await client.query("ROLLBACK;");
-    console.error("Erro ao inserir:", err.message);
+    console.error("❌ Erro ao inserir:", err.message);
   }
 }
+
 function getHotStageIdsManualmente() {
-  return [391, 1043];
+  return [391, 1043]; // Manually defined stages
 }
+
 async function main() {
   const client = new Client(dbCfg);
   try {
+    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
     await ensureTable(client);
 
     const hotStageIds = getHotStageIdsManualmente();
+    console.log("📊 Obtendo leads das etapas:", hotStageIds);
 
     const allRows = [];
-
     for (const stageId of hotStageIds) {
       let page = 1;
       const leadIds = [];
 
       while (true) {
+        console.log(`🔄 Buscando leads da etapa ${stageId}, página ${page}...`);
         const res = await callNutshellJSONRPC("findLeads", {
           query: { status: 0, stageId },
           page,
@@ -206,6 +221,9 @@ async function main() {
 
       for (let i = 0; i < leadIds.length; i += 100) {
         const batch = leadIds.slice(i, i + 100);
+        console.log(
+          `🔄 Processando batch de leads (IDs: ${batch.join(", ")})...`
+        );
         const tasks = batch.map((id) =>
           callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
         );
@@ -226,11 +244,11 @@ async function main() {
         allRows.push(...rows);
       }
     }
-    const pipelines = new Set(allRows.map((r) => r.pipeline));
   } catch (err) {
-    console.error("Erro:", err.message);
+    console.error("❌ Erro:", err.message);
   } finally {
     await client.end();
+    console.log("🔌 Conexão com o banco encerrada.");
   }
 }
 
