@@ -9,9 +9,9 @@ import { fileURLToPath } from "url";
 // Configuração de arquivos e variáveis de ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".envv") });
+dotenv.config({ path: path.join(__dirname, ".env") });
 
-// Extraindo as variáveis de ambiente do arquivo .envv
+// Extraindo as variáveis de ambiente do arquivo .env
 const {
   PGHOST,
   PGPORT,
