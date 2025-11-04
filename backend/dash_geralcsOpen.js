@@ -188,7 +188,7 @@ async function upsertRows(client, rows) {
 }
 
 function getHotStageIdsManualmente() {
-  return [391, 1043]; // Manually defined stages
+  return [391, 1043, 1039]; // Manually defined stages
 }
 
 async function main() {
