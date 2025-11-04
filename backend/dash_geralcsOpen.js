@@ -95,7 +95,6 @@ async function saveToPostgres(leadIds) {
       const numero = leadId.numero; // Suponha que 'numero' seja parte do objeto leadId
 
       if (!numero) {
-        console.log(`🚨 Lead ${leadId} não possui 'numero' e será ignorado.`);
         continue; // Ignorar a inserção se 'numero' for null ou vazio
       }
 
