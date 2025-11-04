@@ -170,7 +170,6 @@ async function upsertRows(client, rows) {
         .map((c) => `${c} = EXCLUDED.${c}`)
         .join(", ")};`;
 
-  console.log("📥 Iniciando upsert de dados...");
   try {
     await client.query("BEGIN;");
     await client.query("SET LOCAL lock_timeout = '10s';");
@@ -190,7 +189,6 @@ function getHotStageIdsManualmente() {
 async function main() {
   const client = new Client(dbCfg);
   try {
-    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
     await ensureTable(client);
 
@@ -240,7 +238,6 @@ async function main() {
     console.error("❌ Erro:", err.message);
   } finally {
     await client.end();
-    console.log("🔌 Conexão com o banco encerrada.");
   }
 }
 

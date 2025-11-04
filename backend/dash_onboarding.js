@@ -58,8 +58,6 @@ async function getColumnMap() {
     }
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
-  console.log("🔄 Buscando mapeamento das colunas...");
-
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -88,7 +86,6 @@ async function getMondayData() {
   const limit = 50;
   let page = 1;
 
-  console.log("🔄 Iniciando a coleta de dados...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -111,7 +108,6 @@ async function getMondayData() {
     if (!pageData) break;
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
-    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
 
   return allItems;
@@ -129,7 +125,6 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
-    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
@@ -139,7 +134,6 @@ async function saveToPostgres(items, columnMap) {
       .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
       .join(", ");
 
-    console.log("📑 Criando ou verificando a tabela...");
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
@@ -196,7 +190,6 @@ async function saveToPostgres(items, columnMap) {
         }),
       ];
 
-      console.log(`📥 Inserindo linha:`, row);
       await client.query(insertQuery, row);
       inserted++;
     }
@@ -205,7 +198,6 @@ async function saveToPostgres(items, columnMap) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end();
-    console.log("🔌 Conexão com o banco de dados encerrada.");
   }
 }
 

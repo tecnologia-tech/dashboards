@@ -56,7 +56,6 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
-  console.log("🔍 Buscando as colunas do board...");
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -67,10 +66,8 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
-  console.log("📊 Dados das colunas recebidos:", data);
 
   const columns = data?.data?.boards?.[0]?.columns || [];
-  console.log("📑 Colunas extraídas:", columns);
 
   const map = {};
   columns.forEach((col) => {
@@ -88,7 +85,6 @@ async function getMondayData() {
   const limit = 50;
   let page = 1;
 
-  console.log("🔄 Iniciando o carregamento dos itens do board...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -108,14 +104,12 @@ async function getMondayData() {
     }
 
     const data = await res.json();
-    console.log("📊 Dados da página recebidos:", data);
 
     const pageData = data?.data?.boards?.[0]?.items_page;
     if (!pageData) break;
 
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
-    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
 
   return allItems;
@@ -132,7 +126,6 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
-    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
@@ -183,7 +176,6 @@ async function saveToPostgres(items, columnMap) {
         item.group?.title ?? "",
       ];
 
-      console.log("📥 Inserindo linha:", row);
       await client.query(insertQuery, row);
       inserted++;
     }

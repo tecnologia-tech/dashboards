@@ -191,7 +191,6 @@ async function upsertRows(client, rows, batchSize = 500) {
 
 export default async function main() {
   const client = new Pool(dbCfg); // Usando Pool para melhorar o desempenho
-  console.log("🔗 Conectando ao banco de dados...");
   await client.connect();
   await ensureTable(client);
 
@@ -213,7 +212,6 @@ export default async function main() {
 
   await Promise.all(tasks);
 
-  console.log(`📊 ${rows.length} leads processados com sucesso.`);
   await upsertRows(client, rows);
 
   await client.end();

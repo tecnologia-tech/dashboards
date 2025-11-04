@@ -60,7 +60,6 @@ const TABLES = fs
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
-    console.log(`🔄 Buscando dados da tabela ${tableName}...`);
     const result = await client.query(`SELECT * FROM ${tableName}`);
     console.log(`✅ Dados da tabela ${tableName} obtidos com sucesso.`);
     return result.rows;
@@ -74,14 +73,11 @@ async function fetchTableData(tableName) {
 
 // Função para rodar um módulo
 async function runModule(file) {
-  console.log(`▶️ Iniciando execução do módulo: ${file}...`); // Log de execução do módulo
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
   try {
-    console.log(`🔄 Importando módulo: ${file}`);
     const mod = await import(modulePath + `?v=${Date.now()}`);
     if (typeof mod.default === "function") {
-      console.log(`🔄 Executando o módulo: ${file}`);
       await mod.default();
     }
     console.log(`✅ ${file} concluído (${formatTime(Date.now() - start)})`);

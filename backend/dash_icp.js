@@ -56,7 +56,6 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
-  console.log("🔄 Buscando mapeamento das colunas do board...");
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -67,7 +66,6 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
-  console.log("📊 Dados das colunas recebidos:", data);
 
   const columns = data?.data?.boards?.[0]?.columns || [];
   const map = {};
@@ -86,7 +84,6 @@ async function getMondayData() {
   const limit = 50;
   let page = 1;
 
-  console.log("🔄 Iniciando a coleta de dados do board...");
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -111,7 +108,6 @@ async function getMondayData() {
 
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
-    console.log(`📦 Página ${page++} carregada (${allItems.length} itens)`);
   } while (cursor);
 
   return allItems;
@@ -128,7 +124,6 @@ async function saveToPostgres(items, columnMap) {
   });
 
   try {
-    console.log("🔗 Conectando ao banco de dados...");
     await client.connect();
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
@@ -136,7 +131,6 @@ async function saveToPostgres(items, columnMap) {
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
-    console.log("📑 Criando ou verificando a tabela...");
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
@@ -179,7 +173,6 @@ async function saveToPostgres(items, columnMap) {
         item.group?.title ?? "",
       ];
 
-      console.log(`📥 Inserindo linha:`, row);
       await client.query(insertQuery, row);
       count++;
     }
@@ -189,7 +182,6 @@ async function saveToPostgres(items, columnMap) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end();
-    console.log("🔌 Conexão com o banco de dados encerrada.");
   }
 }
 

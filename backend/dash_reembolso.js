@@ -186,7 +186,6 @@ async function saveToPostgres(items, columnMap) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end();
-    console.log("🔌 Conexão com o banco de dados encerrada.");
   }
 }
 
