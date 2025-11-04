@@ -82,12 +82,47 @@ async function getAllLeadIds() {
   return ids;
 }
 
+// Função para criar a tabela, caso não exista
+async function createTableIfNotExists(client) {
+  const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS public.dash_geralcsopen
+    (
+      data date,
+      pipeline text COLLATE pg_catalog."default",
+      empresa text COLLATE pg_catalog."default",
+      assigned text COLLATE pg_catalog."default",
+      valor numeric(12,2),
+      numero text COLLATE pg_catalog."default" NOT NULL,
+      tag text COLLATE pg_catalog."default",
+      id_primary_company text COLLATE pg_catalog."default",
+      id_primary_person text COLLATE pg_catalog."default",
+      lead_id text COLLATE pg_catalog."default",
+      CONSTRAINT dash_geralcsopen_pkey PRIMARY KEY (numero),
+      CONSTRAINT unique_lead_id UNIQUE (lead_id)
+    )
+    TABLESPACE pg_default;
+
+    ALTER TABLE IF EXISTS public.dash_geralcsopen
+      OWNER TO ${PGUSER};`; // Define o proprietário da tabela
+
+  try {
+    // Executa a criação da tabela
+    await client.query(createTableQuery);
+    console.log("✅ Tabela 'dash_geralcsopen' criada ou já existente.");
+  } catch (err) {
+    console.error("🚨 Erro ao criar a tabela:", err.message);
+  }
+}
+
 // Função para salvar os dados na tabela dash_geralcsopen
 async function saveToPostgres(leadIds) {
   const client = new Client(dbCfg);
   try {
     await client.connect(); // Conectar ao banco de dados PostgreSQL
     console.log("🔄 Conectado ao banco de dados PostgreSQL");
+
+    // Cria a tabela se não existir
+    await createTableIfNotExists(client);
 
     // Inserir dados na tabela dash_geralcsopen
     for (const leadId of leadIds) {
