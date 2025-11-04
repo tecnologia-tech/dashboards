@@ -48,8 +48,6 @@ async function callRPC(method, params = {}, attempt = 1) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
-
-    console.log(`🔄 Chamando RPC para o método ${method}...`);
     const res = await fetch(NUTSHELL_API_URL, {
       method: "POST",
       agent: httpsAgent,
@@ -69,7 +67,6 @@ async function callRPC(method, params = {}, attempt = 1) {
         `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
       );
     }
-    console.log(`✅ Resposta recebida do método ${method}`);
     return json.result;
   } catch (err) {
     if (attempt < 3) {
@@ -209,7 +206,6 @@ export default async function main() {
   const tasks = ids.map((id) =>
     limit(async () => {
       try {
-        console.log(`🔄 Processando lead ID ${id}...`);
         const lead = await callRPC("getLead", { leadId: id });
         rows.push(mapLeadToRow(lead));
       } catch (err) {
