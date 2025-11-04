@@ -78,8 +78,10 @@ async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
   try {
+    console.log(`🔄 Importando módulo: ${file}`);
     const mod = await import(modulePath + `?v=${Date.now()}`);
     if (typeof mod.default === "function") {
+      console.log(`🔄 Executando o módulo: ${file}`);
       await mod.default();
     }
     console.log(`✅ ${file} concluído (${formatTime(Date.now() - start)})`);
@@ -134,7 +136,7 @@ async function runSequentialLoop() {
 
     console.log(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...`);
     ciclo++;
-    await sleep(60000);
+    await sleep(60000); // Espera 1 minuto antes de reiniciar o ciclo
   }
 }
 
