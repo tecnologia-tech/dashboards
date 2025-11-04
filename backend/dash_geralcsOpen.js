@@ -3,13 +3,15 @@ import dotenv from "dotenv";
 import path from "path";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
+import https from "https"; // Adicionada a importação do módulo https
+import pLimit from "p-limit"; // Certifique-se de importar pLimit se não estiver importado
 
 // Configuração de arquivos e variáveis de ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, "banco.env") });
+dotenv.config({ path: path.join(__dirname, ".envv") });
 
-// Extraindo as variáveis de ambiente do arquivo banco.env
+// Extraindo as variáveis de ambiente do arquivo .envv
 const {
   PGHOST,
   PGPORT,
