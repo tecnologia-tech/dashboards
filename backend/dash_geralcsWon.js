@@ -88,7 +88,6 @@ async function callRPC(method, params = {}, attempt = 1) {
 // Função para obter todos os IDs de leads
 async function getAllLeadIds() {
   const ids = [];
-  console.log("🔄 Buscando todos os IDs de leads...");
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
       query: { status: 10 },
@@ -137,7 +136,6 @@ function mapLeadToRow(lead) {
 
 // Função para garantir que a tabela exista no banco
 async function ensureTable(client) {
-  console.log("📑 Verificando e criando a tabela se necessário...");
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
       data TIMESTAMP,
@@ -160,7 +158,6 @@ async function ensureTable(client) {
     WHERE a.ctid < b.ctid
     AND a.numero = b.numero;
   `);
-  console.log("✅ Tabela verificada e duplicados removidos.");
 }
 
 // Função para realizar o upsert dos dados no banco
@@ -187,7 +184,6 @@ async function upsertRows(client, rows, batchSize = 500) {
         .map((c) => `${c}=EXCLUDED.${c}`)
         .join(", ")}
     `;
-    console.log(`🔄 Inserindo batch de ${batch.length} registros...`);
     await client.query(sql, vals);
   }
   console.log(`✅ Upsert de ${rows.length} registros concluído.`);
