@@ -9,9 +9,9 @@ import pLimit from "p-limit"; // Certifique-se de importar pLimit se não estive
 // Configuração de arquivos e variáveis de ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".envv") }); // Verifique o nome do arquivo .env
+dotenv.config({ path: path.join(__dirname, ".env") }); // Verifique o nome do arquivo .env
 
-// Extraindo as variáveis de ambiente do arquivo .envv
+// Extraindo as variáveis de ambiente do arquivo .env
 const {
   PGHOST,
   PGPORT,
