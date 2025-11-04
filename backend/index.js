@@ -94,13 +94,10 @@ async function runModule(file) {
 async function runSequentialLoop() {
   const dashFiles = fs
     .readdirSync(__dirname)
-    .filter(
-      (f) =>
-        f.startsWith("dash_") &&
-        f.endsWith(".js") &&
-        !["dash_geralcsWon.js", "dash_geralcsOpen.js"].includes(f)
-    )
+    .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
     .sort((a, b) => a.localeCompare(b));
+
+  const nutshellFiles = ["dash_geralcsWon.js", "dash_geralcsOpen.js"];
 
   let ciclo = 1;
 
@@ -108,26 +105,16 @@ async function runSequentialLoop() {
     const cicloStart = Date.now();
     console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...`);
 
-    const nutshellTasks = [
-      runModule("dash_geralcsWon.js"),
-      runModule("dash_geralcsOpen.js"),
+    // Rodando 2 arquivos dash_*.js seguidos de 2 módulos do Nutshell
+    const dashBatch = [runModule(dashFiles[0]), runModule(dashFiles[1])];
+
+    const nutshellBatch = [
+      runModule(nutshellFiles[0]),
+      runModule(nutshellFiles[1]),
     ];
 
-    // Logando o estado das promessas
-    const nutshellResults = await Promise.allSettled(nutshellTasks);
-    console.log("Resultados do ciclo 1:", nutshellResults);
-
-    // Executando em batches de 4 módulos
-    for (let i = 0; i < dashFiles.length; i += 4) {
-      const currentBatch = dashFiles.slice(i, i + 4);
-      console.log(`⚙️  Rodando batch: ${currentBatch.join(", ")}`);
-
-      const tasks = currentBatch.map((f) => runModule(f));
-      const batchResults = await Promise.allSettled(tasks);
-      console.log("Resultados do batch:", batchResults);
-
-      await sleep(2000);
-    }
+    // Executando os dois batches
+    await Promise.all([...dashBatch, ...nutshellBatch]);
 
     const cicloEnd = Date.now();
     console.log(
