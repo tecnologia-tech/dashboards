@@ -3,15 +3,15 @@ import dotenv from "dotenv";
 import path from "path";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
-import https from "https"; // Adicionada a importação do módulo https
-import pLimit from "p-limit"; // Adicionada importação do pLimit, caso não tenha sido importado
+import https from "https";
+import pLimit from "p-limit";
 
 // Configuração de arquivos e variáveis de ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-// Extraindo as variáveis de ambiente do arquivo .envv
+// Extraindo as variáveis de ambiente do arquivo banco.env
 const {
   PGHOST,
   PGPORT,
@@ -38,6 +38,28 @@ const dbCfg = {
   password: PGPASSWORD,
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
+
+// Função para salvar os dados no PostgreSQL
+async function saveToPostgres(leadIds) {
+  const client = new Client(dbCfg);
+  try {
+    await client.connect(); // Conectar ao banco de dados PostgreSQL
+    console.log("🔄 Conectado ao banco de dados PostgreSQL");
+
+    // Exemplo de inserção de dados na tabela leads (ajuste conforme seu schema)
+    for (const leadId of leadIds) {
+      const query =
+        "INSERT INTO leads (id) VALUES ($1) ON CONFLICT (id) DO NOTHING";
+      await client.query(query, [leadId]); // Inserir leadId na tabela
+    }
+
+    console.log(`📦 ${leadIds.length} leads salvos no banco de dados.`);
+  } catch (err) {
+    console.error("🚨 Erro ao salvar dados no PostgreSQL:", err.message);
+  } finally {
+    await client.end(); // Fechar a conexão com o banco de dados
+  }
+}
 
 // Função para fazer chamadas à API Nutshell
 const httpsAgent = new https.Agent({ keepAlive: true });
@@ -70,7 +92,6 @@ async function getAllLeadIds() {
   console.log("🧭 Iniciando a busca de leads 'won'...");
 
   for (let page = 1; ; page++) {
-    console.log(`📄 Buscando leads na página ${page}...`);
     const leads = await callRPC("findLeads", {
       query: { status: 10 }, // Status 10 é "won"
       page,
@@ -78,7 +99,6 @@ async function getAllLeadIds() {
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id)); // Adicionando os IDs das leads
-    console.log(`📦 Encontrados ${leads.length} leads na página ${page}`);
   }
   console.log(`📦 Total de ${ids.length} leads 'won' encontrados.`);
   return ids;
@@ -95,7 +115,7 @@ export default async function dashGeralcsWon() {
     console.log(`📦 ${leadIds.length} leads 'won' encontrados.`);
 
     // Aqui você pode adicionar a lógica para salvar ou processar esses dados
-    await saveToPostgres(leadIds); // A função saveToPostgres deve ser implementada para persistir os dados no banco de dados
+    await saveToPostgres(leadIds); // A função saveToPostgres foi definida acima
     console.log(
       `🏁 dash_geralcsWon concluído em ${((Date.now() - start) / 1000).toFixed(
         1
