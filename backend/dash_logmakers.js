@@ -1,206 +1,120 @@
+// dash_logmakers.js
+
+import { Client } from "pg";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
 import path from "path";
-import pkg from "pg";
-const { Client } = pkg;
+import https from "https";
+import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
+// Initialize environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-dotenv.config({ path: path.join(__dirname, ".env") });
+const {
+  PGHOST,
+  PGPORT,
+  PGDATABASE,
+  PGUSER,
+  PGPASSWORD,
+  PGSSLMODE,
+  NUTSHELL_USERNAME,
+  NUTSHELL_API_TOKEN,
+  NUTSHELL_API_URL,
+} = process.env;
 
-const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
-  process.env;
+// Authentication header for the Nutshell API
+const AUTH_HEADER =
+  "Basic " +
+  Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 
-const MONDAY_BOARD_ID = "18027717616";
-const TABLE_NAME = "dash_logmakers";
+const dbCfg = {
+  host: PGHOST,
+  port: Number(PGPORT || 5432),
+  database: PGDATABASE,
+  user: PGUSER,
+  password: PGPASSWORD,
+  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
+};
 
-const MONDAY_QUERY = `
-  query ($board_id: ID!, $limit: Int!, $cursor: String) {
-    boards(ids: [$board_id]) {
-      items_page(limit: $limit, cursor: $cursor) {
-        cursor
-        items {
-          id
-          name
-          group { title }
-          column_values {
-            id
-            text
-          }
-        }
-      }
-    }
-  }
-`;
+const httpsAgent = new https.Agent({ keepAlive: true });
 
-function cleanName(title) {
-  return title
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9_]/g, "")
-    .trim();
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-async function getColumnMap() {
-  const query = `
-    query ($board_id: ID!) {
-      boards(ids: [$board_id]) {
-        columns {
-          id
-          title
-        }
-      }
-    }
-  `;
-  const variables = { board_id: MONDAY_BOARD_ID };
-
-  const res = await fetch("https://api.monday.com/v2", {
-    method: "POST",
-    headers: {
-      Authorization: MONDAY_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const data = await res.json();
-  const columns = data?.data?.boards?.[0]?.columns || [];
-
-  const map = {};
-  columns.forEach((col) => {
-    if (col.id && col.title) {
-      const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}_${col.id}`;
-    }
-  });
-  return map;
-}
-
-async function getMondayData() {
-  const allItems = [];
-  let cursor = null;
-  const limit = 50;
-  let page = 1;
-
-  do {
-    const res = await fetch("https://api.monday.com/v2", {
-      method: "POST",
-      headers: {
-        Authorization: MONDAY_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: MONDAY_QUERY,
-        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Erro HTTP ${res.status} - ${text}`);
-    }
-
-    const data = await res.json();
-    const pageData = data?.data?.boards?.[0]?.items_page;
-    if (!pageData) break;
-
-    allItems.push(...(pageData.items || []));
-    cursor = pageData.cursor;
-  } while (cursor);
-
-  return allItems;
-}
-
-async function saveToPostgres(items, columnMap) {
-  const client = new Client({
-    host: PGHOST,
-    port: PGPORT ? parseInt(PGPORT, 10) : 5432,
-    database: PGDATABASE,
-    user: PGUSER,
-    password: PGPASSWORD,
-    ssl: false,
-  });
-
-  try {
-    await client.connect();
-    console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
-
-    const columns = Object.values(columnMap);
-    const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
-    await client.query(`
-  DROP TABLE IF EXISTS ${TABLE_NAME};
-  CREATE TABLE ${TABLE_NAME} (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    ${colDefs},
-    grupo TEXT
+// Function to make a call to the Nutshell API via RPC
+async function callRPC(method, params = {}) {
+  console.log(`📡 Enviando para: ${NUTSHELL_API_URL}`);
+  console.log(
+    `📦 Corpo: ${JSON.stringify({
+      jsonrpc: "2.0",
+      method,
+      params,
+      id: Date.now(),
+    })}`
   );
-`);
 
-    const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, ${columns
-      .map((c) => `"${c}"`)
-      .join(", ")}, grupo)
-      VALUES (${[
-        "$1",
-        "$2",
-        ...columns.map((_, i) => `$${i + 3}`),
-        `$${columns.length + 3}`,
-      ].join(", ")})
-      ON CONFLICT (id) DO UPDATE SET
-      ${columns
-        .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(["grupo = EXCLUDED.grupo"])
-        .join(", ")}
-    `;
+  const res = await fetch(NUTSHELL_API_URL, {
+    method: "POST",
+    agent: httpsAgent,
+    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
+  });
 
-    let count = 0;
-    for (const item of items) {
-      const col = {};
-      (item.column_values || []).forEach((c) => {
-        if (!c || !columnMap[c.id]) return;
-        col[columnMap[c.id]] = c.text ?? "";
-      });
-
-      const row = [
-        item.id ?? "",
-        item.name ?? "",
-        ...columns.map((t) => col[t] ?? ""),
-        item.group?.title ?? "",
-      ];
-
-      await client.query(insertQuery, row);
-      count++;
-    }
-
-    console.log(`✅ ${count} registros atualizados em ${TABLE_NAME}`);
-  } catch (err) {
-    console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
-  } finally {
-    await client.end().catch(() => {});
-  }
-}
-
-export default async function dashLogmakers() {
-  const start = Date.now();
-  console.log("▶️ Executando dash_logmakers.js...");
-  try {
-    const columnMap = await getColumnMap();
-    const items = await getMondayData();
-    if (!items.length) {
-      console.log("Nenhum registro retornado do Monday.");
-      return [];
-    }
-    await saveToPostgres(items, columnMap);
-    console.log(
-      `🏁 dash_logmakers concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
+  const json = await res.json().catch(() => null);
+  if (!json || json.error) {
+    throw new Error(
+      `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
     );
-  } catch (err) {
-    console.error("🚨 Erro geral em dash_logmakers:", err.message);
   }
+
+  return json.result;
 }
+
+// Main logic for fetching logmaker details and inserting them into PostgreSQL
+async function run() {
+  const client = new Client(dbCfg);
+  await client.connect();
+
+  console.log("🔄 Buscando dados...");
+
+  const ids = await callRPC("findLogmakers", {
+    query: { status: 10 }, // 'Active' logmakers
+    limit: 100,
+  });
+  console.log(`📦 ${ids.length} logmakers encontrados`);
+
+  const tasks = ids.map(async (id) => {
+    try {
+      console.log(`🔍 Buscando detalhes do logmaker ${id}`);
+      const logmakerDetails = await callRPC("getLogmaker", { logmakerId: id });
+      console.log(`📝 Logmaker encontrado: ${JSON.stringify(logmakerDetails)}`);
+
+      // Insert logmaker into PostgreSQL
+      const query =
+        "INSERT INTO logmakers (id, name, status) VALUES ($1, $2, $3)";
+      await client.query(query, [
+        logmakerDetails.id,
+        logmakerDetails.name,
+        logmakerDetails.status,
+      ]);
+
+      console.log(`✅ Logmaker ${id} inserido com sucesso`);
+    } catch (error) {
+      console.error(`⚠️ Falha ao processar logmaker ${id}: ${error.message}`);
+    }
+  });
+
+  await Promise.all(tasks);
+  console.log("✅ Todos os logmakers foram processados");
+
+  await client.end();
+  console.log("✅ Conexão com banco de dados fechada");
+}
+
+// Start the process
+run().catch((error) => {
+  console.error("❌ Erro inesperado:", error);
+});

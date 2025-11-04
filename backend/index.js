@@ -146,7 +146,7 @@ async function runSequentialLoop() {
       colors.cyan(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...\n`)
     );
     ciclo++;
-    await sleep(60000);
+    await sleep(60000); // Pausa de 1 minuto antes de reiniciar o ciclo
   }
 }
 
@@ -168,5 +168,5 @@ app.listen(PORT, () => {
 
 (async function main() {
   console.log(colors.cyan("🚀 Iniciando ciclo paralelo otimizado..."));
-  await runSequentialLoop();
+  await runSequentialLoop(); // Garantindo que o ciclo seja executado infinitamente
 })();
