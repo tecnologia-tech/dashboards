@@ -128,7 +128,6 @@ async function callNutshellJSONRPC(method, params = {}) {
   const json = await res.json();
   if (!res.ok || json.error)
     throw new Error(JSON.stringify(json.error || json));
-  console.log(`✅ Resposta do método ${method}:`, json.result);
   return json.result;
 }
 
