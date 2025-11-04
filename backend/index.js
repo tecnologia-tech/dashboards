@@ -74,10 +74,10 @@ async function fetchTableData(tableName) {
 
 // Função para rodar um módulo
 async function runModule(file) {
+  console.log(`▶️ Iniciando execução do módulo: ${file}...`); // Log de execução do módulo
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
   try {
-    console.log(`▶️ Iniciando ${file}...`);
     const mod = await import(modulePath + `?v=${Date.now()}`);
     if (typeof mod.default === "function") {
       await mod.default();
