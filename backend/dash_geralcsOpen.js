@@ -91,11 +91,19 @@ async function saveToPostgres(leadIds) {
 
     // Inserir dados na tabela dash_geralcsopen
     for (const leadId of leadIds) {
+      // Verificar se o campo 'numero' está presente antes de tentar salvar
+      const numero = leadId.numero; // Suponha que 'numero' seja parte do objeto leadId
+
+      if (!numero) {
+        console.log(`🚨 Lead ${leadId} não possui 'numero' e será ignorado.`);
+        continue; // Ignorar a inserção se 'numero' for null ou vazio
+      }
+
       const query = `
-        INSERT INTO public.dash_geralcsopen (lead_id, data)
-        VALUES ($1, CURRENT_DATE) 
-        ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id e data (data atual)
-      await client.query(query, [leadId]); // Inserir leadId e data na tabela
+        INSERT INTO public.dash_geralcsopen (lead_id, numero, data)
+        VALUES ($1, $2, CURRENT_DATE) 
+        ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id, numero e data (data atual)
+      await client.query(query, [leadId, numero]); // Inserir leadId, numero e data na tabela
     }
 
     console.log(
