@@ -70,7 +70,6 @@ async function getAllLeadIds() {
   console.log("🧭 Iniciando a busca de leads 'open'...");
 
   for (let page = 1; ; page++) {
-    console.log(`📄 Buscando leads na página ${page}...`);
     const leads = await callRPC("findLeads", {
       query: { status: 0 }, // Status 0 é "open"
       page,
@@ -78,7 +77,6 @@ async function getAllLeadIds() {
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id)); // Adicionando os IDs das leads
-    console.log(`📦 Encontrados ${leads.length} leads na página ${page}`);
   }
   console.log(`📦 Total de ${ids.length} leads 'open' encontrados.`);
   return ids;
