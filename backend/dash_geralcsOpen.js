@@ -3,13 +3,13 @@ import dotenv from "dotenv";
 import path from "path";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
-import https from "https";
+import https from "https"; // Adicionada a importação do módulo https
 import pLimit from "p-limit"; // Certifique-se de importar pLimit se não estiver importado
 
 // Configuração de arquivos e variáveis de ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".env") }); // Verifique o nome do arquivo .env
+dotenv.config({ path: path.join(__dirname, ".envv") }); // Verifique o nome do arquivo .env
 
 // Extraindo as variáveis de ambiente do arquivo .envv
 const {
@@ -78,10 +78,11 @@ async function getAllLeadIds() {
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id)); // Adicionando os IDs das leads
   }
+  console.log(`📦 Total de ${ids.length} leads 'open' encontrados.`);
   return ids;
 }
 
-// Função para salvar os dados na tabela dash_geralcsopen (ou qualquer outra tabela específica)
+// Função para salvar os dados na tabela dash_geralcsopen
 async function saveToPostgres(leadIds) {
   const client = new Client(dbCfg);
   try {
@@ -92,12 +93,14 @@ async function saveToPostgres(leadIds) {
     for (const leadId of leadIds) {
       const query = `
         INSERT INTO public.dash_geralcsopen (lead_id, data)
-        VALUES ($1, CURRENT_TIMESTAMP) 
-        ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id e data (timestamp atual)
+        VALUES ($1, CURRENT_DATE) 
+        ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id e data (data atual)
       await client.query(query, [leadId]); // Inserir leadId e data na tabela
     }
 
-    console.log(`📦 ${leadIds.length} leads salvos na tabela dash_geralcsopen.`);
+    console.log(
+      `📦 ${leadIds.length} leads salvos na tabela dash_geralcsopen.`
+    );
   } catch (err) {
     console.error("🚨 Erro ao salvar dados no PostgreSQL:", err.message);
   } finally {
