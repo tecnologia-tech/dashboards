@@ -146,7 +146,7 @@ async function runSequentialLoop() {
       colors.cyan(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...\n`)
     );
     ciclo++;
-    await sleep(60000); // Pausa de 1 minuto antes de reiniciar o ciclo
+    await sleep(60000);
   }
 }
 

@@ -1,25 +1,18 @@
-// Importing necessary dependencies
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
+import path from "path";
 import { fileURLToPath } from "url";
-
-// Setting up file path and environment configuration
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".env") });
 
-// Environment variables for PostgreSQL and Monday API
+dotenv.config({ path: path.join(__dirname, ".env") });
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-// Board ID and table name for Monday.com and PostgreSQL
-const MONDAY_BOARD_ID = "8918157934";
+const MONDAY_BOARD_ID = "8149184194";
 const TABLE_NAME = "dash_icp";
-
-// GraphQL query to fetch Monday data
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -27,30 +20,22 @@ const MONDAY_QUERY = `
         cursor
         items {
           id
-          name
-          group { title }
-          column_values {
+          name   column_values {
             id
-            text
-            value
-          }
+            text          }
         }
       }
     }
   }
 `;
-
-// Function to clean and normalize column names for use in PostgreSQL
 function cleanName(title) {
   return title
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remove accents
-    .replace(/\s+/g, "_") // Replace spaces with underscores
-    .replace(/[^a-zA-Z0-9_]/g, "") // Remove non-alphanumeric characters
-    .trim(); // Trim extra spaces
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_]/g, "")
+    .trim();
 }
-
-// Function to fetch column mapping from Monday board
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -80,14 +65,11 @@ async function getColumnMap() {
   columns.forEach((col) => {
     if (col.id && col.title) {
       const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}_${col.id}`; // Mapping column title to a safe name
+      map[col.id] = `${safeName}_${col.id}`;
     }
   });
-
-  return map; // Returning the column map
+  return map;
 }
-
-// Function to fetch data from Monday board
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
@@ -117,14 +99,10 @@ async function getMondayData() {
     if (!pageData) break;
 
     allItems.push(...(pageData.items || []));
-    cursor = pageData.cursor; // Update cursor for pagination
-  } while (cursor); // Keep fetching if cursor is present
-
-  console.log(`📦 ${allItems.length} items fetched from Monday board.`);
-  return allItems; // Return all fetched items
+    cursor = pageData.cursor;
+  } while (cursor);
+  return allItems;
 }
-
-// Function to save data into PostgreSQL database
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -137,98 +115,67 @@ async function saveToPostgres(items, columnMap) {
 
   try {
     await client.connect();
-    console.log(`💾 Saving ${items.length} records into ${TABLE_NAME}...`);
-
-    const columns = Object.values(columnMap); // Get all column names from the map
-    const colDefs = columns
-      .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`) // Create column definitions for PostgreSQL
-      .join(", ");
-
-    // Create the table if it doesn't exist
+    console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
+    const columns = Object.values(columnMap);
+    const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
     await client.query(`
-      DROP TABLE IF EXISTS ${TABLE_NAME};
-      CREATE TABLE ${TABLE_NAME} (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        ${colDefs},
-        grupo TEXT
-      );
-    `);
-
-    // Insert records into the PostgreSQL table
+  DROP TABLE IF EXISTS ${TABLE_NAME};
+  CREATE TABLE ${TABLE_NAME} (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    ${colDefs},
+    grupo TEXT
+  );
+`);
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, grupo, ${columns
-      .flatMap((c) => [`"${c}_text"`, `"${c}_value"`])
+      INSERT INTO ${TABLE_NAME} (id, name, ${columns
+      .map((c) => `"${c}"`)
       .join(", ")})
-      VALUES (${[
-        "$1",
-        "$2",
-        "$3",
-        ...columns.flatMap((_, i) => [`$${i * 2 + 4}`, `$${i * 2 + 5}`]),
-      ].join(", ")})
-      ON CONFLICT (id) DO UPDATE SET
-      ${columns
-        .flatMap((c) => [
-          `"${c}_text" = EXCLUDED."${c}_text"`,
-          `"${c}_value" = EXCLUDED."${c}_value"`,
-        ])
-        .concat(["grupo = EXCLUDED.grupo"])
-        .join(", ")}
-    `;
+      VALUES (${["$1", "$2", ...columns.map((_, i) => `$${i + 3}`)].join(
+        ", "
+      )})   ON CONFLICT (id) DO UPDATE SET
+      ${columns.map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ")} `;
 
-    let inserted = 0;
+    let count = 0;
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c?.id || !columnMap[c.id]) return;
-        const title = columnMap[c.id];
-        col[title] = {
-          text: c.text ?? "",
-          value:
-            typeof c.value === "object"
-              ? JSON.stringify(c.value)
-              : c.value ?? "",
-        };
+        if (!c || !columnMap[c.id]) return;
+        col[columnMap[c.id]] = c.text ?? "";
       });
 
       const row = [
         item.id ?? "",
         item.name ?? "",
-        item.group?.title ?? "",
-        ...columns.flatMap((t) => {
-          const c = col[t] || {};
-          return [c.text ?? "", c.value ?? ""];
-        }),
+        ...columns.map((t) => col[t] ?? ""),
       ];
 
       await client.query(insertQuery, row);
-      inserted++;
+      count++;
     }
 
-    console.log(`✅ ${inserted} records updated in ${TABLE_NAME}`);
+    console.log(`✅ ${count} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
-    console.error(`❌ Error saving ${TABLE_NAME}:`, err.message);
+    console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end().catch(() => {});
   }
 }
-
-// Main function to execute the script
 export default async function dashICP() {
   const start = Date.now();
-  console.log("▶️ Executing dash_icp.js...");
+  console.log("▶️ Executando dash_icp.js...");
   try {
-    const columnMap = await getColumnMap(); // Fetch column mappings from Monday
-    const items = await getMondayData(); // Fetch data from Monday
+    const columnMap = await getColumnMap();
+    const items = await getMondayData();
     if (!items.length) {
-      console.log("No records returned from Monday.");
+      console.log("Nenhum registro retornado do Monday.");
       return [];
     }
-    await saveToPostgres(items, columnMap); // Save the data to PostgreSQL
+    await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_icp completed in ${((Date.now() - start) / 1000).toFixed(1)}s`
+      `🏁 dash_icp concluído em ${((Date.now() - start) / 1000).toFixed(1)}s`
     );
   } catch (err) {
-    console.error("🚨 General error in dash_icp:", err.message);
+    console.error("🚨 Erro geral em dash_icp:", err.message);
   }
 }

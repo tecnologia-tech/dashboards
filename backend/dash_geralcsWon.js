@@ -1,17 +1,13 @@
-import { Client } from "pg";
+import { Client, Pool } from "pg";
 import dotenv from "dotenv";
 import path from "path";
-import fetch from "node-fetch";
-import { fileURLToPath } from "url";
 import https from "https";
 import pLimit from "p-limit";
-
-// Configuração de arquivos e variáveis de ambiente
+import fetch from "node-fetch";
+import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
-
-// Extraindo as variáveis de ambiente do arquivo banco.env
 const {
   PGHOST,
   PGPORT,
@@ -23,13 +19,9 @@ const {
   NUTSHELL_API_TOKEN,
   NUTSHELL_API_URL,
 } = process.env;
-
-// Definindo o cabeçalho de autenticação básico para a API Nutshell
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
-// Configuração do banco de dados PostgreSQL
 const dbCfg = {
   host: PGHOST,
   port: Number(PGPORT || 5432),
@@ -38,126 +30,170 @@ const dbCfg = {
   password: PGPASSWORD,
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
-
-// Função para fazer chamadas à API Nutshell
 const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(10);
-
+const limit = pLimit(10); // Aumente o limite para maior concorrência, dependendo da carga
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Função para realizar a chamada à API de RPC
-async function callRPC(method, params = {}) {
-  const res = await fetch(NUTSHELL_API_URL, {
-    method: "POST",
-    agent: httpsAgent,
-    headers: { Authorization: AUTH_HEADER, "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
-  });
-  const json = await res.json().catch(() => null);
-  if (!json || json.error) {
-    throw new Error(
-      `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
-    );
-  }
-  return json.result;
-}
+async function callRPC(method, params = {}, attempt = 1) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-// Função para obter todos os IDs das leads com status "won" (status=10)
+    const res = await fetch(NUTSHELL_API_URL, {
+      method: "POST",
+      agent: httpsAgent,
+      headers: {
+        Authorization: AUTH_HEADER,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    const json = await res.json().catch(() => null);
+    if (!json || json.error) {
+      throw new Error(
+        `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
+      );
+    }
+    return json.result;
+  } catch (err) {
+    if (attempt < 3) {
+      const wait = 1000 * attempt; // Reduzi o tempo de espera entre tentativas
+      console.warn(
+        `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
+          wait / 1000
+        }s`
+      );
+      await sleep(wait);
+      return callRPC(method, params, attempt + 1);
+    } else {
+      console.error(`🚨 RPC ${method} falhou após ${attempt} tentativas`);
+      throw err;
+    }
+  }
+}
 async function getAllLeadIds() {
   const ids = [];
-  console.log("🧭 Iniciando a busca de leads 'won'...");
-
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
-      query: { status: 10 }, // Status 10 é "won"
+      query: { status: 10 },
       page,
       limit: 100,
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
-    ids.push(...leads.map((l) => l.id)); // Adicionando os IDs das leads
+    ids.push(...leads.map((l) => l.id));
+    await sleep(100); // Reduzi o tempo de espera
   }
-  console.log(`📦 Total de ${ids.length} leads 'won' encontrados.`);
   return ids;
 }
+function mapLeadToRow(lead) {
+  const id = String(lead.id ?? lead.leadId);
+  const valor = Number(lead.value?.amount ?? 0);
+  const empresa = lead.primaryAccount?.name ?? "";
+  const assigned = lead.assignee?.name ?? "";
+  const tag = Array.isArray(lead.tags)
+    ? lead.tags.map((t) => t.name).join(" | ")
+    : "";
+  const pipeline = lead.stageset?.name ?? "";
+  const data =
+    lead.closedTime ??
+    lead.dueTime ??
+    lead.modifiedTime ??
+    new Date().toISOString();
+  const id_primary_company = lead.primaryAccount?.id ?? "";
+  const id_primary_person = lead.contacts?.[0]?.id ?? "";
 
-// Função para criar a tabela, caso não exista
-async function createTableIfNotExists(client) {
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS public.dash_geralcswon
-    (
-      data timestamp without time zone,
-      pipeline text COLLATE pg_catalog."default",
-      empresa text COLLATE pg_catalog."default",
-      assigned text COLLATE pg_catalog."default",
-      valor numeric(12,2),
-      numero text COLLATE pg_catalog."default",
-      tag text COLLATE pg_catalog."default",
-      id_primary_company text COLLATE pg_catalog."default",
-      id_primary_person text COLLATE pg_catalog."default",
-      lead_id text COLLATE pg_catalog."default" NOT NULL,
-      CONSTRAINT dash_geralcswon_pkey PRIMARY KEY (lead_id)
-    )
-    TABLESPACE pg_default;
+  return {
+    data,
+    pipeline,
+    empresa,
+    assigned,
+    valor,
+    numero: id,
+    tag,
+    id_primary_company,
+    id_primary_person,
+    lead_id: id,
+  };
+}
+async function ensureTable(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS dash_geralcsWon (
+      data TIMESTAMP,
+      pipeline TEXT,
+      empresa TEXT,
+      assigned TEXT,
+      valor NUMERIC(12,2),
+      numero TEXT,
+      tag TEXT,
+      id_primary_company TEXT,
+      id_primary_person TEXT,
+      lead_id TEXT PRIMARY KEY
+ );
+  `);
 
-    ALTER TABLE IF EXISTS public.dash_geralcswon
-      OWNER TO ${PGUSER};`; // Define o proprietário da tabela
+  await client.query(`
+    DELETE FROM dash_geralcsWon a
+    USING dash_geralcsWon b
+    WHERE a.ctid < b.ctid
+    AND a.numero = b.numero;
+  `);
+}
 
-  try {
-    // Executa a criação da tabela
-    await client.query(createTableQuery);
-    console.log("✅ Tabela 'dash_geralcswon' criada ou já existente.");
-  } catch (err) {
-    console.error("🚨 Erro ao criar a tabela:", err.message);
+async function upsertRows(client, rows, batchSize = 500) {
+  if (!rows.length) return;
+  const cols = Object.keys(rows[0]);
+
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const vals = batch.flatMap((r) => cols.map((c) => r[c]));
+    const placeholders = batch
+      .map(
+        (_, i) =>
+          `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
+      )
+      .join(",");
+
+    const sql = `
+      INSERT INTO dash_geralcsWon (${cols.join(",")})
+      VALUES ${placeholders}
+      ON CONFLICT (lead_id) DO UPDATE SET
+      ${cols
+        .filter((c) => c !== "lead_id")
+        .map((c) => `${c}=EXCLUDED.${c}`)
+        .join(", ")}
+    `;
+    await client.query(sql, vals);
   }
 }
 
-// Função para salvar os dados na tabela dash_geralcswon
-async function saveToPostgres(leadIds) {
-  const client = new Client(dbCfg);
-  try {
-    await client.connect(); // Conectar ao banco de dados PostgreSQL
-    console.log("🔄 Conectado ao banco de dados PostgreSQL");
+export default async function main() {
+  const client = new Pool(dbCfg); // Usando Pool para melhorar o desempenho
+  await client.connect();
+  await ensureTable(client);
 
-    // Cria a tabela se não existir
-    await createTableIfNotExists(client);
+  const ids = await getAllLeadIds();
+  const rows = [];
 
-    // Inserir dados na tabela dash_geralcswon
-    for (const leadId of leadIds) {
-      const query = `
-        INSERT INTO public.dash_geralcswon (lead_id, data)
-        VALUES ($1, CURRENT_TIMESTAMP) 
-        ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id e data (timestamp atual)
-      await client.query(query, [leadId]); // Inserir leadId e data na tabela
-    }
+  const tasks = ids.map((id) =>
+    limit(async () => {
+      try {
+        const lead = await callRPC("getLead", { leadId: id });
+        rows.push(mapLeadToRow(lead));
+      } catch (err) {
+        console.warn(`⚠️ Falha em lead ${id}: ${err.message}`);
+        if (err.message.includes("429")) await sleep(2000);
+      }
+    })
+  );
 
-    console.log(`📦 ${leadIds.length} leads salvos na tabela dash_geralcswon.`);
-  } catch (err) {
-    console.error("🚨 Erro ao salvar dados no PostgreSQL:", err.message);
-  } finally {
-    await client.end(); // Fechar a conexão com o banco de dados
-  }
-}
-
-// Função principal do módulo, que faz a integração com o banco de dados
-export default async function dashGeralcsWon() {
-  const start = Date.now();
-  console.log("▶️ Executando dash_geralcsWon...");
-
-  try {
-    // Obtém os IDs das leads com status "won"
-    const leadIds = await getAllLeadIds();
-    console.log(`📦 ${leadIds.length} leads 'won' encontrados.`);
-
-    // Salva os dados na tabela dash_geralcswon
-    await saveToPostgres(leadIds); // Chama a função para salvar os dados no PostgreSQL
-    console.log(
-      `🏁 dash_geralcsWon concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
-    );
-  } catch (err) {
-    console.error("🚨 Erro em dash_geralcsWon:", err.message);
-  }
+  await Promise.all(tasks);
+  console.log(`📊 Leads processados com sucesso: ${rows.length}`);
+  await upsertRows(client, rows);
+  await client.end();
+  console.log("🏁 dash_geralcsWon.js concluído com sucesso!");
 }
