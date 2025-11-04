@@ -116,7 +116,6 @@ async function callNutshellJSONRPC(method, params = {}) {
     params,
     id: String(Date.now()),
   };
-  console.log(`🔄 Chamando método ${method}...`);
   const res = await fetch(NUTSHELL_API_URL, {
     method: "POST",
     headers: {
@@ -133,7 +132,6 @@ async function callNutshellJSONRPC(method, params = {}) {
 
 // Ensure the table exists
 async function ensureTable(client) {
-  console.log("📑 Verificando e criando a tabela se necessário...");
   await client.query(`DROP TABLE IF EXISTS dash_geralcsopen`);
   await client.query(`
     CREATE TABLE dash_geralcsopen (
@@ -148,7 +146,6 @@ async function ensureTable(client) {
       id_primary_person TEXT,
       lead_id TEXT );
   `);
-  console.log("✅ Tabela criada ou verificada.");
 }
 
 // Upsert rows into the database
@@ -198,7 +195,6 @@ async function main() {
     await ensureTable(client);
 
     const hotStageIds = getHotStageIdsManualmente();
-    console.log("📊 Obtendo leads das etapas:", hotStageIds);
 
     const allRows = [];
     for (const stageId of hotStageIds) {
@@ -206,7 +202,6 @@ async function main() {
       const leadIds = [];
 
       while (true) {
-        console.log(`🔄 Buscando leads da etapa ${stageId}, página ${page}...`);
         const res = await callNutshellJSONRPC("findLeads", {
           query: { status: 0, stageId },
           page,
@@ -220,9 +215,7 @@ async function main() {
 
       for (let i = 0; i < leadIds.length; i += 100) {
         const batch = leadIds.slice(i, i + 100);
-        console.log(
-          `🔄 Processando batch de leads (IDs: ${batch.join(", ")})...`
-        );
+      
         const tasks = batch.map((id) =>
           callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
         );
