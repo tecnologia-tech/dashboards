@@ -78,7 +78,6 @@ async function getAllLeadIds() {
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id)); // Adicionando os IDs das leads
   }
-  console.log(`📦 Total de ${ids.length} leads 'open' encontrados.`);
   return ids;
 }
 
