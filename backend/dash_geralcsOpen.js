@@ -3,15 +3,15 @@ import dotenv from "dotenv";
 import path from "path";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
-import https from "https"; // Adicionada a importação do módulo https
+import https from "https";
 import pLimit from "p-limit"; // Certifique-se de importar pLimit se não estiver importado
 
 // Configuração de arquivos e variáveis de ambiente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, ".env") }); // Verifique o nome do arquivo .env
 
-// Extraindo as variáveis de ambiente do arquivo .env
+// Extraindo as variáveis de ambiente do arquivo .envv
 const {
   PGHOST,
   PGPORT,
@@ -82,6 +82,30 @@ async function getAllLeadIds() {
   return ids;
 }
 
+// Função para salvar os dados na tabela dash_geralcswon (ou qualquer outra tabela específica)
+async function saveToPostgres(leadIds) {
+  const client = new Client(dbCfg);
+  try {
+    await client.connect(); // Conectar ao banco de dados PostgreSQL
+    console.log("🔄 Conectado ao banco de dados PostgreSQL");
+
+    // Inserir dados na tabela dash_geralcswon
+    for (const leadId of leadIds) {
+      const query = `
+        INSERT INTO public.dash_geralcswon (lead_id, data)
+        VALUES ($1, CURRENT_TIMESTAMP) 
+        ON CONFLICT (lead_id) DO NOTHING`; // Adicionando lead_id e data (timestamp atual)
+      await client.query(query, [leadId]); // Inserir leadId e data na tabela
+    }
+
+    console.log(`📦 ${leadIds.length} leads salvos na tabela dash_geralcswon.`);
+  } catch (err) {
+    console.error("🚨 Erro ao salvar dados no PostgreSQL:", err.message);
+  } finally {
+    await client.end(); // Fechar a conexão com o banco de dados
+  }
+}
+
 // Função principal do módulo, que faz a integração com o banco de dados
 export default async function dashGeralcsOpen() {
   const start = Date.now();
@@ -92,8 +116,8 @@ export default async function dashGeralcsOpen() {
     const leadIds = await getAllLeadIds();
     console.log(`📦 ${leadIds.length} leads 'open' encontrados.`);
 
-    // Aqui você pode adicionar a lógica para salvar ou processar esses dados
-    await saveToPostgres(leadIds); // A função saveToPostgres deve ser implementada para persistir os dados no banco de dados
+    // Salva os dados na tabela dash_geralcswon
+    await saveToPostgres(leadIds); // Chama a função para salvar os dados no PostgreSQL
     console.log(
       `🏁 dash_geralcsOpen concluído em ${((Date.now() - start) / 1000).toFixed(
         1
