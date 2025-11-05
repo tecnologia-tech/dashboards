@@ -35,15 +35,6 @@ const MONDAY_QUERY = `
   }
 `;
 
-function cleanName(title) {
-  return title
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9_]/g, "")
-    .trim();
-}
-
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -70,8 +61,10 @@ async function getColumnMap() {
   const map = {};
   columns.forEach((col) => {
     if (col.id && col.title) {
-      const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}`; // Corrigido para mapear sem adicionar "name" extra
+      const safeName = col.title
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "");
+      map[col.id] = safeName;
     }
   });
   return map;
@@ -129,38 +122,39 @@ async function saveToPostgres(items, columnMap) {
 
     if (result.rows[0].to_regclass === null) {
       console.log(`Tabela ${TABLE_NAME} não existe. Criando...`);
-      await client.query(`
-        CREATE TABLE ${TABLE_NAME} (
-          "id" TEXT PRIMARY KEY,
-          "name" TEXT,
-          "value" NUMERIC(12,2),  -- Garantindo a coluna value
-          "grupo" TEXT,
-          ${Object.values(columnMap)
-            .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
-            .join(", ")}
-        );
-      `);
+      let createTableQuery = `CREATE TABLE ${TABLE_NAME} (
+        "id" TEXT PRIMARY KEY,
+        "name" TEXT,
+        "grupo" TEXT
+      `;
+
+      // Adiciona as colunas dinamicamente
+      Object.values(columnMap).forEach((colName) => {
+        createTableQuery += `, "${colName}_text" TEXT, "${colName}_value" TEXT`;
+      });
+      createTableQuery += ");";
+
+      await client.query(createTableQuery);
     } else {
       console.log(`Tabela ${TABLE_NAME} já existe.`);
     }
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} ("id", "name", "value", ${Object.values(
+      INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(
       columnMap
     )
       .map((c) => `"${c}"`)
-      .join(", ")}, "grupo")
+      .join(", ")})
       VALUES (${[
         "$1",
         "$2",
-        "$3", // Para a coluna "value"
+        "$3", // Para a coluna "grupo"
         ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
-        `$${Object.values(columnMap).length + 4}`,
       ].join(", ")})
       ON CONFLICT ("id") DO UPDATE SET
       ${Object.values(columnMap)
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(['"grupo" = EXCLUDED."grupo"', '"value" = EXCLUDED."value"'])
+        .concat(['"grupo" = EXCLUDED."grupo"'])
         .join(", ")};
     `;
 
@@ -182,9 +176,8 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        item.value ?? 0, // Garantindo que o valor "value" seja passado corretamente
+        item.group?.title ?? "", // Para o campo grupo
         ...Object.values(columnMap).map((t) => col[t] ?? ""),
-        item.group?.title ?? "",
       ];
 
       console.log(`Inserting row: ${JSON.stringify(row)}`); // Log do que está sendo inserido
