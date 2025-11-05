@@ -80,52 +80,42 @@ async function runModule(file) {
 async function runSequentialLoop() {
   let ciclo = 1;
 
-  const batches = [
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_apoio.js", "dash_compras.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_cs.js", "dash_csat.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_cx.js", "dash_delivery.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_fornecedores.js", "dash_handover.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_icp.js", "dash_ixdelivery.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_ixlogcomex.js", "dash_logmakers.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_nps.js", "dash_onboarding.js"],
-  ];
+  const batches = [["dash_apoio.js", "dash_compras.js"]];
 
   while (true) {
     const cicloStart = Date.now();
-    console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...\n`);
+    console.log(`🧭 [${hora()}] Iniciando ciclo #${ciclo}...`);
 
+    // Exibe o status do ciclo
+    console.log(`🕒 [${hora()}] Ciclo #${ciclo} iniciado...`);
+
+    // Executando cada lote
     for (const batch of batches) {
       const batchStart = Date.now();
-      console.log(`📂 Iniciando lote: ${batch.join(", ")}`);
+      console.log(`📂 [${hora()}] Iniciando lote: ${batch.join(", ")}`);
 
       // Rodando os módulos do lote em paralelo
       await Promise.all(batch.map((file) => runModule(file)));
 
       console.log(
-        `✅ Lote concluído em ${formatTime(Date.now() - batchStart)}\n`
+        `✅ [${hora()}] Lote ${batch.join(", ")} concluído em ${formatTime(
+          Date.now() - batchStart
+        )}\n`
       );
     }
 
     const cicloEnd = Date.now();
     console.log(
-      `🏁 Ciclo #${ciclo} finalizado em ${formatTime(
+      `🏁 [${hora()}] Ciclo #${ciclo} concluído em ${formatTime(
         cicloEnd - cicloStart
-      )} às ${hora()}\n`
+      )}\n`
     );
-    console.log(`🔁 Aguardando 1 minuto para reiniciar...\n`);
+
+    console.log(`🔁 Aguardando 1 minuto para reiniciar o ciclo...`);
     ciclo++;
-    await sleep(60000);
+    await sleep(60000); // Espera 1 minuto antes de reiniciar o ciclo
   }
 }
-
-// ======= Rotas =======
 
 const TABLES = fs
   .readdirSync(__dirname)
@@ -136,10 +126,10 @@ async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
     const result = await client.query(`SELECT * FROM ${tableName}`);
-    console.log(`✅ Dados da tabela ${tableName} obtidos.`);
+    console.log(`✅ [${hora()}] Dados da tabela ${tableName} obtidos.`);
     return result.rows;
   } catch (err) {
-    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
+    console.error(`🚨 [${hora()}] Erro ao buscar ${tableName}: ${err.message}`);
     return [];
   } finally {
     client.release();
@@ -157,10 +147,10 @@ TABLES.forEach((t) =>
 );
 
 app.listen(PORT, () => {
-  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`🌐 [${hora()}] Servidor rodando em http://localhost:${PORT}`);
 });
 
 (async function main() {
-  console.log("🚀 Iniciando ciclo paralelo otimizado...\n");
-  await runSequentialLoop();
+  console.log("🚀 [${hora()}] Iniciando ciclo paralelo otimizado...");
+  await runSequentialLoop(); // Garantindo que o ciclo seja executado infinitamente
 })();
