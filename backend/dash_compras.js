@@ -4,7 +4,6 @@ import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
 import { fileURLToPath } from "url";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -13,8 +12,8 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-const MONDAY_BOARD_ID = "18206014428"; // ID do seu board no Monday.com
-const TABLE_NAME = "dash_compras"; // Nome da tabela no banco de dados
+const MONDAY_BOARD_ID = "8918157934";
+const TABLE_NAME = "dash_compras";
 
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
@@ -57,7 +56,6 @@ async function getColumnMap() {
     }
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
-
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -101,32 +99,14 @@ async function getMondayData() {
       const text = await res.text().catch(() => "");
       throw new Error(`Erro HTTP ${res.status} - ${text}`);
     }
-
     const data = await res.json();
     const pageData = data?.data?.boards?.[0]?.items_page;
     if (!pageData) break;
-
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
   } while (cursor);
 
   return allItems;
-}
-
-async function ensureTable(client) {
-  // Certificando que a tabela e as colunas necessárias existem
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-      id TEXT PRIMARY KEY,
-      name TEXT,
-      group TEXT,
-      value NUMERIC(12,2),
-      ${Object.values(await getColumnMap())
-        .map((col) => `"${col}" TEXT`)
-        .join(", ")},
-      CONSTRAINT dash_compras_pkey PRIMARY KEY (id)
-    );
-  `);
 }
 
 async function saveToPostgres(items, columnMap) {
@@ -143,11 +123,13 @@ async function saveToPostgres(items, columnMap) {
     await client.connect();
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    // Definir as colunas dinamicamente
+    // Definindo as colunas dinamicamente
     const columns = Object.values(columnMap);
-    const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
+    const colDefs = columns
+      .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
+      .join(", ");
 
-    // Deletar a tabela se já existir e criar novamente
+    // Deletando a tabela se já existir e criando novamente
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
@@ -178,12 +160,19 @@ async function saveToPostgres(items, columnMap) {
         .join(", ")};
     `;
 
-    let count = 0;
+    let inserted = 0;
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
-        if (!c || !columnMap[c.id]) return;
-        col[columnMap[c.id]] = c.text ?? "";
+        if (!c?.id || !columnMap[c.id]) return;
+        const title = columnMap[c.id];
+        col[title] = {
+          text: c.text ?? "",
+          value:
+            typeof c.value === "object"
+              ? JSON.stringify(c.value)
+              : c.value ?? "",
+        };
       });
 
       const row = [
@@ -195,13 +184,33 @@ async function saveToPostgres(items, columnMap) {
       ];
 
       await client.query(insertQuery, row);
-      count++;
+      inserted++;
     }
-
-    console.log(`✅ ${count} registros atualizados em ${TABLE_NAME}`);
+    console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end().catch(() => {});
+  }
+}
+
+export default async function dashCompras() {
+  const start = Date.now();
+  console.log("▶️ Executando dash_compras.js...");
+  try {
+    const columnMap = await getColumnMap();
+    const items = await getMondayData();
+    if (!items.length) {
+      console.log("Nenhum registro retornado do Monday.");
+      return [];
+    }
+    await saveToPostgres(items, columnMap);
+    console.log(
+      `🏁 dash_compras concluído em ${((Date.now() - start) / 1000).toFixed(
+        1
+      )}s`
+    );
+  } catch (err) {
+    console.error("🚨 Erro geral em dash_compras:", err.message);
   }
 }
