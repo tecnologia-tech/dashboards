@@ -133,7 +133,13 @@ async function saveToPostgres(items, columnMap) {
     });
     createTableQuery += ");";
 
+    console.log("Consulta de criação da tabela:", createTableQuery); // Log de criação da tabela
     await client.query(createTableQuery);
+
+    // Verifica se as colunas da tabela foram criadas corretamente
+    const columnCheckQuery = `SELECT column_name FROM information_schema.columns WHERE table_name = '${TABLE_NAME}';`;
+    const columnCheckResult = await client.query(columnCheckQuery);
+    console.log("Colunas da tabela criada:", columnCheckResult.rows); // Logs das colunas criadas
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(
@@ -185,26 +191,5 @@ async function saveToPostgres(items, columnMap) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end().catch(() => {});
-  }
-}
-
-export default async function dashCompras() {
-  const start = Date.now();
-  console.log("▶️ Executando dash_compras.js...");
-  try {
-    const columnMap = await getColumnMap();
-    const items = await getMondayData();
-    if (!items.length) {
-      console.log("Nenhum registro retornado do Monday.");
-      return [];
-    }
-    await saveToPostgres(items, columnMap);
-    console.log(
-      `🏁 dash_compras concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
-    );
-  } catch (err) {
-    console.error("🚨 Erro geral em dash_compras:", err.message);
   }
 }
