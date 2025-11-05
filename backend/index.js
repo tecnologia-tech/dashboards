@@ -69,30 +69,29 @@ async function runModule(file) {
 async function runSequentialLoop() {
   let ciclo = 1;
 
+  const batches = [
+    // Primeiro lote
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_apoio.js", "dash_compras.js"],
+    // Depois do primeiro ciclo
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_cs.js", "dash_csat.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_cx.js", "dash_delivery.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_fornecedores.js", "dash_handover.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_icp.js", "dash_ixdelivery.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_ixlogcomex.js", "dash_logmakers.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_nps.js", "dash_onboarding.js"],
+    // Adicione mais lotes conforme necessário
+  ];
+
   while (true) {
     const cicloStart = Date.now();
     console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...`);
-
-    // Rodando os módulos conforme a ordem desejada
-    const batches = [
-      // Primeiro lote
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_apoio.js", "dash_compras.js"],
-      // Depois do primeiro ciclo
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_cs.js", "dash_csat.js"],
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_cx.js", "dash_delivery.js"],
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_fornecedores.js", "dash_handover.js"],
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_icp.js", "dash_ixdelivery.js"],
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_ixlogcomex.js", "dash_logmakers.js"],
-      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-      ["dash_nps.js", "dash_onboarding.js"],
-      // Adiciona os outros lotes conforme necessário
-    ];
 
     // Executando cada lote sequencialmente
     for (const batch of batches) {
@@ -111,6 +110,27 @@ async function runSequentialLoop() {
     console.log(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...`);
     ciclo++;
     await sleep(60000); // Espera 1 minuto antes de reiniciar o ciclo
+  }
+}
+
+// Função para obter os arquivos das tabelas
+const TABLES = fs
+  .readdirSync(__dirname)
+  .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
+  .map((f) => f.replace(".js", "")); // Garante que a variável TABLES seja definida corretamente
+
+// Função para buscar dados de uma tabela
+async function fetchTableData(tableName) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`SELECT * FROM ${tableName}`);
+    console.log(`✅ Dados da tabela ${tableName} obtidos com sucesso.`);
+    return result.rows;
+  } catch (err) {
+    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
+    return [];
+  } finally {
+    client.release();
   }
 }
 
