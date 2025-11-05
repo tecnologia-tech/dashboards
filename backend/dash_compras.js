@@ -43,12 +43,15 @@ async function getBoardColumns(boardId) {
   });
 
   const data = await response.json();
-  console.log("Resposta da API Monday.com:", data);
-  if (data.data && data.data.boards && data.data.boards[0]) {
-    return data.data.boards[0].columns; // Retorna as colunas
-  } else {
-    throw new Error("Não foi possível recuperar as colunas do board.");
+  console.log("Resposta completa da API:", JSON.stringify(data, null, 2)); // Log mais detalhado
+
+  if (!data || !data.data || !data.data.boards || !data.data.boards[0]) {
+    throw new Error(
+      "Não foi possível obter os dados do board. Verifique o boardId."
+    );
   }
+
+  return data.data.boards[0].columns; // Retorna as colunas
 }
 
 // Função para criar a tabela no PostgreSQL dinamicamente
