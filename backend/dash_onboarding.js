@@ -6,8 +6,6 @@ const { Client } = pkg;
 import { fileURLToPath } from "url";
 
 const __filename = new URL(import.meta.url).pathname;
-
-// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -18,6 +16,7 @@ const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
 const MONDAY_BOARD_ID = "8149184073"; // Substitua pelo ID correto
 const TABLE_NAME = "dash_onboarding"; // Nome da tabela
 
+// Consulta GraphQL para pegar os dados do board
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -37,7 +36,7 @@ const MONDAY_QUERY = `
   }
 `;
 
-// Função para limpar o nome da coluna
+// Função para limpar o nome da coluna (formato para o banco de dados)
 function cleanName(title) {
   return title
     .normalize("NFD")
@@ -47,7 +46,7 @@ function cleanName(title) {
     .trim();
 }
 
-// Mapeamento das colunas
+// Função para mapear as colunas do board
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -131,21 +130,26 @@ async function saveToPostgres(items, columnMap) {
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
+    // Mapeando as colunas para garantir que os nomes sejam corretos
     const columns = Object.values(columnMap);
+
+    // Definindo as colunas da tabela
     const colDefs = columns
       .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
       .join(", ");
 
+    // Deletando a tabela existente e criando uma nova com as colunas corretas
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
         id TEXT PRIMARY KEY,
         name TEXT,
-        ${colDefs},
-        grupo TEXT
+        grupo TEXT,
+        ${colDefs}
       );
     `);
 
+    // Definindo a consulta de inserção
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, grupo, ${columns
       .flatMap((c) => [`"${c}_text"`, `"${c}_value"`])
@@ -156,7 +160,6 @@ async function saveToPostgres(items, columnMap) {
         "$3",
         ...columns.flatMap((_, i) => [`$${i * 2 + 4}`, `$${i * 2 + 5}`]),
       ].join(", ")})
-
       ON CONFLICT (id) DO UPDATE SET
       ${columns
         .flatMap((c) => [
@@ -168,6 +171,8 @@ async function saveToPostgres(items, columnMap) {
     `;
 
     let inserted = 0;
+
+    // Inserindo os dados
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
@@ -195,6 +200,7 @@ async function saveToPostgres(items, columnMap) {
       await client.query(insertQuery, row);
       inserted++;
     }
+
     console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
@@ -203,6 +209,7 @@ async function saveToPostgres(items, columnMap) {
   }
 }
 
+// Função principal para executar o processo
 export default async function dashOnboarding() {
   const start = Date.now();
   console.log("▶️ Executando dash_onboarding.js...");

@@ -6,8 +6,6 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 const __filename = new URL(import.meta.url).pathname;
-
-// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -15,9 +13,10 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-const MONDAY_BOARD_ID = "8626580892";
-const TABLE_NAME = "dash_apoio";
+const MONDAY_BOARD_ID = "8626580892"; // ID do board
+const TABLE_NAME = "dash_apoio"; // Nome da tabela no PostgreSQL
 
+// Consulta GraphQL para pegar os dados do board
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -37,6 +36,7 @@ const MONDAY_QUERY = `
   }
 `;
 
+// Função para limpar o nome da coluna (formato para o banco de dados)
 function cleanName(title) {
   return title
     .normalize("NFD")
@@ -46,6 +46,7 @@ function cleanName(title) {
     .trim();
 }
 
+// Função para mapear as colunas do board
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -82,6 +83,7 @@ async function getColumnMap() {
   return map;
 }
 
+// Função para buscar dados do Monday.com
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
@@ -117,6 +119,7 @@ async function getMondayData() {
   return allItems;
 }
 
+// Função para salvar dados no PostgreSQL
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -135,6 +138,7 @@ async function saveToPostgres(items, columnMap) {
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
+    // Deleta a tabela existente e cria uma nova com as colunas corretas
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
@@ -145,6 +149,7 @@ async function saveToPostgres(items, columnMap) {
       );
     `);
 
+    // Definindo a consulta de inserção
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
       .map((c) => `"${c}"`)
@@ -163,6 +168,8 @@ async function saveToPostgres(items, columnMap) {
     `;
 
     let inserted = 0;
+
+    // Inserindo os dados
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
@@ -189,6 +196,7 @@ async function saveToPostgres(items, columnMap) {
   }
 }
 
+// Função principal para executar o processo
 export default async function dashApoio() {
   const start = Date.now();
   console.log("▶️ Executando dash_apoio.js...");
