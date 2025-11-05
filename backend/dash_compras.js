@@ -131,10 +131,10 @@ async function saveToPostgres(items, columnMap) {
       console.log(`Tabela ${TABLE_NAME} não existe. Criando...`);
       await client.query(`
         CREATE TABLE ${TABLE_NAME} (
-          id TEXT PRIMARY KEY,
-          name TEXT,
-          value NUMERIC(12,2),  -- Garantindo a coluna value
-          grupo TEXT,
+          "id" TEXT PRIMARY KEY,
+          "name" TEXT,
+          "value" NUMERIC(12,2),  -- Garantindo a coluna value
+          "grupo" TEXT,
           ${Object.values(columnMap)
             .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
             .join(", ")}
@@ -145,9 +145,11 @@ async function saveToPostgres(items, columnMap) {
     }
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, value, ${Object.values(columnMap)
+      INSERT INTO ${TABLE_NAME} ("id", "name", "value", ${Object.values(
+      columnMap
+    )
       .map((c) => `"${c}"`)
-      .join(", ")}, grupo)
+      .join(", ")}, "grupo")
       VALUES (${[
         "$1",
         "$2",
@@ -155,10 +157,10 @@ async function saveToPostgres(items, columnMap) {
         ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
         `$${Object.values(columnMap).length + 4}`,
       ].join(", ")})
-      ON CONFLICT (id) DO UPDATE SET
+      ON CONFLICT ("id") DO UPDATE SET
       ${Object.values(columnMap)
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(["grupo = EXCLUDED.grupo", "value = EXCLUDED.value"])
+        .concat(['"grupo" = EXCLUDED."grupo"', '"value" = EXCLUDED."value"'])
         .join(", ")};
     `;
 
