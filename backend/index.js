@@ -8,10 +8,9 @@ import pLimit from "p-limit";
 const __filename = new URL(import.meta.url).pathname;
 const __dirname = path.dirname(__filename);
 
-// Agora você pode usar o __dirname normalmente
+// Carregar variáveis de ambiente
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-// Resto do seu código
 const app = express();
 const limit = pLimit(5); // Definir o limite de execução paralela (5, por exemplo)
 
@@ -35,6 +34,29 @@ const connectDb = async () => {
   return client;
 };
 
+// Função para garantir que a tabela esteja criada corretamente
+const ensureTableExists = async (client, table) => {
+  const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS ${table} (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      value NUMERIC(12,2),  -- Garantir que a coluna 'value' exista
+      grupo TEXT
+    );
+  `;
+
+  // Criação ou atualização da tabela
+  try {
+    await client.query(createTableQuery);
+    console.log(`✅ Tabela ${table} verificada/criada com sucesso.`);
+  } catch (err) {
+    console.error(
+      `❌ Erro ao criar ou verificar tabela ${table}:`,
+      err.message
+    );
+  }
+};
+
 // Função para realizar o insert com verificação de duplicidade
 const insertData = async (client, table, data) => {
   try {
@@ -46,12 +68,17 @@ const insertData = async (client, table, data) => {
       return;
     }
 
-    const insertQuery = `INSERT INTO ${table} (id, name, value) VALUES ($1, $2, $3)`;
-    await client.query(insertQuery, [data.id, data.name, data.value]);
+    const insertQuery = `INSERT INTO ${table} (id, name, value, grupo) VALUES ($1, $2, $3, $4)`;
+    await client.query(insertQuery, [
+      data.id,
+      data.name,
+      data.value,
+      data.grupo,
+    ]);
 
     console.log("Dados inseridos com sucesso");
   } catch (err) {
-    console.error("Erro ao inserir dados:", err);
+    console.error("Erro ao inserir dados:", err.message);
   }
 };
 
@@ -60,8 +87,8 @@ const runCycle = async () => {
   try {
     const client = await connectDb();
 
-    // Aqui você pode rodar seus scripts, como dash_apoio.js, dash_compras.js, etc.
-    // Por exemplo:
+    // Garantir que a tabela existe ou seja recriada
+    await ensureTableExists(client, "dash_compras");
 
     // Simulação de execução de scripts
     console.log("Executando dash_apoio.js...");
@@ -70,13 +97,18 @@ const runCycle = async () => {
     await limit(() => import("./dash_compras.js")); // Executa paralelo
 
     // Exemplo de insert de dados
-    const data = { id: "12345", name: "Produto 1", value: 100 };
+    const data = {
+      id: "12345",
+      name: "Produto 1",
+      value: 100,
+      grupo: "Grupo A",
+    };
     await insertData(client, "dash_compras", data);
 
     console.log("Ciclo concluído!");
     await client.end();
   } catch (err) {
-    console.error("Erro durante o ciclo:", err);
+    console.error("Erro durante o ciclo:", err.message);
   }
 };
 
