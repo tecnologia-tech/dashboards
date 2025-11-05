@@ -66,7 +66,6 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
-  console.log("Columns fetched from Monday:", data); // Log dos dados da tabela
   const columns = data?.data?.boards?.[0]?.columns || [];
   const map = {};
   columns.forEach((col) => {
@@ -107,7 +106,6 @@ async function getMondayData() {
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
   } while (cursor);
-  console.log(`Fetched ${allItems.length} items from Monday.`);
   return allItems;
 }
 
@@ -125,38 +123,34 @@ async function saveToPostgres(items, columnMap) {
     await client.connect();
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    const columns = Object.values(columnMap);
-    const colDefs = columns
-      .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
-      .join(", ");
-
-    // Logs para o processo de criação da tabela
-    console.log(`Creating table: DROP IF EXISTS ${TABLE_NAME};`);
+    // Criar a tabela, se ela já existir, será descartada e criada novamente
+    console.log(`Criando a tabela ${TABLE_NAME}...`);
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
         id TEXT PRIMARY KEY,
         name TEXT,
-        value NUMERIC(12,2),  -- Criando a coluna "value"
-        ${colDefs},
-        grupo TEXT
+        value NUMERIC(12,2),  -- Garantindo a coluna value
+        grupo TEXT,
+        ${Object.values(columnMap)
+          .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
+          .join(", ")}
       );
     `);
 
-    // Logando as queries de inserção
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, value, ${columns
+      INSERT INTO ${TABLE_NAME} (id, name, value, ${Object.values(columnMap)
       .map((c) => `"${c}"`)
       .join(", ")}, grupo)
       VALUES (${[
         "$1",
         "$2",
-        "$3", // Para o valor "value"
-        ...columns.map((_, i) => `$${i + 4}`),
-        `$${columns.length + 4}`,
+        "$3", // Para a coluna "value"
+        ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
+        `$${Object.values(columnMap).length + 4}`,
       ].join(", ")})
       ON CONFLICT (id) DO UPDATE SET
-      ${columns
+      ${Object.values(columnMap)
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
         .concat(["grupo = EXCLUDED.grupo", "value = EXCLUDED.value"])
         .join(", ")};
@@ -181,7 +175,7 @@ async function saveToPostgres(items, columnMap) {
         item.id ?? "",
         item.name ?? "",
         item.value ?? 0, // Garantindo que o valor "value" seja passado corretamente
-        ...columns.map((t) => col[t] ?? ""),
+        ...Object.values(columnMap).map((t) => col[t] ?? ""),
         item.group?.title ?? "",
       ];
 
