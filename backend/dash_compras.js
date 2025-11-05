@@ -143,19 +143,36 @@ async function saveToPostgres(items, columnMap) {
     await client.connect();
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    await ensureTable(client); // Garantir que a tabela existe
-
+    // Definir as colunas dinamicamente
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
+
+    // Deletar a tabela se já existir e criar novamente
+    await client.query(`
+      DROP TABLE IF EXISTS ${TABLE_NAME};
+      CREATE TABLE ${TABLE_NAME} (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        ${colDefs},
+        grupo TEXT
+      );
+    `);
+
+    // Query para inserção ou atualização dos dados
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, group, value, ${columns
+      INSERT INTO ${TABLE_NAME} (id, name, ${columns
       .map((c) => `"${c}"`)
-      .join(", ")})
-      VALUES ($1, $2, $3, $4, ${columns.map((_, i) => `$${i + 5}`).join(", ")})
+      .join(", ")}, grupo)
+      VALUES (${[
+        "$1",
+        "$2",
+        ...columns.map((_, i) => `$${i + 3}`),
+        `$${columns.length + 3}`,
+      ].join(", ")})
       ON CONFLICT (id) DO UPDATE SET
       ${columns
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(["group = EXCLUDED.group", "value = EXCLUDED.value"])
+        .concat(["grupo = EXCLUDED.grupo"])
         .join(", ")};
     `;
 
@@ -170,9 +187,8 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        item.group?.title ?? "",
-        parseFloat(item.value ?? 0), // Garantir que o valor seja um número
         ...columns.map((t) => col[t] ?? ""),
+        item.group?.title ?? "",
       ];
 
       await client.query(insertQuery, row);
@@ -184,26 +200,5 @@ async function saveToPostgres(items, columnMap) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end().catch(() => {});
-  }
-}
-
-export default async function dashCompras() {
-  const start = Date.now();
-  console.log("▶️ Executando dash_compras.js...");
-  try {
-    const columnMap = await getColumnMap();
-    const items = await getMondayData();
-    if (!items.length) {
-      console.log("Nenhum registro retornado do Monday.");
-      return [];
-    }
-    await saveToPostgres(items, columnMap);
-    console.log(
-      `🏁 dash_compras concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
-    );
-  } catch (err) {
-    console.error("🚨 Erro geral em dash_compras:", err.message);
   }
 }
