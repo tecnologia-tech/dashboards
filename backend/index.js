@@ -80,7 +80,7 @@ async function runModule(file) {
 async function runSequentialLoop() {
   let ciclo = 1;
 
-  const batches = [["dash_cs.js", "dash_csat.js"]];
+  const batches = [["dash_apoio.js", "dash_compras.js"]];
 
   while (true) {
     const cicloStart = Date.now();
