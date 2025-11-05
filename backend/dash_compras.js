@@ -71,7 +71,7 @@ async function getColumnMap() {
   columns.forEach((col) => {
     if (col.id && col.title) {
       const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}_${col.id}`;
+      map[col.id] = `${safeName}`; // Corrigido para mapear sem adicionar "name" extra
     }
   });
   return map;
@@ -123,20 +123,26 @@ async function saveToPostgres(items, columnMap) {
     await client.connect();
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    // Criar a tabela, se ela já existir, será descartada e criada novamente
-    console.log(`Criando a tabela ${TABLE_NAME}...`);
-    await client.query(`
-      DROP TABLE IF EXISTS ${TABLE_NAME};
-      CREATE TABLE ${TABLE_NAME} (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        value NUMERIC(12,2),  -- Garantindo a coluna value
-        grupo TEXT,
-        ${Object.values(columnMap)
-          .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
-          .join(", ")}
-      );
-    `);
+    // Verifica se a tabela já existe, caso contrário cria
+    const checkTableExistsQuery = `SELECT to_regclass('${TABLE_NAME}');`;
+    const result = await client.query(checkTableExistsQuery);
+
+    if (result.rows[0].to_regclass === null) {
+      console.log(`Tabela ${TABLE_NAME} não existe. Criando...`);
+      await client.query(`
+        CREATE TABLE ${TABLE_NAME} (
+          id TEXT PRIMARY KEY,
+          name TEXT,
+          value NUMERIC(12,2),  -- Garantindo a coluna value
+          grupo TEXT,
+          ${Object.values(columnMap)
+            .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
+            .join(", ")}
+        );
+      `);
+    } else {
+      console.log(`Tabela ${TABLE_NAME} já existe.`);
+    }
 
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, value, ${Object.values(columnMap)
