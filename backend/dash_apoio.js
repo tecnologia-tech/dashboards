@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import pkg from "pg";
 const { Client } = pkg;
 import { fileURLToPath } from "url";
+import path from "path";
 
 const __filename = new URL(import.meta.url).pathname;
 
