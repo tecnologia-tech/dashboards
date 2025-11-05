@@ -153,6 +153,7 @@ async function saveToPostgres(items, columnMap) {
       CREATE TABLE ${TABLE_NAME} (
         id TEXT PRIMARY KEY,
         name TEXT,
+        value NUMERIC(12,2),  -- Aqui estamos criando a coluna value
         ${colDefs},
         grupo TEXT
       );
@@ -160,19 +161,20 @@ async function saveToPostgres(items, columnMap) {
 
     // Query para inserção ou atualização dos dados
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, ${columns
+      INSERT INTO ${TABLE_NAME} (id, name, value, ${columns
       .map((c) => `"${c}"`)
       .join(", ")}, grupo)
       VALUES (${[
         "$1",
         "$2",
-        ...columns.map((_, i) => `$${i + 3}`),
-        `$${columns.length + 3}`,
+        "$3", // Para o valor (value)
+        ...columns.map((_, i) => `$${i + 4}`),
+        `$${columns.length + 4}`,
       ].join(", ")})
       ON CONFLICT (id) DO UPDATE SET
       ${columns
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(["grupo = EXCLUDED.grupo"])
+        .concat(["grupo = EXCLUDED.grupo", "value = EXCLUDED.value"])
         .join(", ")};
     `;
 
@@ -187,6 +189,7 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
+        item.value ?? 0, // Garantindo que o valor seja passado corretamente
         ...columns.map((t) => col[t] ?? ""),
         item.group?.title ?? "",
       ];
