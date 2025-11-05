@@ -2,10 +2,9 @@ import dotenv from "dotenv";
 import fetch from "node-fetch";
 import pkg from "pg";
 const { Client } = pkg;
-import path from "path";
 import { fileURLToPath } from "url";
+import path from "path";
 
-// Obter o nome do arquivo atual
 const __filename = new URL(import.meta.url).pathname;
 
 // Obter o diretório do arquivo atual
@@ -16,8 +15,8 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-const MONDAY_BOARD_ID = "18206014428";
-const TABLE_NAME = "dash_compras";
+const MONDAY_BOARD_ID = "8626580892";
+const TABLE_NAME = "dash_apoio";
 
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
@@ -88,7 +87,6 @@ async function getMondayData() {
   let cursor = null;
   const limit = 50;
   let page = 1;
-
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -134,11 +132,9 @@ async function saveToPostgres(items, columnMap) {
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    // Criar as colunas dinamicamente com base no columnMap
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
-    // Criar a tabela dinamicamente
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
@@ -149,7 +145,6 @@ async function saveToPostgres(items, columnMap) {
       );
     `);
 
-    // Inserir dados na tabela
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
       .map((c) => `"${c}"`)
@@ -160,7 +155,6 @@ async function saveToPostgres(items, columnMap) {
         ...columns.map((_, i) => `$${i + 3}`),
         `$${columns.length + 3}`,
       ].join(", ")})
-
       ON CONFLICT (id) DO UPDATE SET
       ${columns
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
@@ -189,15 +183,15 @@ async function saveToPostgres(items, columnMap) {
 
     console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
-    console.error(`❌ Erro em ${TABLE_NAME}:`, err.message);
+    console.error("❌ Erro ao salvar:", err.message);
   } finally {
     await client.end().catch(() => {});
   }
 }
 
-export default async function dashCompras() {
+export default async function dashApoio() {
   const start = Date.now();
-  console.log("▶️ Executando dash_compras.js...");
+  console.log("▶️ Executando dash_apoio.js...");
   try {
     const columnMap = await getColumnMap();
     const items = await getMondayData();
@@ -207,11 +201,9 @@ export default async function dashCompras() {
     }
     await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_compras concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
+      `🏁 dash_apoio concluído em ${((Date.now() - start) / 1000).toFixed(1)}s`
     );
   } catch (err) {
-    console.error("🚨 Erro geral em dash_compras:", err.message);
+    console.error("🚨 Erro geral em dash_apoio:", err.message);
   }
 }

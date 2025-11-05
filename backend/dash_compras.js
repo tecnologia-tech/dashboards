@@ -134,9 +134,11 @@ async function saveToPostgres(items, columnMap) {
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
+    // Criar as colunas dinamicamente com base no columnMap
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
+    // Criar a tabela dinamicamente
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
@@ -147,6 +149,7 @@ async function saveToPostgres(items, columnMap) {
       );
     `);
 
+    // Inserir dados na tabela
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, ${columns
       .map((c) => `"${c}"`)
