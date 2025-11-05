@@ -1,3 +1,4 @@
+// index.js
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -27,10 +28,11 @@ const pool = new Pool({
   user: PGUSER,
   password: PGPASSWORD,
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-  max: 5, // Limita o número de conexões simultâneas
+  max: 5,
 });
 
-// Função para formatação do tempo
+// ======= Funções utilitárias =======
+
 function formatTime(ms) {
   const s = (ms / 1000).toFixed(1);
   const min = Math.floor(s / 60);
@@ -38,42 +40,49 @@ function formatTime(ms) {
   return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
 }
 
-// Função para pegar o horário atual no Brasil
 function hora() {
   return new Date().toLocaleTimeString("pt-BR", {
     timeZone: "America/Sao_Paulo",
   });
 }
 
-// Função para criar pausa
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Função para rodar um módulo
+// ======= Execução de módulos =======
+
 async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
+  const startHora = hora();
+
+  console.log(`🟡 [${startHora}] Iniciando ${file}...`);
+
   try {
     const mod = await import(modulePath + `?v=${Date.now()}`);
     if (typeof mod.default === "function") {
       await mod.default();
     }
-    console.log(`✅ ${file} concluído (${formatTime(Date.now() - start)})`);
+
+    const end = Date.now();
+    const endHora = hora();
+    console.log(
+      `✅ [${endHora}] ${file} concluído em ${formatTime(end - start)}\n`
+    );
   } catch (err) {
-    console.error(`❌ Erro em ${file}: ${err.message}`);
+    console.error(`❌ [${hora()}] Erro em ${file}: ${err.message}\n`);
   }
 }
 
-// Função para rodar o ciclo de módulos
+// ======= Ciclo principal =======
+
 async function runSequentialLoop() {
   let ciclo = 1;
 
   const batches = [
-    // Primeiro lote
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
     ["dash_apoio.js", "dash_compras.js"],
-    // Depois do primeiro ciclo
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
     ["dash_cs.js", "dash_csat.js"],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
@@ -86,45 +95,48 @@ async function runSequentialLoop() {
     ["dash_ixlogcomex.js", "dash_logmakers.js"],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
     ["dash_nps.js", "dash_onboarding.js"],
-    // Adicione mais lotes conforme necessário
   ];
 
   while (true) {
     const cicloStart = Date.now();
-    console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...`);
+    console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...\n`);
 
-    // Executando cada lote sequencialmente
     for (const batch of batches) {
       const batchStart = Date.now();
+      console.log(`📂 Iniciando lote: ${batch.join(", ")}`);
+
+      // Rodando os módulos do lote em paralelo
       await Promise.all(batch.map((file) => runModule(file)));
+
       console.log(
-        `✅ Lote concluído em ${formatTime(Date.now() - batchStart)}`
+        `✅ Lote concluído em ${formatTime(Date.now() - batchStart)}\n`
       );
     }
 
     const cicloEnd = Date.now();
     console.log(
-      `✅ Ciclo #${ciclo} concluído em ${formatTime(cicloEnd - cicloStart)}`
+      `🏁 Ciclo #${ciclo} finalizado em ${formatTime(
+        cicloEnd - cicloStart
+      )} às ${hora()}\n`
     );
-
-    console.log(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...`);
+    console.log(`🔁 Aguardando 1 minuto para reiniciar...\n`);
     ciclo++;
-    await sleep(60000); // Espera 1 minuto antes de reiniciar o ciclo
+    await sleep(60000);
   }
 }
 
-// Função para obter os arquivos das tabelas
+// ======= Rotas =======
+
 const TABLES = fs
   .readdirSync(__dirname)
   .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
-  .map((f) => f.replace(".js", "")); // Garante que a variável TABLES seja definida corretamente
+  .map((f) => f.replace(".js", ""));
 
-// Função para buscar dados de uma tabela
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
     const result = await client.query(`SELECT * FROM ${tableName}`);
-    console.log(`✅ Dados da tabela ${tableName} obtidos com sucesso.`);
+    console.log(`✅ Dados da tabela ${tableName} obtidos.`);
     return result.rows;
   } catch (err) {
     console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
@@ -134,16 +146,12 @@ async function fetchTableData(tableName) {
   }
 }
 
-// Rota para coletar os dados de todas as tabelas
 app.get("/api/dashboard", async (req, res) => {
   const data = {};
-  for (const t of TABLES) {
-    data[t] = await fetchTableData(t);
-  }
+  for (const t of TABLES) data[t] = await fetchTableData(t);
   res.json(data);
 });
 
-// Rota dinâmica para as tabelas
 TABLES.forEach((t) =>
   app.get(`/api/${t}`, async (req, res) => res.json(await fetchTableData(t)))
 );
@@ -153,6 +161,6 @@ app.listen(PORT, () => {
 });
 
 (async function main() {
-  console.log("🚀 Iniciando ciclo paralelo otimizado...");
-  await runSequentialLoop(); // Garantindo que o ciclo seja executado infinitamente
+  console.log("🚀 Iniciando ciclo paralelo otimizado...\n");
+  await runSequentialLoop();
 })();
