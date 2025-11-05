@@ -8,7 +8,6 @@ import { fileURLToPath } from "url";
 
 const __filename = new URL(import.meta.url).pathname;
 
-// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -39,18 +38,16 @@ const dbCfg = {
 };
 
 const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(10); // Limite de concorrência
+const limit = pLimit(10);
 
-// Função para esperar (usada para controlar o tempo entre tentativas)
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Função para fazer chamadas RPC ao Nutshell com reintentos
 async function callRPC(method, params = {}, attempt = 1) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+    const timeout = setTimeout(() => controller.abort(), 30000); 
     const res = await fetch(NUTSHELL_API_URL, {
       method: "POST",
       agent: httpsAgent,
@@ -73,14 +70,14 @@ async function callRPC(method, params = {}, attempt = 1) {
     return json.result;
   } catch (err) {
     if (attempt < 3) {
-      const wait = 1000 * attempt; // Aumenta o tempo de espera entre as tentativas
+      const wait = 1000 * attempt; 
       console.warn(
         `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
           wait / 1000
         }s`
       );
       await sleep(wait);
-      return callRPC(method, params, attempt + 1); // Tenta novamente
+      return callRPC(method, params, attempt + 1);
     } else {
       console.error(`🚨 RPC ${method} falhou após ${attempt} tentativas`);
       throw err;
@@ -88,7 +85,6 @@ async function callRPC(method, params = {}, attempt = 1) {
   }
 }
 
-// Função para obter todos os IDs de leads
 async function getAllLeadIds() {
   const ids = [];
   for (let page = 1; ; page++) {
@@ -99,13 +95,12 @@ async function getAllLeadIds() {
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
-    await sleep(100); // Tempo de espera entre requisições
+    await sleep(100); 
   }
   console.log(`✅ Total de ${ids.length} leads encontrados.`);
   return ids;
 }
 
-// Função para mapear os dados do lead para o formato de linha
 function mapLeadToRow(lead) {
   const id = String(lead.id ?? lead.leadId);
   const valor = Number(lead.value?.amount ?? 0);
@@ -137,7 +132,6 @@ function mapLeadToRow(lead) {
   };
 }
 
-// Função para garantir que a tabela exista no banco
 async function ensureTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
@@ -154,7 +148,6 @@ async function ensureTable(client) {
  );
   `);
 
-  // Remove registros duplicados (com o mesmo número)
   await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
@@ -163,7 +156,6 @@ async function ensureTable(client) {
   `);
 }
 
-// Função para realizar o upsert dos dados no banco
 async function upsertRows(client, rows, batchSize = 500) {
   if (!rows.length) return;
   const cols = Object.keys(rows[0]);
@@ -193,14 +185,13 @@ async function upsertRows(client, rows, batchSize = 500) {
 }
 
 export default async function main() {
-  const client = new Pool(dbCfg); // Usando Pool para melhorar o desempenho
+  const client = new Pool(dbCfg); 
   await client.connect();
   await ensureTable(client);
 
   const ids = await getAllLeadIds();
   const rows = [];
 
-  // Processando os leads em paralelo com o limite de concorrência
   const tasks = ids.map((id) =>
     limit(async () => {
       try {
@@ -208,7 +199,7 @@ export default async function main() {
         rows.push(mapLeadToRow(lead));
       } catch (err) {
         console.warn(`⚠️ Falha ao processar lead ${id}: ${err.message}`);
-        if (err.message.includes("429")) await sleep(2000); // Delay em caso de excesso de requisições
+        if (err.message.includes("429")) await sleep(2000); 
       }
     })
   );

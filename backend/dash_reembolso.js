@@ -1,13 +1,10 @@
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
-import { fileURLToPath } from "url";
+import path from "path";
 
 const __filename = new URL(import.meta.url).pathname;
-
-// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -15,10 +12,9 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-const MONDAY_BOARD_ID = "8182800749"; // Substitua pelo seu ID de board do Monday
-const TABLE_NAME = "dash_reembolso"; // Tabela de destino no banco PostgreSQL
+const MONDAY_BOARD_ID = "8182800749";
+const TABLE_NAME = "dash_reembolso";
 
-// Query do Monday.com para buscar os dados
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
     boards(ids: [$board_id]) {
@@ -38,7 +34,6 @@ const MONDAY_QUERY = `
   }
 `;
 
-// Função para limpar o nome da coluna
 function cleanName(title) {
   return title
     .normalize("NFD")
@@ -48,7 +43,6 @@ function cleanName(title) {
     .trim();
 }
 
-// Função para mapear as colunas do Monday
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -61,6 +55,7 @@ async function getColumnMap() {
     }
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
+
   const res = await fetch("https://api.monday.com/v2", {
     method: "POST",
     headers: {
@@ -71,24 +66,38 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
-  const columns = data?.data?.boards?.[0]?.columns || [];
+
+  if (
+    !data ||
+    !data.data ||
+    !data.data.boards ||
+    !data.data.boards[0]?.columns
+  ) {
+    console.error(
+      "Erro ao obter colunas do board. Verifique a resposta da API."
+    );
+    return {};
+  }
+
+  const columns = data.data.boards[0].columns;
+
   const map = {};
   columns.forEach((col) => {
     if (col.id && col.title) {
       const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}_${col.id}`;
+      if (map[col.id]) {
+        console.warn(`⚠️ Coluna duplicada: ${col.title}`);
+      }
+      map[col.id] = safeName;
     }
   });
   return map;
 }
 
-// Função para buscar dados do Monday
 async function getMondayData() {
   const allItems = [];
   let cursor = null;
   const limit = 50;
-  let page = 1;
-
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -109,15 +118,17 @@ async function getMondayData() {
 
     const data = await res.json();
     const pageData = data?.data?.boards?.[0]?.items_page;
+
     if (!pageData) break;
+
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
   } while (cursor);
 
+  console.log(`📊 Total de itens recuperados do Monday: ${allItems.length}`);
   return allItems;
 }
 
-// Função para salvar dados no PostgreSQL
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -130,41 +141,43 @@ async function saveToPostgres(items, columnMap) {
 
   try {
     await client.connect();
+
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    // Obter o mapeamento de colunas
     const columns = Object.values(columnMap);
-    const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
-    // Criar a tabela se não existir
+    const uniqueColumns = [...new Set(columns)];
+
+    const colDefs = uniqueColumns.map((t) => `"${t}" TEXT`).join(", ");
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
         id TEXT PRIMARY KEY,
         name TEXT,
-        ${colDefs},
-        grupo TEXT
+        grupo TEXT,
+        ${colDefs}
       );
     `);
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, ${columns
+      INSERT INTO ${TABLE_NAME} (id, name, grupo, ${uniqueColumns
       .map((c) => `"${c}"`)
-      .join(", ")}, grupo)
+      .join(", ")})
       VALUES (${[
         "$1",
         "$2",
-        ...columns.map((_, i) => `$${i + 3}`),
-        `$${columns.length + 3}`,
+        "$3",
+        ...uniqueColumns.map((_, i) => `$${i + 4}`),
       ].join(", ")})
       ON CONFLICT (id) DO UPDATE SET
-      ${columns
+      ${uniqueColumns
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
         .concat(["grupo = EXCLUDED.grupo"])
         .join(", ")}
     `;
 
-    let count = 0;
+    let inserted = 0;
+
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
@@ -175,35 +188,31 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        ...columns.map((t) => col[t] ?? ""),
         item.group?.title ?? "",
+        ...uniqueColumns.map((t) => col[t] ?? ""),
       ];
 
       await client.query(insertQuery, row);
-      count++;
+      inserted++;
     }
-    console.log(`✅ ${count} registros atualizados em ${TABLE_NAME}`);
+    console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
-    console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
+    console.error("❌ Erro ao salvar:", err.message);
   } finally {
-    await client.end();
+    await client.end().catch(() => {});
   }
 }
 
-// Função principal para executar o processo de ETL
-export default async function dashReembolso() {
+export default async function dashCompras() {
   const start = Date.now();
   console.log("▶️ Executando dash_reembolso.js...");
-
   try {
     const columnMap = await getColumnMap();
     const items = await getMondayData();
-
     if (!items.length) {
       console.log("Nenhum registro retornado do Monday.");
       return [];
     }
-
     await saveToPostgres(items, columnMap);
     console.log(
       `🏁 dash_reembolso concluído em ${((Date.now() - start) / 1000).toFixed(

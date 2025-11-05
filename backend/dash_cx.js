@@ -3,11 +3,8 @@ import fetch from "node-fetch";
 import pkg from "pg";
 const { Client } = pkg;
 import path from "path";
-import { fileURLToPath } from "url";
 
 const __filename = new URL(import.meta.url).pathname;
-
-// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -70,13 +67,25 @@ async function getColumnMap() {
 
   const data = await res.json();
 
-  const columns = data?.data?.boards?.[0]?.columns || [];
+  if (
+    !data ||
+    !data.data ||
+    !data.data.boards ||
+    !data.data.boards[0]?.columns
+  ) {
+    console.error(
+      "Erro ao obter colunas do board. Verifique a resposta da API."
+    );
+    return {};
+  }
+
+  const columns = data.data.boards[0].columns;
 
   const map = {};
   columns.forEach((col) => {
     if (col.id && col.title) {
       const safeName = cleanName(col.title);
-      map[col.id] = `${safeName}_${col.id}`;
+      map[col.id] = safeName;
     }
   });
   return map;
@@ -86,8 +95,6 @@ async function getMondayData() {
   const allItems = [];
   let cursor = null;
   const limit = 50;
-  let page = 1;
-
   do {
     const res = await fetch("https://api.monday.com/v2", {
       method: "POST",
@@ -107,14 +114,15 @@ async function getMondayData() {
     }
 
     const data = await res.json();
-
     const pageData = data?.data?.boards?.[0]?.items_page;
+
     if (!pageData) break;
 
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
   } while (cursor);
 
+  console.log(`📊 Total de itens recuperados do Monday: ${allItems.length}`);
   return allItems;
 }
 
@@ -132,7 +140,6 @@ async function saveToPostgres(items, columnMap) {
     await client.connect();
 
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
-
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
 
@@ -141,22 +148,17 @@ async function saveToPostgres(items, columnMap) {
       CREATE TABLE ${TABLE_NAME} (
         id TEXT PRIMARY KEY,
         name TEXT,
-        ${colDefs},
-        grupo TEXT
+        grupo TEXT,
+        ${colDefs}
       );
     `);
-
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} (id, name, ${columns
+      INSERT INTO ${TABLE_NAME} (id, name, grupo, ${columns
       .map((c) => `"${c}"`)
-      .join(", ")}, grupo)
-      VALUES (${[
-        "$1",
-        "$2",
-        ...columns.map((_, i) => `$${i + 3}`),
-        `$${columns.length + 3}`,
-      ].join(", ")})
-
+      .join(", ")})
+      VALUES (${["$1", "$2", "$3", ...columns.map((_, i) => `$${i + 4}`)].join(
+        ", "
+      )})
       ON CONFLICT (id) DO UPDATE SET
       ${columns
         .map((c) => `"${c}" = EXCLUDED."${c}"`)
@@ -164,7 +166,8 @@ async function saveToPostgres(items, columnMap) {
         .join(", ")}
     `;
 
-    let count = 0;
+    let inserted = 0;
+
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
@@ -175,23 +178,20 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        ...columns.map((t) => col[t] ?? ""),
         item.group?.title ?? "",
+        ...columns.map((t) => col[t] ?? ""),
       ];
-
       await client.query(insertQuery, row);
-      count++;
+      inserted++;
     }
-
-    console.log(`✅ ${count} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
-    console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
+    console.error("❌ Erro ao salvar:", err.message);
   } finally {
     await client.end().catch(() => {});
   }
 }
 
-export default async function dashCx() {
+export default async function dashCompras() {
   const start = Date.now();
   console.log("▶️ Executando dash_cx.js...");
   try {

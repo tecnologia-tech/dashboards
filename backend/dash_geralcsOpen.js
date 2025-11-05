@@ -5,7 +5,6 @@ import { fileURLToPath } from "url";
 
 const __filename = new URL(import.meta.url).pathname;
 
-// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -35,7 +34,6 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-// Extract lead number from URL or lead name
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
   if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
@@ -54,8 +52,8 @@ function toSQLDateFromISO(isoString) {
   if (!isoString || typeof isoString !== "string") return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
-  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000); // Adjust to Brazil timezone
-  return br.toISOString().slice(0, 10); // Return only the date part
+  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000); 
+  return br.toISOString().slice(0, 10); 
 }
 
 function parseAmountToNumber(valueObj) {
@@ -110,7 +108,6 @@ function mapLeadToRow(leadFull, accountMap) {
   };
 }
 
-// Call Nutshell API using JSON-RPC
 async function callNutshellJSONRPC(method, params = {}) {
   const payload = {
     jsonrpc: "2.0",
@@ -132,7 +129,6 @@ async function callNutshellJSONRPC(method, params = {}) {
   return json.result;
 }
 
-// Ensure the table exists
 async function ensureTable(client) {
   await client.query(`DROP TABLE IF EXISTS dash_geralcsopen`);
   await client.query(`
@@ -150,7 +146,6 @@ async function ensureTable(client) {
   `);
 }
 
-// Upsert rows into the database
 async function upsertRows(client, rows) {
   if (!rows || rows.length === 0) return;
   const cols = Object.keys(rows[0]);
@@ -185,7 +180,7 @@ async function upsertRows(client, rows) {
 }
 
 function getHotStageIdsManualmente() {
-  return [391, 1043, 1039]; // Manually defined stages
+  return [391, 1043, 1039];
 }
 
 async function main() {

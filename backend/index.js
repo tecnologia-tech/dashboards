@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -31,8 +30,6 @@ const pool = new Pool({
   max: 5,
 });
 
-// ======= Funções utilitárias =======
-
 function formatTime(ms) {
   const s = (ms / 1000).toFixed(1);
   const min = Math.floor(s / 60);
@@ -49,8 +46,6 @@ function hora() {
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
-
-// ======= Execução de módulos =======
 
 async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
@@ -75,26 +70,36 @@ async function runModule(file) {
   }
 }
 
-// ======= Ciclo principal =======
-
 async function runSequentialLoop() {
   let ciclo = 1;
 
-  const batches = [["dash_apoio.js", "dash_compras.js"]];
+  const batches = [
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_apoio.js", "dash_compras.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_cs.js", "dash_csat.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_cx.js", "dash_delivery.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_fornecedores.js", "dash_handover.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_icp.js", "dash_ixdelivery.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_ixlogcomex.js", "dash_logmakers.js"],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_nps.js", "dash_onboarding.js"],
+  ];
 
   while (true) {
     const cicloStart = Date.now();
     console.log(`🧭 [${hora()}] Iniciando ciclo #${ciclo}...`);
 
-    // Exibe o status do ciclo
     console.log(`🕒 [${hora()}] Ciclo #${ciclo} iniciado...`);
 
-    // Executando cada lote
     for (const batch of batches) {
       const batchStart = Date.now();
       console.log(`📂 [${hora()}] Iniciando lote: ${batch.join(", ")}`);
 
-      // Rodando os módulos do lote em paralelo
       await Promise.all(batch.map((file) => runModule(file)));
 
       console.log(
@@ -148,5 +153,5 @@ app.listen(PORT, () => {
 
 (async function main() {
   console.log("🚀 [${hora()}] Iniciando ciclo paralelo otimizado...");
-  await runSequentialLoop(); // Garantindo que o ciclo seja executado infinitamente
+  await runSequentialLoop();
 })();
