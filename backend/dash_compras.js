@@ -127,17 +127,16 @@ async function saveToPostgres(items, columnMap) {
 
     // Cria a tabela dinamicamente
     let createTableQuery = `CREATE TABLE ${TABLE_NAME} (
-      "id" TEXT PRIMARY KEY,
-      "name" TEXT,
-      "grupo" TEXT
-    `;
+  "id" TEXT PRIMARY KEY,
+  "name" TEXT,
+  "grupo" TEXT
+`;
 
     // Adiciona as colunas dinamicamente
     Object.values(columnMap).forEach((colName) => {
       createTableQuery += `, "${colName}_text" TEXT, "${colName}_value" JSONB`; // Usando JSONB para valores mais complexos
     });
     createTableQuery += ");";
-
     console.log("Consulta de criação da tabela:", createTableQuery); // Log de criação da tabela
     await client.query(createTableQuery);
 
@@ -147,23 +146,21 @@ async function saveToPostgres(items, columnMap) {
     console.log("Colunas da tabela criada:", columnCheckResult.rows); // Logs das colunas da tabela
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(
-      columnMap
-    )
+  INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(columnMap)
       .map((c) => `"${c}"`)
       .join(", ")})
-      VALUES (${[
-        "$1",
-        "$2",
-        "$3", // Para a coluna "grupo"
-        ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
-      ].join(", ")})
-      ON CONFLICT ("id") DO UPDATE SET
-      ${Object.values(columnMap)
-        .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(['"grupo" = EXCLUDED."grupo"'])
-        .join(", ")};
-    `;
+  VALUES (${[
+    "$1",
+    "$2",
+    "$3", // Para a coluna "grupo"
+    ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
+  ].join(", ")})
+  ON CONFLICT ("id") DO UPDATE SET
+  ${Object.values(columnMap)
+    .map((c) => `"${c}" = EXCLUDED."${c}"`)
+    .concat(['"grupo" = EXCLUDED."grupo"'])
+    .join(", ")};
+`;
 
     let inserted = 0;
     for (const item of items) {
