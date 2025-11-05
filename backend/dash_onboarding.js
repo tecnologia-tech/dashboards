@@ -4,10 +4,14 @@ import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
 import { fileURLToPath } from "url";
+import path from "path";
 
-// Configuração do arquivo .env
-const __filename = fileURLToPath(import.meta.url);
+// Obter o nome do arquivo atual
+const __filename = new URL(import.meta.url).pathname;
+
+// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
+
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =

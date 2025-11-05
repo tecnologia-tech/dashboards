@@ -4,8 +4,12 @@ import path from "path";
 import pkg from "pg";
 const { Client } = pkg;
 import { fileURLToPath } from "url";
+import path from "path";
 
-const __filename = fileURLToPath(import.meta.url);
+// Obter o nome do arquivo atual
+const __filename = new URL(import.meta.url).pathname;
+
+// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -13,8 +17,8 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
 
-const MONDAY_BOARD_ID = "8860920734";  // Board ID
-const TABLE_NAME = "dash_ixdelivery";  // Table name
+const MONDAY_BOARD_ID = "8860920734"; // Board ID
+const TABLE_NAME = "dash_ixdelivery"; // Table name
 
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
@@ -213,7 +217,9 @@ export default async function dashIXDelivery() {
     }
     await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_ixdelivery concluído em ${((Date.now() - start) / 1000).toFixed(1)}s`
+      `🏁 dash_ixdelivery concluído em ${((Date.now() - start) / 1000).toFixed(
+        1
+      )}s`
     );
   } catch (err) {
     console.error("🚨 Erro geral em dash_ixdelivery:", err.message);

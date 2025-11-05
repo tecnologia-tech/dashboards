@@ -4,8 +4,12 @@ import pkg from "pg";
 const { Client } = pkg;
 import path from "path";
 import { fileURLToPath } from "url";
+import path from "path";
 
-const __filename = fileURLToPath(import.meta.url);
+// Obter o nome do arquivo atual
+const __filename = new URL(import.meta.url).pathname;
+
+// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -67,7 +71,6 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
-
 
   const columns = data?.data?.boards?.[0]?.columns || [];
   const map = {};
@@ -199,7 +202,9 @@ export default async function dashHandover() {
     }
     await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_handover concluído em ${((Date.now() - start) / 1000).toFixed(1)}s`
+      `🏁 dash_handover concluído em ${((Date.now() - start) / 1000).toFixed(
+        1
+      )}s`
     );
   } catch (err) {
     console.error("🚨 Erro geral em dash_handover:", err.message);

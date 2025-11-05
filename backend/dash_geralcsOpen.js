@@ -2,10 +2,14 @@ import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
+import path from "path";
 
-const __filename = fileURLToPath(import.meta.url);
+// Obter o nome do arquivo atual
+const __filename = new URL(import.meta.url).pathname;
+
+// Obter o diretório do arquivo atual
 const __dirname = path.dirname(__filename);
+
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const {
@@ -213,7 +217,7 @@ async function main() {
 
       for (let i = 0; i < leadIds.length; i += 100) {
         const batch = leadIds.slice(i, i + 100);
-      
+
         const tasks = batch.map((id) =>
           callNutshellJSONRPC("getLead", { leadId: id }).catch(() => null)
         );
