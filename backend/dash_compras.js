@@ -66,6 +66,7 @@ async function getColumnMap() {
   });
 
   const data = await res.json();
+  console.log("Columns fetched from Monday:", data); // Log dos dados da tabela
   const columns = data?.data?.boards?.[0]?.columns || [];
   const map = {};
   columns.forEach((col) => {
@@ -99,13 +100,14 @@ async function getMondayData() {
       const text = await res.text().catch(() => "");
       throw new Error(`Erro HTTP ${res.status} - ${text}`);
     }
+
     const data = await res.json();
     const pageData = data?.data?.boards?.[0]?.items_page;
     if (!pageData) break;
     allItems.push(...(pageData.items || []));
     cursor = pageData.cursor;
   } while (cursor);
-
+  console.log(`Fetched ${allItems.length} items from Monday.`);
   return allItems;
 }
 
@@ -123,25 +125,25 @@ async function saveToPostgres(items, columnMap) {
     await client.connect();
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
 
-    // Definindo as colunas dinamicamente
     const columns = Object.values(columnMap);
     const colDefs = columns
       .map((t) => `"${t}_text" TEXT, "${t}_value" TEXT`)
       .join(", ");
 
-    // Deletando a tabela se já existir e criando novamente
+    // Logs para o processo de criação da tabela
+    console.log(`Creating table: DROP IF EXISTS ${TABLE_NAME};`);
     await client.query(`
       DROP TABLE IF EXISTS ${TABLE_NAME};
       CREATE TABLE ${TABLE_NAME} (
         id TEXT PRIMARY KEY,
         name TEXT,
-        value NUMERIC(12,2),  -- Aqui estamos criando a coluna value
+        value NUMERIC(12,2),  -- Criando a coluna "value"
         ${colDefs},
         grupo TEXT
       );
     `);
 
-    // Query para inserção ou atualização dos dados
+    // Logando as queries de inserção
     const insertQuery = `
       INSERT INTO ${TABLE_NAME} (id, name, value, ${columns
       .map((c) => `"${c}"`)
@@ -149,7 +151,7 @@ async function saveToPostgres(items, columnMap) {
       VALUES (${[
         "$1",
         "$2",
-        "$3", // Para o valor (value)
+        "$3", // Para o valor "value"
         ...columns.map((_, i) => `$${i + 4}`),
         `$${columns.length + 4}`,
       ].join(", ")})
@@ -178,11 +180,12 @@ async function saveToPostgres(items, columnMap) {
       const row = [
         item.id ?? "",
         item.name ?? "",
-        item.value ?? 0, // Garantindo que o valor seja passado corretamente
+        item.value ?? 0, // Garantindo que o valor "value" seja passado corretamente
         ...columns.map((t) => col[t] ?? ""),
         item.group?.title ?? "",
       ];
 
+      console.log(`Inserting row: ${JSON.stringify(row)}`); // Log do que está sendo inserido
       await client.query(insertQuery, row);
       inserted++;
     }
