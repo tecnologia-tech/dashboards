@@ -2,9 +2,7 @@ import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import path from "path";
 
-// Obter o nome do arquivo atual
 const __filename = new URL(import.meta.url).pathname;
 
 // Obter o diretório do arquivo atual

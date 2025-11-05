@@ -5,9 +5,7 @@ import https from "https";
 import pLimit from "p-limit";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
-import path from "path";
 
-// Obter o nome do arquivo atual
 const __filename = new URL(import.meta.url).pathname;
 
 // Obter o diretório do arquivo atual

@@ -4,9 +4,7 @@ import pkg from "pg";
 const { Client } = pkg;
 import path from "path";
 import { fileURLToPath } from "url";
-import path from "path";
 
-// Obter o nome do arquivo atual
 const __filename = new URL(import.meta.url).pathname;
 
 // Obter o diretório do arquivo atual
