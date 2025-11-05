@@ -50,27 +50,6 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Função para obter os arquivos das tabelas
-const TABLES = fs
-  .readdirSync(__dirname)
-  .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
-  .map((f) => f.replace(".js", ""));
-
-// Função para buscar dados de uma tabela
-async function fetchTableData(tableName) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(`SELECT * FROM ${tableName}`);
-    console.log(`✅ Dados da tabela ${tableName} obtidos com sucesso.`);
-    return result.rows;
-  } catch (err) {
-    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
-    return [];
-  } finally {
-    client.release();
-  }
-}
-
 // Função para rodar um módulo
 async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
@@ -86,31 +65,43 @@ async function runModule(file) {
   }
 }
 
-// Função para rodar um loop sequencial
+// Função para rodar o ciclo de módulos
 async function runSequentialLoop() {
-  const dashFiles = fs
-    .readdirSync(__dirname)
-    .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
-    .sort((a, b) => a.localeCompare(b));
-
-  const nutshellFiles = ["dash_geralcsWon.js", "dash_geralcsOpen.js"];
-
   let ciclo = 1;
 
   while (true) {
     const cicloStart = Date.now();
     console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...`);
 
-    // Rodando 2 arquivos dash_*.js seguidos de 2 módulos do Nutshell
-    const dashBatch = [runModule(dashFiles[0]), runModule(dashFiles[1])];
-
-    const nutshellBatch = [
-      runModule(nutshellFiles[0]),
-      runModule(nutshellFiles[1]),
+    // Rodando os módulos conforme a ordem desejada
+    const batches = [
+      // Primeiro lote
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_apoio.js", "dash_compras.js"],
+      // Depois do primeiro ciclo
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_cs.js", "dash_csat.js"],
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_cx.js", "dash_delivery.js"],
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_fornecedores.js", "dash_handover.js"],
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_icp.js", "dash_ixdelivery.js"],
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_ixlogcomex.js", "dash_logmakers.js"],
+      ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+      ["dash_nps.js", "dash_onboarding.js"],
+      // Adiciona os outros lotes conforme necessário
     ];
 
-    // Executando os dois batches
-    await Promise.all([...dashBatch, ...nutshellBatch]);
+    // Executando cada lote sequencialmente
+    for (const batch of batches) {
+      const batchStart = Date.now();
+      await Promise.all(batch.map((file) => runModule(file)));
+      console.log(
+        `✅ Lote concluído em ${formatTime(Date.now() - batchStart)}`
+      );
+    }
 
     const cicloEnd = Date.now();
     console.log(
