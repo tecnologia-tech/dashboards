@@ -35,6 +35,42 @@ const MONDAY_QUERY = `
   }
 `;
 
+// Função que retorna os dados do board do Monday.com
+async function getMondayData() {
+  const allItems = [];
+  let cursor = null;
+  const limit = 50;
+
+  do {
+    const res = await fetch("https://api.monday.com/v2", {
+      method: "POST",
+      headers: {
+        Authorization: MONDAY_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: MONDAY_QUERY,
+        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Erro HTTP ${res.status} - ${text}`);
+    }
+
+    const data = await res.json();
+    const pageData = data?.data?.boards?.[0]?.items_page;
+    if (!pageData) break;
+    allItems.push(...(pageData.items || []));
+    cursor = pageData.cursor;
+  } while (cursor);
+
+  console.log(`Total de itens recuperados: ${allItems.length}`); // Log para visualizar quantos itens foram recuperados
+  return allItems;
+}
+
+// Função que retorna o mapeamento das colunas do board
 async function getColumnMap() {
   const query = `
     query ($board_id: ID!) {
@@ -70,38 +106,7 @@ async function getColumnMap() {
   return map;
 }
 
-async function getMondayData() {
-  const allItems = [];
-  let cursor = null;
-  const limit = 50;
-
-  do {
-    const res = await fetch("https://api.monday.com/v2", {
-      method: "POST",
-      headers: {
-        Authorization: MONDAY_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: MONDAY_QUERY,
-        variables: { board_id: MONDAY_BOARD_ID, limit, cursor },
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Erro HTTP ${res.status} - ${text}`);
-    }
-
-    const data = await res.json();
-    const pageData = data?.data?.boards?.[0]?.items_page;
-    if (!pageData) break;
-    allItems.push(...(pageData.items || []));
-    cursor = pageData.cursor;
-  } while (cursor);
-  return allItems;
-}
-
+// Função para salvar dados no banco de dados PostgreSQL
 async function saveToPostgres(items, columnMap) {
   const client = new Client({
     host: PGHOST,
@@ -139,24 +144,26 @@ async function saveToPostgres(items, columnMap) {
     // Verifica se as colunas da tabela foram criadas corretamente
     const columnCheckQuery = `SELECT column_name FROM information_schema.columns WHERE table_name = '${TABLE_NAME}';`;
     const columnCheckResult = await client.query(columnCheckQuery);
-    console.log("Colunas da tabela criada:", columnCheckResult.rows); // Logs das colunas criadas
+    console.log("Colunas da tabela criada:", columnCheckResult.rows); // Logs das colunas da tabela
 
     const insertQuery = `
-  INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(columnMap)
+      INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(
+      columnMap
+    )
       .map((c) => `"${c}"`)
       .join(", ")})
-  VALUES (${[
-    "$1",
-    "$2",
-    "$3", // Para a coluna "grupo"
-    ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
-  ].join(", ")})
-  ON CONFLICT ("id") DO UPDATE SET
-  ${Object.values(columnMap)
-    .map((c) => `"${c}" = EXCLUDED."${c}"`)
-    .concat(['"grupo" = EXCLUDED."grupo"'])
-    .join(", ")};
-`;
+      VALUES (${[
+        "$1",
+        "$2",
+        "$3", // Para a coluna "grupo"
+        ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
+      ].join(", ")})
+      ON CONFLICT ("id") DO UPDATE SET
+      ${Object.values(columnMap)
+        .map((c) => `"${c}" = EXCLUDED."${c}"`)
+        .concat(['"grupo" = EXCLUDED."grupo"'])
+        .join(", ")};
+    `;
 
     let inserted = 0;
     for (const item of items) {
@@ -189,5 +196,33 @@ async function saveToPostgres(items, columnMap) {
     console.error(`❌ Erro ao salvar ${TABLE_NAME}:`, err.message);
   } finally {
     await client.end().catch(() => {});
+  }
+}
+
+// Função principal que executa o ciclo
+export default async function dashCompras() {
+  const start = Date.now();
+  console.log("▶️ Executando dash_compras.js...");
+  try {
+    const columnMap = await getColumnMap();
+    const items = await getMondayData();
+
+    console.log(`Número de itens recuperados: ${items.length}`); // Log do número de itens recuperados
+    if (!items.length) {
+      console.log("Nenhum registro retornado do Monday.");
+      return [];
+    }
+
+    // Verificando se os dados estão corretos antes de passar para o próximo passo
+    console.log("Dados a serem salvos:", items.slice(0, 5)); // Exibindo os primeiros 5 itens recuperados
+
+    await saveToPostgres(items, columnMap);
+    console.log(
+      `🏁 dash_compras concluído em ${((Date.now() - start) / 1000).toFixed(
+        1
+      )}s`
+    );
+  } catch (err) {
+    console.error("🚨 Erro geral em dash_compras:", err.message);
   }
 }
