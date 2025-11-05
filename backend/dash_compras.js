@@ -130,7 +130,7 @@ async function saveToPostgres(items, columnMap) {
 
       // Adiciona as colunas dinamicamente
       Object.values(columnMap).forEach((colName) => {
-        createTableQuery += `, "${colName}_text" TEXT, "${colName}_value" TEXT`;
+        createTableQuery += `, "${colName}_text" TEXT, "${colName}_value" JSONB`; // Usando JSONB para valores mais complexos
       });
       createTableQuery += ");";
 
@@ -168,7 +168,7 @@ async function saveToPostgres(items, columnMap) {
           text: c.text ?? "",
           value:
             typeof c.value === "object"
-              ? JSON.stringify(c.value)
+              ? JSON.stringify(c.value) // Armazenando valores como JSONB
               : c.value ?? "",
         };
       });
