@@ -142,23 +142,21 @@ async function saveToPostgres(items, columnMap) {
     console.log("Colunas da tabela criada:", columnCheckResult.rows); // Logs das colunas criadas
 
     const insertQuery = `
-      INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(
-      columnMap
-    )
+  INSERT INTO ${TABLE_NAME} ("id", "name", "grupo", ${Object.values(columnMap)
       .map((c) => `"${c}"`)
       .join(", ")})
-      VALUES (${[
-        "$1",
-        "$2",
-        "$3", // Para a coluna "grupo"
-        ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
-      ].join(", ")})
-      ON CONFLICT ("id") DO UPDATE SET
-      ${Object.values(columnMap)
-        .map((c) => `"${c}" = EXCLUDED."${c}"`)
-        .concat(['"grupo" = EXCLUDED."grupo"'])
-        .join(", ")};
-    `;
+  VALUES (${[
+    "$1",
+    "$2",
+    "$3", // Para a coluna "grupo"
+    ...Object.values(columnMap).map((_, i) => `$${i + 4}`),
+  ].join(", ")})
+  ON CONFLICT ("id") DO UPDATE SET
+  ${Object.values(columnMap)
+    .map((c) => `"${c}" = EXCLUDED."${c}"`)
+    .concat(['"grupo" = EXCLUDED."grupo"'])
+    .join(", ")};
+`;
 
     let inserted = 0;
     for (const item of items) {
