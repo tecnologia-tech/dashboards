@@ -12,7 +12,7 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
   process.env;
-const MONDAY_BOARD_ID = "8918157934";
+const MONDAY_BOARD_ID = "18206014428";
 const TABLE_NAME = "dash_compras";
 
 const MONDAY_QUERY = `
