@@ -1,124 +1,147 @@
 import express from "express";
-import { Client } from "pg";
-import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
-import pLimit from "p-limit";
+import cors from "cors";
+import pkg from "pg";
+import dotenv from "dotenv";
+import { fileURLToPath, pathToFileURL } from "url";
 
-// Obter o caminho do arquivo atual com import.meta.url
-const __filename = new URL(import.meta.url).pathname;
+const { Pool } = pkg;
+
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Carregar variáveis de ambiente
 dotenv.config({ path: path.join(__dirname, ".env") });
-
-const app = express();
-const limit = pLimit(5); // Definir o limite de execução paralela (5, por exemplo)
 
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
   process.env;
 
-// Configuração do banco de dados PostgreSQL
-const dbCfg = {
+const app = express();
+const PORT = process.env.PORT || 3001;
+app.use(cors());
+app.use(express.json());
+
+const pool = new Pool({
   host: PGHOST,
-  port: PGPORT || 5432,
+  port: parseInt(PGPORT || "5432"),
   database: PGDATABASE,
   user: PGUSER,
   password: PGPASSWORD,
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
+  max: 5, // Limita o número de conexões simultâneas
+});
 
-// Função para conectar ao PostgreSQL
-const connectDb = async () => {
-  const client = new Client(dbCfg);
-  await client.connect();
-  return client;
-};
+// Função para formatação do tempo
+function formatTime(ms) {
+  const s = (ms / 1000).toFixed(1);
+  const min = Math.floor(s / 60);
+  const sec = (s % 60).toFixed(1);
+  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+}
 
-// Função para garantir que a tabela esteja criada corretamente
-const ensureTableExists = async (client, table) => {
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS ${table} (
-      id TEXT PRIMARY KEY,
-      name TEXT,
-      value NUMERIC(12,2),  -- Garantir que a coluna 'value' exista
-      grupo TEXT
-    );
-  `;
+// Função para pegar o horário atual no Brasil
+function hora() {
+  return new Date().toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  });
+}
 
-  // Criação ou atualização da tabela
+// Função para criar pausa
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Função para obter os arquivos das tabelas
+const TABLES = fs
+  .readdirSync(__dirname)
+  .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
+  .map((f) => f.replace(".js", ""));
+
+// Função para buscar dados de uma tabela
+async function fetchTableData(tableName) {
+  const client = await pool.connect();
   try {
-    await client.query(createTableQuery);
-    console.log(`✅ Tabela ${table} verificada/criada com sucesso.`);
+    const result = await client.query(`SELECT * FROM ${tableName}`);
+    console.log(`✅ Dados da tabela ${tableName} obtidos com sucesso.`);
+    return result.rows;
   } catch (err) {
-    console.error(
-      `❌ Erro ao criar ou verificar tabela ${table}:`,
-      err.message
-    );
+    console.error(`🚨 Erro ao buscar ${tableName}: ${err.message}`);
+    return [];
+  } finally {
+    client.release();
   }
-};
+}
 
-// Função para realizar o insert com verificação de duplicidade
-const insertData = async (client, table, data) => {
+// Função para rodar um módulo
+async function runModule(file) {
+  const modulePath = pathToFileURL(path.join(__dirname, file)).href;
+  const start = Date.now();
   try {
-    const checkQuery = `SELECT * FROM ${table} WHERE id = $1`;
-    const result = await client.query(checkQuery, [data.id]);
-
-    if (result.rows.length > 0) {
-      console.log("O dado já existe na tabela, ignorando inserção...");
-      return;
+    const mod = await import(modulePath + `?v=${Date.now()}`);
+    if (typeof mod.default === "function") {
+      await mod.default();
     }
-
-    const insertQuery = `INSERT INTO ${table} (id, name, value, grupo) VALUES ($1, $2, $3, $4)`;
-    await client.query(insertQuery, [
-      data.id,
-      data.name,
-      data.value,
-      data.grupo,
-    ]);
-
-    console.log("Dados inseridos com sucesso");
+    console.log(`✅ ${file} concluído (${formatTime(Date.now() - start)})`);
   } catch (err) {
-    console.error("Erro ao inserir dados:", err.message);
+    console.error(`❌ Erro em ${file}: ${err.message}`);
   }
-};
+}
 
-// Função principal que executa os ciclos de dados
-const runCycle = async () => {
-  try {
-    const client = await connectDb();
+// Função para rodar um loop sequencial
+async function runSequentialLoop() {
+  const dashFiles = fs
+    .readdirSync(__dirname)
+    .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
+    .sort((a, b) => a.localeCompare(b));
 
-    // Garantir que a tabela existe ou seja recriada
-    await ensureTableExists(client, "dash_compras");
+  const nutshellFiles = ["dash_geralcsWon.js", "dash_geralcsOpen.js"];
 
-    // Simulação de execução de scripts
-    console.log("Executando dash_apoio.js...");
-    await limit(() => import("./dash_apoio.js")); // Executa paralelo
-    console.log("Executando dash_compras.js...");
-    await limit(() => import("./dash_compras.js")); // Executa paralelo
+  let ciclo = 1;
 
-    // Exemplo de insert de dados
-    const data = {
-      id: "12345",
-      name: "Produto 1",
-      value: 100,
-      grupo: "Grupo A",
-    };
-    await insertData(client, "dash_compras", data);
+  while (true) {
+    const cicloStart = Date.now();
+    console.log(`🧭 Iniciando ciclo #${ciclo} às ${hora()}...`);
 
-    console.log("Ciclo concluído!");
-    await client.end();
-  } catch (err) {
-    console.error("Erro durante o ciclo:", err.message);
+    // Rodando 2 arquivos dash_*.js seguidos de 2 módulos do Nutshell
+    const dashBatch = [runModule(dashFiles[0]), runModule(dashFiles[1])];
+
+    const nutshellBatch = [
+      runModule(nutshellFiles[0]),
+      runModule(nutshellFiles[1]),
+    ];
+
+    // Executando os dois batches
+    await Promise.all([...dashBatch, ...nutshellBatch]);
+
+    const cicloEnd = Date.now();
+    console.log(
+      `✅ Ciclo #${ciclo} concluído em ${formatTime(cicloEnd - cicloStart)}`
+    );
+
+    console.log(`🔁 Reiniciando ciclo em 1 minuto (${hora()})...`);
+    ciclo++;
+    await sleep(60000); // Espera 1 minuto antes de reiniciar o ciclo
   }
-};
+}
 
-// Rota simples para testar o servidor
-app.get("/", (req, res) => {
-  res.send("Servidor está funcionando!");
+// Rota para coletar os dados de todas as tabelas
+app.get("/api/dashboard", async (req, res) => {
+  const data = {};
+  for (const t of TABLES) {
+    data[t] = await fetchTableData(t);
+  }
+  res.json(data);
 });
 
-// Inicia o ciclo ao iniciar o servidor
-app.listen(3001, () => {
-  console.log("Servidor rodando em http://localhost:3001");
-  runCycle(); // Executa o ciclo de dados quando o servidor é iniciado
+// Rota dinâmica para as tabelas
+TABLES.forEach((t) =>
+  app.get(`/api/${t}`, async (req, res) => res.json(await fetchTableData(t)))
+);
+
+app.listen(PORT, () => {
+  console.log(`🌐 Servidor rodando em http://localhost:${PORT}`);
 });
+
+(async function main() {
+  console.log("🚀 Iniciando ciclo paralelo otimizado...");
+  await runSequentialLoop(); // Garantindo que o ciclo seja executado infinitamente
+})();
