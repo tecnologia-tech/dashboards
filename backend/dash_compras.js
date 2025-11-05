@@ -172,8 +172,8 @@ async function saveToPostgres(items, columnMap) {
     for (const item of items) {
       const col = {};
       (item.column_values || []).forEach((c) => {
+        // Verificar se a chave existe antes de mapear
         if (!c || !columnMap[c.id]) return;
-        // Verifique se a coluna "value" existe antes de tentar usar.
         if (c.text) {
           col[columnMap[c.id]] = c.text ?? "";
         }
