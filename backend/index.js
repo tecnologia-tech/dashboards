@@ -110,10 +110,6 @@ async function runSequentialLoop() {
         cicloEnd - cicloStart
       )}\n`
     );
-
-    console.log(`🔁 Aguardando 1 minuto para reiniciar o ciclo...`);
-    ciclo++;
-    await sleep(60000); // Espera 1 minuto antes de reiniciar o ciclo
   }
 }
 
