@@ -52,8 +52,8 @@ function toSQLDateFromISO(isoString) {
   if (!isoString || typeof isoString !== "string") return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
-  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000); 
-  return br.toISOString().slice(0, 10); 
+  const br = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+  return br.toISOString().slice(0, 10);
 }
 
 function parseAmountToNumber(valueObj) {

@@ -195,7 +195,6 @@ async function saveToPostgres(items, columnMap) {
       await client.query(insertQuery, row);
       inserted++;
     }
-    console.log(`✅ ${inserted} registros atualizados em ${TABLE_NAME}`);
   } catch (err) {
     console.error("❌ Erro ao salvar:", err.message);
   } finally {

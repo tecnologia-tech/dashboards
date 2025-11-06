@@ -1,4 +1,4 @@
-import { Client, Pool } from "pg";
+import { Client } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import https from "https";
@@ -6,11 +6,9 @@ import pLimit from "p-limit";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
-const __filename = new URL(import.meta.url).pathname;
-
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, "banco.env") });
 
 const {
   PGHOST,
@@ -44,94 +42,181 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function callRPC(method, params = {}, attempt = 1) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); 
-    const res = await fetch(NUTSHELL_API_URL, {
-      method: "POST",
-      agent: httpsAgent,
-      headers: {
-        Authorization: AUTH_HEADER,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
-      signal: controller.signal,
-    });
+// Função para ajustar o fuso horário para Brasília (subtrai 3 horas)
+function toSQLDateFromISO(isoString, leadId) {
+  if (!isoString || typeof isoString !== "string") return null;
 
-    clearTimeout(timeout);
+  // Converter a data de ISO para objeto Date (no formato UTC)
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return null; // Se a data não for válida, retorna null
 
-    const json = await res.json().catch(() => null);
-    if (!json || json.error) {
-      throw new Error(
-        `Erro RPC: ${JSON.stringify(json?.error || res.statusText)}`
-      );
-    }
-    return json.result;
-  } catch (err) {
-    if (attempt < 3) {
-      const wait = 1000 * attempt; 
-      console.warn(
-        `⚠️ RPC ${method} falhou (tentativa ${attempt}) → retry em ${
-          wait / 1000
-        }s`
-      );
-      await sleep(wait);
-      return callRPC(method, params, attempt + 1);
-    } else {
-      console.error(`🚨 RPC ${method} falhou após ${attempt} tentativas`);
-      throw err;
-    }
-  }
+  // Log da data original para debug
+  console.log(
+    `🚨 Lead ${
+      leadId || "Desconhecido"
+    } - Data original da API: ${d.toISOString()}`
+  );
+
+  // Ajuste de fuso horário para Brasília (subtrair 3 horas de UTC)
+  const adjustedDate = new Date(d.getTime() - 3 * 60 * 60 * 1000); // Subtração de 3 horas para UTC-3
+
+  // Verificação da hora ajustada para Brasília
+  const datePart = adjustedDate.toISOString().slice(0, 10); // YYYY-MM-DD
+  const timePart = adjustedDate.toISOString().slice(11, 19); // HH:mm:ss
+
+  const finalDate = `${datePart} ${timePart}`;
+
+  // Exibe a data ajustada para o horário de Brasília
+  console.log(
+    `✅ Lead ${
+      leadId || "Desconhecido"
+    } - Data ajustada para Brasília: ${finalDate}`
+  );
+
+  return finalDate; // Retorna a data ajustada para o banco
 }
 
+// Função para formatar as tags
+function formatTags(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return null; // Retorna NULL se não tiver tags
+  // Filtra as tags para garantir que são únicas e válidas
+  const validTags = tags
+    .map((tag) => (typeof tag === "object" ? tag.name : tag)) // Extrai o nome das tags se forem objetos
+    .filter(Boolean); // Remove valores nulos, indefinidos e falsy (como "")
+
+  // Se não houver tags válidas, retorna NULL
+  if (validTags.length === 0) return null;
+
+  // Retorna as tags únicas, separadas por " | "
+  const uniqueTags = [...new Set(validTags)];
+  return uniqueTags.join(" | ");
+}
+
+// Função para extrair o número da lead
+function extractNumeroFromLead(lead) {
+  const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
+  if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
+    const parts = pathVal.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && /^\d+$/.test(last)) return last;
+  }
+
+  if (typeof lead.name === "string") {
+    const m = lead.name.match(/(\d{3,})/);
+    if (m) return m[1];
+  }
+
+  return String(lead.id ?? lead.leadId ?? "");
+}
+
+// Função para mapear os dados da lead para o formato que será inserido no banco
+function mapLeadToRow(lead) {
+  const id = String(lead.id ?? lead.leadId); // Usando o id ou leadId
+  if (!id) {
+    console.warn(`⚠️ Lead sem ID encontrado. Lead: ${JSON.stringify(lead)}`);
+  }
+  const valor = Number(lead.value?.amount ?? 0);
+  const empresa = lead.primaryAccount?.name ?? "";
+  const assigned = lead.assignee?.name ?? "";
+  const tag = formatTags(lead.tags);
+  const pipeline = lead.stageset?.name ?? "";
+
+  // Ajuste da data para o horário correto com base no leadId
+  const data = toSQLDateFromISO(
+    lead.closedTime ??
+      lead.dueTime ??
+      lead.modifiedTime ??
+      new Date().toISOString(),
+    id // Passando o id correto para o log
+  );
+
+  const id_primary_company = lead.primaryAccount?.id ?? "";
+  const id_primary_person = lead.contacts?.[0]?.id ?? "";
+
+  return {
+    data, // A data ajustada para o horário de Brasília
+    pipeline,
+    empresa,
+    assigned,
+    valor,
+    numero: extractNumeroFromLead(lead), // Número da lead agora extraído corretamente
+    tag,
+    id_primary_company,
+    id_primary_person,
+    lead_id: id, // Garantindo que o lead_id seja o id correto
+  };
+}
+// Função para buscar todos os IDs das leads
 async function getAllLeadIds() {
   const ids = [];
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
       query: { status: 10 },
       page,
-      limit: 100,
+      limit: 500, // Número de leads por página
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
-    await sleep(100); 
   }
-  console.log(`✅ Total de ${ids.length} leads encontrados.`);
+  console.log(`📦 ${ids.length} leads encontrados.`);
   return ids;
 }
 
-function mapLeadToRow(lead) {
-  const id = String(lead.id ?? lead.leadId);
-  const valor = Number(lead.value?.amount ?? 0);
-  const empresa = lead.primaryAccount?.name ?? "";
-  const assigned = lead.assignee?.name ?? "";
-  const tag = Array.isArray(lead.tags)
-    ? lead.tags.map((t) => t.name).join(" | ")
-    : "";
-  const pipeline = lead.stageset?.name ?? "";
-  const data =
-    lead.closedTime ??
-    lead.dueTime ??
-    lead.modifiedTime ??
-    new Date().toISOString();
-  const id_primary_company = lead.primaryAccount?.id ?? "";
-  const id_primary_person = lead.contacts?.[0]?.id ?? "";
+// Função para realizar requisições RPC para a API do Nutshell
+async function callRPC(method, params = {}, retries = 3, delay = 1000) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(NUTSHELL_API_URL, {
+        method: "POST",
+        agent: httpsAgent,
+        headers: {
+          Authorization: AUTH_HEADER,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method,
+          params,
+          id: Date.now(),
+        }),
+      });
 
-  return {
-    data,
-    pipeline,
-    empresa,
-    assigned,
-    valor,
-    numero: id,
-    tag,
-    id_primary_company,
-    id_primary_person,
-    lead_id: id,
-  };
+      if (!res.ok) {
+        const errorMessage = `Erro na requisição (status ${res.status}): ${res.statusText}`;
+        console.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const json = await res.json();
+      if (json.error) {
+        const errorMessage = `Erro na resposta da API: ${JSON.stringify(
+          json.error
+        )}`;
+        console.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      return json.result;
+    } catch (err) {
+      console.error(
+        `⚠️ Erro na requisição para API (tentativa ${
+          attempt + 1
+        } de ${retries}): ${err.message}`
+      );
+      if (attempt < retries - 1) {
+        console.log(`⏳ Tentando novamente em ${delay / 1000} segundos...`);
+        await sleep(delay);
+        delay *= 2; // Exponential backoff
+      } else {
+        throw new Error(
+          `Erro persistente após ${retries} tentativas: ${err.message}`
+        );
+      }
+    }
+  }
 }
 
+// Função para garantir que a tabela existe no banco de dados
 async function ensureTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
@@ -140,12 +225,12 @@ async function ensureTable(client) {
       empresa TEXT,
       assigned TEXT,
       valor NUMERIC(12,2),
-      numero TEXT,
+      numero TEXT UNIQUE, 
       tag TEXT,
       id_primary_company TEXT,
       id_primary_person TEXT,
       lead_id TEXT PRIMARY KEY
- );
+    );
   `);
 
   await client.query(`
@@ -156,58 +241,67 @@ async function ensureTable(client) {
   `);
 }
 
-async function upsertRows(client, rows, batchSize = 500) {
+// Função para realizar o upsert (inserir ou atualizar) dos registros no banco
+async function upsertRows(client, rows) {
   if (!rows.length) return;
   const cols = Object.keys(rows[0]);
+  const vals = rows.flatMap((r) => cols.map((c) => r[c]));
+  const placeholders = rows
+    .map(
+      (_, i) =>
+        `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
+    )
+    .join(",");
 
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const vals = batch.flatMap((r) => cols.map((c) => r[c]));
-    const placeholders = batch
-      .map(
-        (_, i) =>
-          `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
-      )
-      .join(",");
-
-    const sql = `
-      INSERT INTO dash_geralcsWon (${cols.join(",")})
-      VALUES ${placeholders}
-      ON CONFLICT (lead_id) DO UPDATE SET
-      ${cols
-        .filter((c) => c !== "lead_id")
-        .map((c) => `${c}=EXCLUDED.${c}`)
-        .join(", ")}
-    `;
-    await client.query(sql, vals);
-  }
-  console.log(`✅ Upsert de ${rows.length} registros concluído.`);
+  const sql = `
+    INSERT INTO dash_geralcsWon (${cols.join(",")})
+    VALUES ${placeholders}
+    ON CONFLICT (lead_id) DO UPDATE SET
+    ${cols
+      .filter((c) => c !== "lead_id")
+      .map((c) => `${c}=EXCLUDED.${c}`)
+      .join(", ")}
+  `;
+  await client.query(sql, vals);
 }
 
 export default async function main() {
-  const client = new Pool(dbCfg); 
+  const client = new Client(dbCfg);
   await client.connect();
+
   await ensureTable(client);
 
+  const start = Date.now();
   const ids = await getAllLeadIds();
-  const rows = [];
 
-  const tasks = ids.map((id) =>
-    limit(async () => {
-      try {
-        const lead = await callRPC("getLead", { leadId: id });
-        rows.push(mapLeadToRow(lead));
-      } catch (err) {
-        console.warn(`⚠️ Falha ao processar lead ${id}: ${err.message}`);
-        if (err.message.includes("429")) await sleep(2000); 
-      }
-    })
-  );
+  const allRows = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const batch = ids.slice(i, i + 100);
 
-  await Promise.all(tasks);
+    const tasks = batch.map((id) =>
+      limit(async () => {
+        try {
+          const lead = await callRPC("getLead", { leadId: id });
+          allRows.push(mapLeadToRow(lead));
+        } catch (err) {
+          console.warn("⚠️ Falha ao processar lead", id, err.message);
+        }
+      })
+    );
+    await Promise.all(tasks);
 
-  await upsertRows(client, rows);
+    await upsertRows(client, allRows);
+    allRows.length = 0; // Limpar memória após cada lote
+  }
+
+  const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
+  const total = parseInt(countRes.rows[0].count, 10);
+
+  const duration = ((Date.now() - start) / 1000).toFixed(2);
+  console.log(`✅ Processamento concluído com sucesso!`);
+  console.log(`📊 Total atual na tabela: ${total} registros.`);
+  console.log(`⏱️ Tempo total: ${duration}s`);
 
   await client.end();
-  console.log("🏁 Processamento de dash_geralcsWon concluído!");
+  console.log("🏁 dash_geralcsWon finalizado com sucesso!\n");
 }

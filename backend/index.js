@@ -58,6 +58,8 @@ async function runModule(file) {
     const mod = await import(modulePath + `?v=${Date.now()}`);
     if (typeof mod.default === "function") {
       await mod.default();
+    } else {
+      console.log(`❌ [${hora()}] ${file} não possui função default.`);
     }
 
     const end = Date.now();
@@ -75,21 +77,24 @@ async function runSequentialLoop() {
 
   const batches = [
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_apoio.js", "dash_compras.js"],
+    ["dash_apoio.js", "dash_compras.js", "dash_cs.js", "dash_csat.js"],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_cs.js", "dash_csat.js"],
+    [
+      "dash_cx.js",
+      "dash_delivery.js",
+      "dash_fornecedores.js",
+      "dash_handover.js",
+    ],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_cx.js", "dash_delivery.js"],
+    [
+      "dash_icp.js",
+      "dash_ixdelivery.js",
+      "dash_ixlogcomex.js",
+      "dash_logmakers.js",
+    ],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_fornecedores.js", "dash_handover.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_icp.js", "dash_ixdelivery.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_ixlogcomex.js", "dash_logmakers.js"],
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    ["dash_nps.js", "dash_onboarding.js"],
+    ["dash_nps.js", "dash_onboarding.js", "dash_reembolso.js"],
   ];
-
   while (true) {
     const cicloStart = Date.now();
     console.log(`🧭 [${hora()}] Iniciando ciclo #${ciclo}...`);
