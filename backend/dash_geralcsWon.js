@@ -42,46 +42,34 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Função para ajustar o fuso horário para Brasília (subtrai 3 horas)
 function toSQLDateFromISO(isoString, leadId) {
   if (!isoString || typeof isoString !== "string") return null;
 
-  // Converter a data de ISO para objeto Date (no formato UTC)
   const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return null; // Se a data não for válida, retorna null
+  if (Number.isNaN(d.getTime())) return null;
 
-  // Log da data original para debug
+  const adjustedDate = new Date(d.getTime() - 3 * 60 * 60 * 1000);
 
-  // Ajuste de fuso horário para Brasília (subtrair 3 horas de UTC)
-  const adjustedDate = new Date(d.getTime() - 3 * 60 * 60 * 1000); // Subtração de 3 horas para UTC-3
-
-  // Verificação da hora ajustada para Brasília
-  const datePart = adjustedDate.toISOString().slice(0, 10); // YYYY-MM-DD
-  const timePart = adjustedDate.toISOString().slice(11, 19); // HH:mm:ss
+  const datePart = adjustedDate.toISOString().slice(0, 10);
+  const timePart = adjustedDate.toISOString().slice(11, 19);
 
   const finalDate = `${datePart} ${timePart}`;
 
-  // Exibe a data ajustada para o horário de Brasília
-  return finalDate; // Retorna a data ajustada para o banco
+  return finalDate;
 }
 
-// Função para formatar as tags
 function formatTags(tags) {
-  if (!Array.isArray(tags) || tags.length === 0) return null; // Retorna NULL se não tiver tags
-  // Filtra as tags para garantir que são únicas e válidas
+  if (!Array.isArray(tags) || tags.length === 0) return null;
   const validTags = tags
-    .map((tag) => (typeof tag === "object" ? tag.name : tag)) // Extrai o nome das tags se forem objetos
-    .filter(Boolean); // Remove valores nulos, indefinidos e falsy (como "")
+    .map((tag) => (typeof tag === "object" ? tag.name : tag))
+    .filter(Boolean);
 
-  // Se não houver tags válidas, retorna NULL
   if (validTags.length === 0) return null;
 
-  // Retorna as tags únicas, separadas por " | "
   const uniqueTags = [...new Set(validTags)];
   return uniqueTags.join(" | ");
 }
 
-// Função para extrair o número da lead
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
   if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
@@ -98,9 +86,8 @@ function extractNumeroFromLead(lead) {
   return String(lead.id ?? lead.leadId ?? "");
 }
 
-// Função para mapear os dados da lead para o formato que será inserido no banco
 function mapLeadToRow(lead) {
-  const id = String(lead.id ?? lead.leadId); // Usando o id ou leadId
+  const id = String(lead.id ?? lead.leadId); 
   if (!id) {
     console.warn(`⚠️ Lead sem ID encontrado. Lead: ${JSON.stringify(lead)}`);
   }
@@ -110,39 +97,37 @@ function mapLeadToRow(lead) {
   const tag = formatTags(lead.tags);
   const pipeline = lead.stageset?.name ?? "";
 
-  // Ajuste da data para o horário correto com base no leadId
   const data = toSQLDateFromISO(
     lead.closedTime ??
       lead.dueTime ??
       lead.modifiedTime ??
       new Date().toISOString(),
-    id // Passando o id correto para o log
+    id 
   );
 
   const id_primary_company = lead.primaryAccount?.id ?? "";
   const id_primary_person = lead.contacts?.[0]?.id ?? "";
 
   return {
-    data, // A data ajustada para o horário de Brasília
+    data, 
     pipeline,
     empresa,
     assigned,
     valor,
-    numero: extractNumeroFromLead(lead), // Número da lead agora extraído corretamente
+    numero: extractNumeroFromLead(lead),
     tag,
     id_primary_company,
     id_primary_person,
-    lead_id: id, // Garantindo que o lead_id seja o id correto
+    lead_id: id, 
   };
 }
-// Função para buscar todos os IDs das leads
 async function getAllLeadIds() {
   const ids = [];
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
       query: { status: 10 },
       page,
-      limit: 500, // Número de leads por página
+      limit: 500, 
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
@@ -151,7 +136,6 @@ async function getAllLeadIds() {
   return ids;
 }
 
-// Função para realizar requisições RPC para a API do Nutshell
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -195,7 +179,7 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
       if (attempt < retries - 1) {
         console.log(`⏳ Tentando novamente em ${delay / 1000} segundos...`);
         await sleep(delay);
-        delay *= 2; // Exponential backoff
+        delay *= 2; 
       } else {
         throw new Error(
           `Erro persistente após ${retries} tentativas: ${err.message}`
@@ -205,7 +189,6 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   }
 }
 
-// Função para garantir que a tabela existe no banco de dados
 async function ensureTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
@@ -230,7 +213,6 @@ async function ensureTable(client) {
   `);
 }
 
-// Função para realizar o upsert (inserir ou atualizar) dos registros no banco
 async function upsertRows(client, rows) {
   if (!rows.length) return;
   const cols = Object.keys(rows[0]);
@@ -280,7 +262,7 @@ export default async function main() {
     await Promise.all(tasks);
 
     await upsertRows(client, allRows);
-    allRows.length = 0; // Limpar memória após cada lote
+    allRows.length = 0; 
   }
 
   const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
