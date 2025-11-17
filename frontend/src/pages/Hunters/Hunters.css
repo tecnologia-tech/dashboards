@@ -2,8 +2,8 @@
 
 :root {
   --dark: #0b0b0b;
-  --panel: rgba(15,15,15,0.92);
-  --border: rgba(230,192,104,0.25);
+  --panel: rgba(15, 15, 15, 0.92);
+  --border: rgba(230, 192, 104, 0.25);
   --metal-light: #3d3d3d;
   --blood: #b81d13;
   --fire: #ff7a1a;
@@ -11,14 +11,13 @@
   --silver: #d9d9d9;
 }
 
-/* RESET */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* ===========================================================
+   BASE / FULLSCREEN / RESET
+=========================================================== */
 
 html, body, #root {
+  margin: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -28,7 +27,7 @@ html, body, #root {
 }
 
 /* ===========================================================
-   LAYOUT GERAL
+   LAYOUT PRINCIPAL
 =========================================================== */
 
 .hunters-container {
@@ -38,25 +37,26 @@ html, body, #root {
 }
 
 .hunters-left {
-  width: 220px;          /* sua largura */
+  width: 220px;
   min-width: 220px;
-  height: 100vh;          /* 🔥 FIXA altura total da tela */
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden;       /* 🔥 evita vazamentos */
-  background-color: #000; /* 🔥 evita barras feias */
+  overflow: hidden;
+  background-color: #000;
 }
 
 .hunters-left img {
-  height: 100%;     /* 🔥 ocupa toda a altura */
-  width: auto;      /* 🔥 mantém proporção */
-  object-fit: contain;  /* mantém a imagem inteira */
+   width: 100%;
+  height: 100%;
+  object-fit: cover;   /* 🔥 Preenche total sem deixar espaço */
+  object-position: center;
 }
+
 .hunters-right {
   flex: 1;
-  padding: 10px;
-  gap: 10px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
 }
@@ -65,7 +65,7 @@ html, body, #root {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  height: 100%;
 }
 
 /* ===========================================================
@@ -73,35 +73,33 @@ html, body, #root {
 =========================================================== */
 
 .witcher-hero {
-  background: rgba(10, 10, 10, 0.85);
-  border: 2px solid rgba(230, 192, 104, 0.35);
+  background: rgba(10,10,10,0.85);
+  border: 2px solid var(--border);
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
-  gap: 20px;
   justify-content: space-between;
 }
 
 .hero-title {
-  font-size: 32px;
+  font-size: 26px;
   color: var(--quen);
   white-space: nowrap;
 }
 
 .hero-metrics {
   display: flex;
-  gap: 12px;
-  flex: 1;
-  justify-content: space-evenly;
+  gap: 14px;
 }
 
 .metric {
   background: rgba(25,25,25,0.9);
-  padding: 8px 14px;
+  padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(230,192,104,0.25);
-  min-width: 150px;
+  border: 1px solid var(--border);
+  min-width: 120px;
   text-align: center;
 }
 
@@ -111,29 +109,12 @@ html, body, #root {
 }
 
 .metric strong {
-  font-size: 18px;
   color: var(--fire);
+  font-size: 18px;
 }
 
 /* ===========================================================
-   RESUMO + RANKING
-=========================================================== */
-
-.hunters-main,
-.summary-card,
-.summary-body,
-.summary-item,
-.side-panel,
-.panel,
-.ranking-list,
-.ranking-item,
-.rank-index,
-.rank-value {
-  display: none;
-}
-
-/* ===========================================================
-   CARDS 2×2 DOS HUNTERS
+   GRID 2x2 DOS HUNTERS
 =========================================================== */
 
 .hunters-row {
@@ -141,68 +122,53 @@ html, body, #root {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.hunter-card {
-  background: var(--panel);
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 240px;
-}
-
-/* TÍTULO */
-.card-title {
-  font-size: 24px;
-  color: var(--quen);
-  font-weight: 600;
-  margin-bottom: 8px;
-display: block;
-  width: 100%;
-  text-align: center;
-
-  background: none !important;
-  padding: 0 !important;
-  border: none !important;
-bottom: 6px;
-}
-
-/* área esquerda + direita */
-.hunter-split {
-     display: flex;
-  flex: 1;
-  width: 100%;
-  align-items: stretch; /* 🔥 garante níveis iguais */
-  gap: 16px;
+  gap: 8px;
+  height: calc(100% - 110px); /* ajustado para caber em 1080p */
 }
 
 /* ===========================================================
-   ESQUERDA — GAUGE + FOTO
+   CARD DO HUNTER — agora em 2 colunas
 =========================================================== */
 
-.hunter-left {
+.hunter-card {
+  background: linear-gradient(145deg, rgba(20, 18, 16, 0.92), rgba(10, 10, 10, 0.9));
+  border: 2px solid rgba(230,192,104,0.35);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  min-height: 260px;
+  box-shadow: 0 16px 28px rgba(0,0,0,0.55);
+}
+
+.hunter-left-side {
   position: relative;
-  width: 170px;
-  min-width: 170px;
-  flex-shrink: 0;
-  height: auto;  /* 🔥 Agora deixa a altura natural */
+  flex: 0 0 40%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 180px;
+  max-width: 240px;
+  min-height: 260px;
 }
 
-/* GAUGE */
+.hunter-right-side {
+  flex: 1 1 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: space-between;
+}
+
 .gauge {
   position: relative;
-   width: 170px;
-
-   height: auto; 
+  width: 200px;      /* ajuste fino permitido depois */
+  height: 200px;     /* garante proporção quadrada */
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 .gauge svg {
@@ -212,75 +178,187 @@ bottom: 6px;
 
 .gauge-percent {
   position: absolute;
-  top: 36px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 17px;
-  font-weight: 700;
+  top: 10%;
+  left: 35%;
+  transform: translate(-50%, -50%);
+  font-size: 35px;
+  font-weight: 1000;
   color: var(--quen);
   text-shadow: 0 0 6px #000;
 }
 
-/* FOTO REDONDA */
+/* FOTO CENTRALIZADA DENTRO DO GAUGE */
 .hunter-photo {
   position: absolute;
-  top: 58px;
-  width: 110px;
-  height: 110px;
+  left: 50%;
+  top: 55%;                  /* 🔥 Ajuste fino da altura dentro do gauge */
+  transform: translate(-50%, -50%);
+
+  width: 52%;                /* tamanho da foto em relação ao gauge */
+  aspect-ratio: 1 / 1;       /* garante círculo perfeito */
+
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid rgba(230,192,104,0.8);
   background: #000;
+  box-shadow: 0 0 10px rgba(0,0,0,0.7);
 }
 
-/* ===========================================================
-   DIREITA – 4 MÉTRICAS
-=========================================================== */
 
-.hunter-right {
-  flex: 1 1 auto;
-  height: 100%;
-  width: auto;
-  min-width: 0;
-  align-self: stretch;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr); /* 🔥 Alturas iguais */
-  gap: 14px;
+
+.hunter-name {
+  margin-top: 6px;
+  font-size: 26px;
+  color: var(--quen);
+  font-weight: 700;
+  text-transform: capitalize;
+  text-align: center;
 }
 
-.card-metric {
-  background: rgba(25,25,25,0.85);
-  border: 1px solid rgba(230,192,104,0.35);
-  padding: 12px 16px;
-  border-radius: 10px;
-  /* 🔥 Faz todas ficarem do mesmo tamanho */
+.hunter-info {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  height: 100%;
-}
-.card-metric label {
-  font-size: 15px;
-  margin-bottom: 4px;
-  opacity: .85;
-  text-align: center;
+  gap: 10px;
 }
 
-
-.card-metric span {
-  font-size: 27px;
-  font-weight: 600;
-  text-align: center;
+.hunter-info .card-metric {
+  width: 100%;
+  background: rgba(25,25,25,0.9);
+  border: 1px solid rgba(230,192,104,0.35);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.card-metric .highlight {
+.hunter-info .card-metric label {
+  font-size: 22px;
+  margin: 0;
+  color: rgba(230, 224, 210, 0.95);
+}
+
+.hunter-info .card-metric span {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--silver);
+  text-align: right;
+}
+
+.hunter-info .card-metric .highlight {
   color: var(--fire);
 }
 
-/* aumenta o espaço útil para as 4 primeiras hunter-card */
-.hunters-row > .hunter-card:nth-of-type(-n+4) .hunter-right {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
+/* ============================= ANIMAÇÕES CINEMATOGRÁFICAS ============================= */
+@keyframes fadeInEpic {
+  0% { opacity: 0; filter: blur(8px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
+@keyframes borderPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(230,192,104,0.01); }
+  50% { box-shadow: 0 0 12px rgba(230,192,104,0.04); }
+}
+
+@keyframes heatWave {
+  0% { transform: translateY(0); opacity: 0.04; filter: blur(3px); }
+  50% { transform: translateY(-4%); opacity: 0.06; filter: blur(4px); }
+  100% { transform: translateY(0); opacity: 0.04; filter: blur(3px); }
+}
+
+@keyframes nameGlow {
+  0%, 100% { text-shadow: 0 0 6px rgba(230,192,104,0.25), 0 0 14px rgba(255,122,26,0.15); }
+  50% { text-shadow: 0 0 10px rgba(230,192,104,0.4), 0 0 18px rgba(255,122,26,0.25); }
+}
+
+@keyframes photoGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,122,26,0.02); }
+  50% { box-shadow: 0 0 16px rgba(255,122,26,0.07); }
+}
+
+@keyframes ashFloat {
+  0% { transform: translateY(0); opacity: 0.0; }
+  25% { opacity: 0.05; }
+  50% { transform: translateY(-8%); opacity: 0.07; }
+  75% { opacity: 0.05; }
+  100% { transform: translateY(0); opacity: 0.0; }
+}
+
+@keyframes gaugeFill {
+  from { stroke-dashoffset: 376; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes gaugeNumber {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade-in nas principais áreas */
+body, .hunters-container, .hunters-left, .hunters-right {
+  animation: fadeInEpic 1.6s ease-in-out forwards;
+}
+.hunter-card {
+  animation: fadeInEpic 1.6s ease-in-out forwards;
+  animation-delay: 0s;
+  position: relative;
+  overflow: hidden;
+}
+.hunters-row > .hunter-card:nth-child(2) { animation-delay: 0.15s; }
+.hunters-row > .hunter-card:nth-child(3) { animation-delay: 0.30s; }
+.hunters-row > .hunter-card:nth-child(4) { animation-delay: 0.45s; }
+
+/* Pulso nas bordas douradas e métricas */
+.hunter-card,
+.hunter-info .card-metric {
+  animation: borderPulse 3.5s ease-in-out infinite;
+}
+
+/* Heat-wave sutil */
+.hunter-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  mix-blend-mode: screen;
+  animation: heatWave 6s ease-in-out infinite;
+  opacity: 0.05;
+}
+
+/* Glow respirante no nome */
+.hunter-name {
+  animation: nameGlow 4s ease-in-out infinite;
+}
+
+/* Glow suave nas fotos */
+.hunter-photo {
+  animation: photoGlow 3.2s ease-in-out infinite;
+}
+
+/* Cinzas flutuando na lateral esquerda */
+.hunters-left {
+  position: relative;
+  overflow: hidden;
+}
+.hunters-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.05) 0%, transparent 35%),
+              radial-gradient(circle at 80% 90%, rgba(255,255,255,0.04) 0%, transparent 30%),
+              radial-gradient(circle at 60% 70%, rgba(255,255,255,0.03) 0%, transparent 25%);
+  animation: ashFloat 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Gauge animando preenchimento e número */
+.gauge svg path[stroke="url(#gaugeGlow)"] {
+  stroke-dasharray: 376;
+  stroke-dashoffset: 376;
+  animation: gaugeFill 1.8s ease-in-out forwards;
+}
+.gauge-percent {
+  animation: gaugeNumber 1.8s ease-in-out forwards;
 }

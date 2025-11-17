@@ -78,7 +78,6 @@ function Gauge({ valor, meta }) {
           </linearGradient>
         </defs>
 
-        {/* fundo */}
         <path
           d="M20 80 A60 60 0 0 1 140 80"
           fill="none"
@@ -88,7 +87,6 @@ function Gauge({ valor, meta }) {
           opacity="0.35"
         />
 
-        {/* progresso */}
         <path
           d="M20 80 A60 60 0 0 1 140 80"
           fill="none"
@@ -99,150 +97,90 @@ function Gauge({ valor, meta }) {
         />
       </svg>
 
-      {/* 🔥 PORCENTAGEM AQUI */}
       <div className="gauge-percent">{pctDisplay}%</div>
     </div>
   );
 }
 
 export default function Hunters() {
-  const { total, ranking, hunters } = huntersData;
-  const topValor = Math.max(...ranking.map((r) => r.valor));
+  const { total, hunters } = huntersData;
 
   return (
     <div className="hunters-container">
+      {/* LATERAL ESQUERDA */}
       <div className="hunters-left">
         <img src={huntersImg} alt="Hunter" />
       </div>
 
+      {/* ÁREA PRINCIPAL */}
       <div className="hunters-right">
-        <div className="hunters-root">
-          {/* HERO */}
-          <div className="witcher-hero">
-            <div className="hero-title">Geral dos Hunters </div>
-            <div className="hero-metrics">
-              <div className="metric">
-                <label>Vendas</label>
-                <strong>{total.vendas}</strong>
-              </div>
-              <div className="metric">
-                <label>Ticket Médio</label>
-                <strong>{formatCurrency(total.ticketMedio)}</strong>
-              </div>
-              <div className="metric">
-                <label>Vendido</label>
-                <strong>{formatCurrency(total.vendido)}</strong>
-              </div>
-              <div className="metric">
-                <label>Meta</label>
-                <strong>{formatCurrency(total.meta)}</strong>
-              </div>
+        {/* HERO */}
+        <div className="witcher-hero">
+          <div className="hero-title">Geral dos Hunters</div>
+
+          <div className="hero-metrics">
+            <div className="metric">
+              <label>Vendas</label>
+              <strong>{total.vendas}</strong>
+            </div>
+            <div className="metric">
+              <label>Ticket Médio</label>
+              <strong>{formatCurrency(total.ticketMedio)}</strong>
+            </div>
+            <div className="metric">
+              <label>Vendido</label>
+              <strong>{formatCurrency(total.vendido)}</strong>
+            </div>
+            <div className="metric">
+              <label>Meta</label>
+              <strong>{formatCurrency(total.meta)}</strong>
             </div>
           </div>
+        </div>
 
-          {/* RESUMO + RANKING */}
-          <div className="hunters-main">
-            <div className="summary-card">
-              <div className="summary-header">
-                <h2>Resumo das Caçadas</h2>
-              </div>
-              <div className="summary-body">
-                <div className="summary-item">
-                  <label>Vendas</label>
-                  <div className="value">{total.vendas}</div>
+        {/* 4 HUNTERS (2x2) */}
+        <div className="hunters-row">
+          {hunters.map((h) => {
+            const photo = getHunterImage(h.nome);
+
+            return (
+              <div className="hunter-card" key={h.nome}>
+                <div className="hunter-left-side">
+                  <div className="gauge-wrapper">
+                    <Gauge valor={h.vendido} meta={h.meta} />
+                    {photo && (
+                      <img src={photo} className="hunter-photo" alt={h.nome} />
+                    )}
+                  </div>
+                  <div className="hunter-name">{h.nome}</div>
                 </div>
-                <div className="summary-item">
-                  <label>Ticket Médio</label>
-                  <div className="value">
-                    {formatCurrency(total.ticketMedio)}
+
+                <div className="hunter-right-side hunter-info">
+                  <div className="card-metric">
+                    <label>Vendas</label>
+                    <span className="highlight">{h.vendas}</span>
+                  </div>
+
+                  <div className="card-metric">
+                    <label>Vendido</label>
+                    <span className="highlight">
+                      {formatCurrency(h.vendido)}
+                    </span>
+                  </div>
+
+                  <div className="card-metric">
+                    <label>Ticket Médio</label>
+                    <span>{formatCurrency(h.ticketMedio)}</span>
+                  </div>
+
+                  <div className="card-metric">
+                    <label>Meta</label>
+                    <span>{formatCurrency(h.meta)}</span>
                   </div>
                 </div>
-                <div className="summary-item">
-                  <label>Vendido</label>
-                  <div className="value highlight">
-                    {formatCurrency(total.vendido)}
-                  </div>
-                </div>
-                <div className="summary-item">
-                  <label>Meta</label>
-                  <div className="value">{formatCurrency(total.meta)}</div>
-                </div>
               </div>
-            </div>
-
-            <div className="side-panel">
-              <div className="panel ranking-panel">
-                <div className="panel-title">Ranking Hunters</div>
-                <div className="ranking-list">
-                  {ranking.map((r, i) => (
-                    <div key={r.nome} className="ranking-item">
-                      <div className="ranking-info">
-                        <span className="rank-index">#{i + 1}</span>
-                        <span className="rank-name">{r.nome}</span>
-                      </div>
-                      <span className="rank-value">
-                        {formatCurrency(r.valor)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CARDS 2x2 */}
-          <div className="hunters-row">
-            {hunters.map((h) => {
-              const photo = getHunterImage(h.nome);
-
-              return (
-                <div className="hunter-card" key={h.nome}>
-                  <div className="card-title">{h.nome}</div>
-
-                  <div className="hunter-split">
-                    {/* ESQUERDA */}
-                    <div className="hunter-left">
-                      <Gauge valor={h.vendido} meta={h.meta} />
-                      {photo && (
-                        <img
-                          src={photo}
-                          className="hunter-photo"
-                          alt={h.nome}
-                        />
-                      )}
-                    </div>
-
-                    {/* DIREITA */}
-                    <div className="hunter-right">
-                      {/* Linha 1 → Vendido | Meta */}
-                      <div className="card-metric">
-                        <label>Vendido</label>
-                        <span className="highlight">
-                          {formatCurrency(h.vendido)}
-                        </span>
-                      </div>
-
-                      <div className="card-metric">
-                        <label>Meta</label>
-                        <span>{formatCurrency(h.meta)}</span>
-                      </div>
-
-                      {/* Linha 2 → Vendas | Ticket Médio */}
-                      <div className="card-metric">
-                        <label>Vendas</label>
-                        <span className="highlight">{h.vendas}</span>
-                      </div>
-
-                      <div className="card-metric">
-                        <label>Ticket Médio</label>
-                        <span>{formatCurrency(h.ticketMedio)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
       </div>
     </div>
