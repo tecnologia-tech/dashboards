@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import styles from "./dashLastDance.module.css";
+import styles from "./LastDance.module.css";
 import logolastdance from "../../assets/lastdance.png";
 
 const META_MENSAL = 1300000;
 
-export default function DashLastDance() {
+export default function LastDance() {
   const [dados, setDados] = useState([]);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);

@@ -1,18 +1,31 @@
 :root {
-  --preto: #0b0b0b;            /* preto profundo premium */
-  --preto-escuro: #121212;     /* graphite contraste */
+  --preto: #0b0b0b;
+  --preto-escuro: #121212;
 
-  --amarelo: #e5c33b;          /* dourado suave Apple */
-  --amarelo-claro: #ffd84a;    /* dourado de highlight */
+  --amarelo: #e5c33b;
+  --amarelo-claro: #ffd84a;
 
-  --vermelho: #c22626;         /* bordô premium */
-  --vermelho-escuro: #b31a1a;  /* vinho escuro */
+  --vermelho: #c22626;
+  --vermelho-escuro: #b31a1a;
 
-  --header-size: 16vh;
+  --header-size: 28vh;
   --bloco2-size: 32vh;
   --bloco3-size: 20vh;
-  --row-size: 26vh;
+  --row-size: 23vh;
+
+  /* 🔥 MESMO GRADIENTE PARA TUDO */
+  --grad-blackfriday:
+    radial-gradient(circle at 50% 0%, rgba(255,0,0,0.08) 0%, transparent 55%),
+    linear-gradient(
+      to bottom,
+      #0b0b0b 0%,
+      #1a0b0b 25%,
+      #661010 50%,
+      #1a0b0b 75%,
+      #0b0b0b 100%
+    );
 }
+
 /* RESET */
 * {
   margin: 0;
@@ -28,16 +41,13 @@ html, body {
 
 /* ROOT */
 .root {
-  width: 100%;
+    width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
   font-family: 'Baloo 2', sans-serif;
 
-  background:
-    radial-gradient(circle at 10% 20%, rgba(229,195,59,0.10), transparent 45%),
-    radial-gradient(circle at 80% 0%, rgba(194,38,38,0.08), transparent 55%),
-    linear-gradient(135deg, #121212 0%, #0b0b0b 100%);
+  background: var(--grad-blackfriday);  /* 👈 AQUI */
 
   padding: 0 1.5vw 1vh 1.5vw;
   gap: 1.8vh;
@@ -46,10 +56,11 @@ html, body {
 /* BLOCO 1 (HEADER) */
 .bloco1 {
   width: 100%;
+  background: var(--grad-blackfriday);
   height: var(--header-size);
   overflow: hidden;
   border-radius: 0 0 26px 26px;
-  border: 3px solid var(--amarelo);
+  border: 3px dashed var(--vermelho);
   border-top: none;
 }
 
@@ -68,8 +79,8 @@ html, body {
   padding: 1.8vh 1.5vw;
   position: relative;
   overflow: hidden;
-  background: #121212;
   box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+  background: var(--grad-blackfriday);
 }
 
 .bloco2::before,
@@ -87,8 +98,8 @@ html, body {
 /* BLOCO 2 */
 .bloco2 {
   height: var(--bloco2-size);
-  background: linear-gradient(135deg, #1a1a1a 0%, #0b0b0b 100%);
-  border: 4px solid var(--amarelo);
+  background: var(--grad-blackfriday);
+  border: 3px dashed var(--preto-escuro);
 
   display: flex;
   flex-direction: column;
@@ -117,7 +128,8 @@ html, body {
 /* BLOCO 3 */
 .bloco3 {
   height: var(--bloco3-size);
-  border: 3px dashed var(--amarelo);
+  border: 3px dashed var(--escuro);
+  background: var(--grad-blackfriday);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -133,13 +145,13 @@ html, body {
 .counterLabel {
   font-size: 2.2rem;
   font-weight: 700;
-  color: var(--vermelho);
+  color: var(--amarelo);
 }
 
 .counterValueBig {
   font-size: 4.5rem;
   font-weight: 900;
-  color: var(--amarelo);
+  color: var(--vermelho);
 }
 
 .progressTrack {
@@ -168,8 +180,8 @@ html, body {
 /* BLOCO 4 (TABELA) */
 .bloco4 {
   flex: 2;
-  background: linear-gradient(150deg, #121212 0%, #0b0b0b 100%);
-  border: 4px solid var(--amarelo);
+  background: var(--grad-blackfriday);
+  border: 3px dashed var(--escuro);
   display: flex;
 }
 
@@ -179,7 +191,7 @@ html, body {
   border-collapse: collapse;
    border: 3px ;
    border-radius: 32px;
-  background: linear-gradient(180deg, #151515 0%, #0f0f0f 100%);
+  background: var(--grad-blackfriday);
 }
 
 .tabela th,
@@ -232,7 +244,7 @@ html, body {
 /* BLOCO 5 */
 .bloco5 {
   flex: 1;
-  border: 3px dashed var(--amarelo);
+  border: 3px dashed var(--escuro);
 
   display: flex;
   flex-direction: column;
@@ -242,11 +254,11 @@ html, body {
 
 .projecaoTitulo {
   font-size: 2rem;
-  color: var(--vermelho);
+  color: var(--amarelo);
 }
 
 .projecaoValor {
   font-size: 3.8rem;
   font-weight: 900;
-  color: var(--amarelo);
+  color: var(--vermelho);
 }
