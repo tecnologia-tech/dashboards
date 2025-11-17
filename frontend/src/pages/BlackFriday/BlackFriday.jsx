@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import styles from "./blackfriday.module.css";
-import logolastdance from "../../assets/black.png";
+import logoblackfriday from "../../assets/black.png";
 
 const META_MENSAL = 1300000;
 
@@ -10,6 +10,7 @@ export default function BlackFriday() {
   const [valorDiario, setValorDiario] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
+  const [totalVendido, setTotalVendido] = useState(0);
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
@@ -27,6 +28,33 @@ export default function BlackFriday() {
     });
   }
 
+  function isMesmaData(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  function contarDiasUteis(inicio, fim, feriados = []) {
+    const data = new Date(
+      inicio.getFullYear(),
+      inicio.getMonth(),
+      inicio.getDate()
+    );
+    const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+    let dias = 0;
+
+    while (data <= limite) {
+      const dia = data.getDay();
+      const ehFeriado = feriados.some((f) => isMesmaData(f, data));
+      if (dia !== 0 && dia !== 6 && !ehFeriado) dias += 1;
+      data.setDate(data.getDate() + 1);
+    }
+
+    return dias;
+  }
+
   // LIBERA ÁUDIO
   useEffect(() => {
     const audio = new Audio("/audios/comemora.mp3");
@@ -38,7 +66,7 @@ export default function BlackFriday() {
       audio.currentTime = 0;
     });
 
-    const salvos = localStorage.getItem("lastdance_leads");
+    const salvos = localStorage.getItem("blackfriday_leads");
     if (salvos) idsAntigosRef.current = JSON.parse(salvos);
   }, []);
 
@@ -52,6 +80,25 @@ export default function BlackFriday() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
+        const inicioMes = new Date(
+          hojeBR.getFullYear(),
+          hojeBR.getMonth(),
+          1,
+          0,
+          0,
+          0,
+          0
+        );
+        const fimMes = new Date(
+          hojeBR.getFullYear(),
+          hojeBR.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+
         const pipelines = [
           "IMPORTAÇÃO CONJUNTA 🧩",
           "CONSULTORIA LANNISTER 🦁",
@@ -62,17 +109,24 @@ export default function BlackFriday() {
         ];
 
         const filtrados = rawData.filter((i) => pipelines.includes(i.pipeline));
-        const recentes = [...filtrados]
+        const filtradosMes = filtrados.filter((i) => {
+          const dt = new Date(i.data);
+          return !Number.isNaN(dt) && dt >= inicioMes && dt <= fimMes;
+        });
+
+        const recentes = [...filtradosMes]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
 
         setDados(recentes);
 
-        const somaMes = filtrados.reduce(
+        const somaMes = filtradosMes.reduce(
           (acc, i) => acc + Number(i.valor || 0),
           0
         );
-        const restante = META_MENSAL - somaMes;
+        setTotalVendido(somaMes);
+
+        const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
         const ultimoDia = new Date(
@@ -80,11 +134,21 @@ export default function BlackFriday() {
           hojeBR.getMonth() + 1,
           0
         );
-        const diasRestantes =
-          Math.ceil((ultimoDia - hojeBR) / (1000 * 60 * 60 * 24)) + 1;
+        const feriados = [new Date(hojeBR.getFullYear(), 10, 20)];
+        const diasRestantesUteis =
+          contarDiasUteis(hojeBR, ultimoDia, feriados) || 1;
 
-        const valorBase = restante / diasRestantes;
-        setValorDiario(Math.max(valorBase, 0));
+        const somaHoje = filtradosMes.reduce((acc, i) => {
+          const dt = new Date(i.data);
+          const mesmoDia =
+            dt.getFullYear() === hojeBR.getFullYear() &&
+            dt.getMonth() === hojeBR.getMonth() &&
+            dt.getDate() === hojeBR.getDate();
+          return mesmoDia ? acc + Number(i.valor || 0) : acc;
+        }, 0);
+
+        const valorBase = restante / diasRestantesUteis;
+        setValorDiario(Math.max(valorBase - somaHoje, 0));
       } catch {}
     }
 
@@ -141,7 +205,7 @@ export default function BlackFriday() {
     <div className={styles.root}>
       {/* BLOCO 1 - HEADER */}
       <div className={styles.bloco1}>
-        <img src={logolastdance} className={styles.headerImage} />
+        <img src={logoblackfriday} className={styles.headerImage} />
       </div>
 
       {/* BLOCO 2 - META DIÁRIA */}
@@ -174,7 +238,7 @@ export default function BlackFriday() {
         <div className={styles.counterRow}>
           <span className={styles.counterLabel}>Contagem total:</span>
           <span className={styles.counterValueBig}>
-            {formatarValor(faltamParaMetaMensal)}
+            {formatarValor(totalVendido)}
           </span>
         </div>
 
