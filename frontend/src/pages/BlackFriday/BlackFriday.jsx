@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import styles from "./dashLastDanceBlack.module.css";
+import styles from "./blackfriday.module.css";
 import logolastdance from "../../assets/black.png";
 
 const META_MENSAL = 1300000;
 
-export default function DashLastDanceBlack() {
+export default function BlackFriday() {
   const [dados, setDados] = useState([]);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
