@@ -61,15 +61,14 @@ function formatCurrency(v) {
 
 function Gauge({ valor, meta }) {
   const pct = Math.min((valor / meta) * 100, 150);
-  const pctDisplay = Math.min((valor / meta) * 100, 100).toFixed(0);
 
-  const radius = 60;
+  const radius = 70;
   const circumference = 2 * Math.PI * radius;
   const dash = (pct / 100) * circumference;
 
   return (
     <div className="gauge">
-      <svg viewBox="0 0 160 90">
+      <svg viewBox="0 0 200 120" preserveAspectRatio="none">
         <defs>
           <linearGradient id="gaugeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="var(--fire)" />
@@ -79,25 +78,23 @@ function Gauge({ valor, meta }) {
         </defs>
 
         <path
-          d="M20 80 A60 60 0 0 1 140 80"
+          d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
           stroke="var(--metal-light)"
-          strokeWidth="12"
-          strokeLinecap="round"
+          strokeWidth="14"
           opacity="0.35"
+          strokeLinecap="round"
         />
 
         <path
-          d="M20 80 A60 60 0 0 1 140 80"
+          d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
           stroke="url(#gaugeGlow)"
-          strokeWidth="12"
+          strokeWidth="14"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circumference}`}
         />
       </svg>
-
-      <div className="gauge-percent">{pctDisplay}%</div>
     </div>
   );
 }
@@ -138,41 +135,48 @@ export default function Hunters() {
           </div>
         </div>
 
-        {/* 4 HUNTERS (2x2) */}
+        {/* 4 HUNTERS */}
         <div className="hunters-row">
           {hunters.map((h) => {
             const photo = getHunterImage(h.nome);
 
+            const pct = Math.min((h.vendido / h.meta) * 100, 100).toFixed(0);
+
             return (
               <div className="hunter-card" key={h.nome}>
+                {/* ESQUERDA: tudo empilhado */}
                 <div className="hunter-left-side">
+                  {/* PORCENTAGEM */}
+                  <div className="hunter-percentage">{pct}%</div>
+
+                  {/* GAUGE + FOTO */}
                   <div className="gauge-wrapper">
                     <Gauge valor={h.vendido} meta={h.meta} />
                     {photo && (
                       <img src={photo} className="hunter-photo" alt={h.nome} />
                     )}
                   </div>
+
+                  {/* NOME */}
                   <div className="hunter-name">{h.nome}</div>
                 </div>
 
-                <div className="hunter-right-side hunter-info">
+                {/* DIREITA */}
+                <div className="hunter-right-side">
                   <div className="card-metric">
                     <label>Vendas</label>
                     <span className="highlight">{h.vendas}</span>
                   </div>
-
                   <div className="card-metric">
                     <label>Vendido</label>
                     <span className="highlight">
                       {formatCurrency(h.vendido)}
                     </span>
                   </div>
-
                   <div className="card-metric">
                     <label>Ticket Médio</label>
                     <span>{formatCurrency(h.ticketMedio)}</span>
                   </div>
-
                   <div className="card-metric">
                     <label>Meta</label>
                     <span>{formatCurrency(h.meta)}</span>
