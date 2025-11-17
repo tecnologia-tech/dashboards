@@ -38,16 +38,21 @@ html, body, #root {
 }
 
 .hunters-left {
-  width: 360px;        /* 🔥 reduz um pouco para caber tudo */
-  height: 100%;
+  width: 220px;          /* sua largura */
+  min-width: 220px;
+  height: 100vh;          /* 🔥 FIXA altura total da tela */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;       /* 🔥 evita vazamentos */
+  background-color: #000; /* 🔥 evita barras feias */
 }
 
 .hunters-left img {
-  width: 100%;
-  height: 100%;
- border-right: 2px solid rgba(230, 192, 104, 0.35);
+  height: 100%;     /* 🔥 ocupa toda a altura */
+  width: auto;      /* 🔥 mantém proporção */
+  object-fit: contain;  /* mantém a imagem inteira */
 }
-
 .hunters-right {
   flex: 1;
   padding: 10px;
@@ -114,78 +119,18 @@ html, body, #root {
    RESUMO + RANKING
 =========================================================== */
 
-.hunters-main {
-  height: 240px; /* 🔥 reduzido para caber TUDO na tela */
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 10px;
+.hunters-main,
+.summary-card,
+.summary-body,
+.summary-item,
+.side-panel,
+.panel,
+.ranking-list,
+.ranking-item,
+.rank-index,
+.rank-value {
+  display: none;
 }
-
-/* RESUMO */
-.summary-card {
-  background: #2b2421;
-  border: 2px solid #ff7a1a;
-  border-radius: 10px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-}
-
-.summary-body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-.summary-item {
-  background: #3a302d;
-  border: 1px solid rgba(255,122,26,0.35);
-  border-radius: 8px;
-  padding: 10px;
-}
-
-.summary-item .value {
-  margin-top: 4px;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.summary-item .highlight {
-  color: var(--fire);
-}
-
-/* RANKING */
-.side-panel {
-  display: flex;
-  flex-direction: column;
-}
-
-.panel {
-  background: var(--panel);
-  padding: 10px;
-  border-radius: 10px;
-  border: 2px solid var(--border);
-}
-
-.ranking-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ranking-item {
-  padding: 8px 12px;
-  background: rgba(25,25,25,0.75);
-  border: 1px solid rgba(255,122,26,0.35);
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.rank-index { color: var(--fire); font-weight: 700; }
-.rank-value { color: var(--quen); font-weight: 600; }
 
 /* ===========================================================
    CARDS 2×2 DOS HUNTERS
