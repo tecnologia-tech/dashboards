@@ -15,22 +15,17 @@
    BASE / FULLSCREEN / RESET
 =========================================================== */
 
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
-    max-width: 100vw !important;
-  overflow-x: hidden !important;
   height: 100%;
   overflow: hidden;
   background: #000;
   font-family: "Cinzel", serif;
   color: var(--silver);
-}
-#root {
-  width: 100vw !important;
-  height: 100vh !important;
-  display: flex;
 }
 
 /* ===========================================================
@@ -52,12 +47,13 @@ html, body, #root {
   align-items: center;
   overflow: hidden;
   background-color: #000;
+  position: relative;
 }
 
 .hunters-left img {
-   width: 100%;
+  width: 100%;
   height: 100%;
-  object-fit: cover;   /* 🔥 Preenche total sem deixar espaço */
+  object-fit: cover;
   object-position: center;
 }
 
@@ -66,6 +62,7 @@ html, body, #root {
   padding: 6px;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* 🔥 garante que a área da direita possa encolher sem quebrar tudo */
 }
 
 .hunters-root {
@@ -80,7 +77,7 @@ html, body, #root {
 =========================================================== */
 
 .witcher-hero {
-  background: rgba(10,10,10,0.85);
+  background: rgba(10, 10, 10, 0.85);
   border: 2px solid var(--border);
   border-radius: 10px;
   padding: 8px 12px;
@@ -102,7 +99,7 @@ html, body, #root {
 }
 
 .metric {
-  background: rgba(25,25,25,0.9);
+  background: rgba(25, 25, 25, 0.9);
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -127,54 +124,44 @@ html, body, #root {
 .hunters-row {
   flex: 1;
   display: grid;
-grid-template-columns: repeat(2, minmax(540px, 1fr));
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 8px;
-  height: calc(100% - 110px); /* ajustado para caber em 1080p */
+  min-height: 0;
 }
 
 /* ===========================================================
-   CARD DO HUNTER — agora em 2 colunas
+   CARD DO HUNTER — 2 colunas (foto + infos)
 =========================================================== */
 
 .hunter-card {
   background: linear-gradient(145deg, rgba(20, 18, 16, 0.92), rgba(10, 10, 10, 0.9));
-  border: 2px solid rgba(230,192,104,0.35);
+  border: 2px solid rgba(230, 192, 104, 0.35);
   border-radius: 16px;
   padding: 16px;
   display: flex;
   gap: 16px;
-  min-height: 260px;
-  min-width: 540px;
-  box-shadow: 0 16px 28px rgba(0,0,0,0.55);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.55);
+  min-width: 0; /* 🔥 importantíssimo em layout flex dentro de grid */
 }
+
+/* LADO ESQUERDO (gauge + foto + nome) */
 
 .hunter-left-side {
   position: relative;
-  flex: 0 0 40%;
+  flex: 0 0 260px;       /* largura fixa pra não esmagar o lado direito */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-width: 180px;
-  max-width: 240px;
-  min-height: 260px;
-}
-
-.hunter-right-side {
-  flex: 1 1 60%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   min-width: 0;
-  justify-content: space-between;
 }
 
 .gauge {
   position: relative;
-  width: 200px;      /* ajuste fino permitido depois */
-  height: 200px;     /* garante proporção quadrada */
+  width: 220px;
+  height: 140px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -200,20 +187,16 @@ grid-template-columns: repeat(2, minmax(540px, 1fr));
 .hunter-photo {
   position: absolute;
   left: 50%;
-  top: 55%;                  /* 🔥 Ajuste fino da altura dentro do gauge */
+  top: 55%;
   transform: translate(-50%, -50%);
-
-  width: 52%;                /* tamanho da foto em relação ao gauge */
-  aspect-ratio: 1 / 1;       /* garante círculo perfeito */
-
+  width: 52%;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid rgba(230,192,104,0.8);
+  border: 4px solid rgba(230, 192, 104, 0.8);
   background: #000;
-  box-shadow: 0 0 10px rgba(0,0,0,0.7);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
 }
-
-
 
 .hunter-name {
   margin-top: 6px;
@@ -224,41 +207,56 @@ grid-template-columns: repeat(2, minmax(540px, 1fr));
   text-align: center;
 }
 
+/* LADO DIREITO (métricas) */
+
+.hunter-right-side {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;  /* 🔥 ESSENCIAL pra não estourar pra fora do card */
+}
+
 .hunter-info {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* Cada metríca dentro do card */
 .hunter-info .card-metric {
   width: 100%;
-  background: rgba(25,25,25,0.9);
-  border: 1px solid rgba(230,192,104,0.35);
+  box-sizing: border-box;
+  background: rgba(25, 25, 25, 0.9);
+  border: 1px solid rgba(230, 192, 104, 0.35);
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  overflow: hidden;
-  flex-shrink: 0;
-  min-width: 0;
   justify-content: space-between;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;  /* 🔥 evita qualquer coisa “vazar” pra fora */
+  min-width: 0;
 }
 
 .hunter-info .card-metric label {
-  font-size: 22px;
+  font-size: 20px;
   margin: 0;
   color: rgba(230, 224, 210, 0.95);
+  flex: 0 0 auto;
 }
 
+/* Valor à direita */
 .hunter-info .card-metric span {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
-    white-space: normal !important;
-  word-break: break-word;
-  max-width: 100%;
   color: var(--silver);
   text-align: right;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;        /* permite quebrar linha se precisar */
+  word-break: break-word;     /* garante que nunca saia da borda */
 }
 
 .hunter-info .card-metric .highlight {
@@ -266,63 +264,133 @@ grid-template-columns: repeat(2, minmax(540px, 1fr));
 }
 
 /* ============================= ANIMAÇÕES CINEMATOGRÁFICAS ============================= */
+
 @keyframes fadeInEpic {
-  0% { opacity: 0; filter: blur(8px); }
-  100% { opacity: 1; filter: blur(0); }
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
 }
 
 @keyframes borderPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(230,192,104,0.01); }
-  50% { box-shadow: 0 0 12px rgba(230,192,104,0.04); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(230, 192, 104, 0.01);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(230, 192, 104, 0.04);
+  }
 }
 
 @keyframes heatWave {
-  0% { transform: translateY(0); opacity: 0.04; filter: blur(3px); }
-  50% { transform: translateY(-4%); opacity: 0.06; filter: blur(4px); }
-  100% { transform: translateY(0); opacity: 0.04; filter: blur(3px); }
+  0% {
+    transform: translateY(0);
+    opacity: 0.04;
+    filter: blur(3px);
+  }
+  50% {
+    transform: translateY(-4%);
+    opacity: 0.06;
+    filter: blur(4px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.04;
+    filter: blur(3px);
+  }
 }
 
 @keyframes nameGlow {
-  0%, 100% { text-shadow: 0 0 6px rgba(230,192,104,0.25), 0 0 14px rgba(255,122,26,0.15); }
-  50% { text-shadow: 0 0 10px rgba(230,192,104,0.4), 0 0 18px rgba(255,122,26,0.25); }
+  0%,
+  100% {
+    text-shadow: 0 0 6px rgba(230, 192, 104, 0.25),
+      0 0 14px rgba(255, 122, 26, 0.15);
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(230, 192, 104, 0.4),
+      0 0 18px rgba(255, 122, 26, 0.25);
+  }
 }
 
 @keyframes photoGlow {
-  0%, 100% { box-shadow: 0 0 10px rgba(255,122,26,0.02); }
-  50% { box-shadow: 0 0 16px rgba(255,122,26,0.07); }
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(255, 122, 26, 0.02);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 122, 26, 0.07);
+  }
 }
 
 @keyframes ashFloat {
-  0% { transform: translateY(0); opacity: 0.0; }
-  25% { opacity: 0.05; }
-  50% { transform: translateY(-8%); opacity: 0.07; }
-  75% { opacity: 0.05; }
-  100% { transform: translateY(0); opacity: 0.0; }
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.05;
+  }
+  50% {
+    transform: translateY(-8%);
+    opacity: 0.07;
+  }
+  75% {
+    opacity: 0.05;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
 }
 
 @keyframes gaugeFill {
-  from { stroke-dashoffset: 376; }
-  to { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: 376;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes gaugeNumber {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Fade-in nas principais áreas */
-body, .hunters-container, .hunters-left, .hunters-right {
+body,
+.hunters-container,
+.hunters-left,
+.hunters-right {
   animation: fadeInEpic 1.6s ease-in-out forwards;
 }
+
 .hunter-card {
   animation: fadeInEpic 1.6s ease-in-out forwards;
   animation-delay: 0s;
   position: relative;
   overflow: hidden;
 }
-.hunters-row > .hunter-card:nth-child(2) { animation-delay: 0.15s; }
-.hunters-row > .hunter-card:nth-child(3) { animation-delay: 0.30s; }
-.hunters-row > .hunter-card:nth-child(4) { animation-delay: 0.45s; }
+
+.hunters-row > .hunter-card:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.hunters-row > .hunter-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.hunters-row > .hunter-card:nth-child(4) {
+  animation-delay: 0.45s;
+}
 
 /* Pulso nas bordas douradas e métricas */
 .hunter-card,
@@ -336,7 +404,11 @@ body, .hunters-container, .hunters-left, .hunters-right {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.01)
+  );
   mix-blend-mode: screen;
   animation: heatWave 6s ease-in-out infinite;
   opacity: 0.05;
@@ -353,17 +425,25 @@ body, .hunters-container, .hunters-left, .hunters-right {
 }
 
 /* Cinzas flutuando na lateral esquerda */
-.hunters-left {
-  position: relative;
-  overflow: hidden;
-}
 .hunters-left::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.05) 0%, transparent 35%),
-              radial-gradient(circle at 80% 90%, rgba(255,255,255,0.04) 0%, transparent 30%),
-              radial-gradient(circle at 60% 70%, rgba(255,255,255,0.03) 0%, transparent 25%);
+  background: radial-gradient(
+      circle at 20% 80%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 90%,
+      rgba(255, 255, 255, 0.04) 0%,
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 60% 70%,
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 25%
+    );
   animation: ashFloat 12s ease-in-out infinite;
   pointer-events: none;
 }
