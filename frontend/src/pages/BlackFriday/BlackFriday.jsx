@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import styles from "./blackfriday.module.css";
+import styles from "./Blackfriday.module.css";
 import logoblackfriday from "../../assets/black.png";
 
 const META_MENSAL = 1300000;
