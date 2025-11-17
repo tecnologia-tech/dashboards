@@ -6,7 +6,7 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<DashLastDance />} />
+        <Route path="/" element={<BlackFriday />} />
       </Routes>
     </HashRouter>
   );
