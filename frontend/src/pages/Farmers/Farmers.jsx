@@ -40,6 +40,7 @@ const FARMERS = [
 export default function Farmers() {
   const [total, setTotal] = React.useState(null);
   const [farmers, setFarmers] = React.useState([]);
+
   React.useEffect(() => {
     async function loadData() {
       const res = await fetch(
@@ -51,23 +52,20 @@ export default function Farmers() {
         ...d,
         valor: Number(d.valor) || 0,
         data: new Date(d.data),
+        assigned: d.assigned?.trim() || "",
       }));
 
-      // FILTRO SEGURO
-      const filtered = parsed.filter((d) => {
-        const dt = new Date(d.data);
-        return (
-          dt >= new Date("2025-11-01T00:00:00") &&
-          dt <= new Date("2025-11-30T23:59:59")
-        );
-      });
+      const start = new Date("2025-11-01T00:00:00");
+      const end = new Date("2025-11-30T23:59:59");
+
+      const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
 
       let totalVendas = 0;
       let totalVendido = 0;
 
       let farmersCalc = FARMERS.map((f) => {
         const rows = filtered.filter(
-          (r) => r.assigned?.trim().toLowerCase() === f.db.trim().toLowerCase()
+          (r) => r.assigned.toLowerCase() === f.db.trim().toLowerCase()
         );
 
         const vendas = rows.length;
@@ -90,7 +88,7 @@ export default function Farmers() {
 
       setFarmers(farmersCalc);
 
-      const metaTotal = FARMERS.reduce((acc, h) => acc + h.meta, 0);
+      const metaTotal = FARMERS.reduce((acc, f) => acc + f.meta, 0);
 
       setTotal({
         vendas: totalVendas,
@@ -117,7 +115,7 @@ export default function Farmers() {
         <div className="witcher-hero">
           <div className="hero-title">
             <span className="title-top">Geral</span>
-            <span className="title-bottom">Farmers</span>
+            <span className="title-bottom">Farmer</span>
           </div>
 
           <div className="hero-metrics">
@@ -149,23 +147,25 @@ export default function Farmers() {
             const photo = getFarmerImage(f.nome, index);
             const pctNumber = f.meta > 0 ? (f.vendido / f.meta) * 100 : 0;
             const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
+            const pctLabel = pctCapped.toFixed(0);
 
             return (
-              <div className="farmer-card" key={f.nome}>
+              <div className="farmer-card" key={f.nome} data-pct={pctLabel}>
                 <div className="farmer-left-side">
-                  <div className="farmer-percentage">
-                    {pctCapped.toFixed(0)}%
-                  </div>
+                  <div className="farmer-percentage">{pctLabel}%</div>
 
                   <div className="gauge-wrapper">
                     <Gauge percent={pctCapped} />
 
-                    <div className="gauge-fire-clip">
+                    <div className="gauge-ice-clip">
                       {Array.from({ length: 40 }).map((_, i) => (
                         <div
                           key={i}
-                          className="fire-particle"
-                          style={{ "--i": i }}
+                          className="ice-particle"
+                          style={{
+                            "--fp-size": "8px",
+                            "--fp-speed": `${10 + (i % 6)}s`,
+                          }}
                         />
                       ))}
                     </div>
@@ -245,7 +245,7 @@ function Gauge({ percent }) {
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
-          stroke="rgba(120,160,200,0.3)"
+          stroke="rgba(140,180,230,0.35)"
           strokeWidth="14"
           opacity="0.35"
           strokeLinecap="round"

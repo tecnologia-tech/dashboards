@@ -29,8 +29,8 @@ html, body, #root {
 }
 
 .hunters-left {
-  width: 190px;
-  min-width: 190px;
+  width: 220px;
+  min-width: 220px;
   background: #000;
   display: flex;
   align-items: center;
@@ -277,7 +277,7 @@ font-size: clamp(30px, 3vw, 50px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 19px;
 }
 
 .hunter-percentage {
@@ -423,6 +423,10 @@ font-size: clamp(30px, 3vw, 50px);
   text-align: center;
   position: relative;
   overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   animation: goldenTextBreath 5.5s ease-in-out infinite alternate, heatShimmer 16s ease-in-out infinite;
 }
 
@@ -469,7 +473,7 @@ font-size: clamp(30px, 3vw, 50px);
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 25px;
 }
 
 .card-metric {
@@ -508,18 +512,17 @@ font-size: clamp(30px, 3vw, 50px);
 }
 
 .card-metric label {
-  font-size: 30px;
+  
   font-weight: 600;
   color: rgba(230,224,210,0.95);
   letter-spacing: 1px;
   white-space: nowrap;
-  animation: heatShimmer 18s ease-in-out infinite;
-}
+  animation: heatShimmer 18s ease-in-out infinite; font-size: 30px; }
 
 .card-metric span {
 font-size: clamp(26px, 3vw, 54px); /* 🔥 diminui se precisar */
   font-weight: 800;
-  color: var(--silver);
+  color: var(--quen);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
@@ -530,6 +533,9 @@ font-size: clamp(26px, 3vw, 54px); /* 🔥 diminui se precisar */
 .card-metric .highlight {
   color: var(--fire);
   text-shadow: 0 0 10px rgba(255,122,26,0.4);
+}
+.hunter-right-side > .card-metric > label {
+  font-size: 20px;
 }
 
 .fire-particle {

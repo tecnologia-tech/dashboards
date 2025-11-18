@@ -39,7 +39,7 @@ html, body, #root {
 }
 
 .farmers-left {
-  width: 190px;
+  width: 220px;
   min-width: 190px;
   background: #000;
   display: flex;
@@ -97,27 +97,31 @@ html, body, #root {
   justify-content: space-between;
   align-items: center;
 
+  background-size: 140% 140%;
   background-image:
     radial-gradient(220% 140% at 10% 0%, rgba(120,160,200,0.05), transparent 55%),
     radial-gradient(220% 140% at 90% 30%, rgba(140,180,230,0.05), transparent 55%),
     linear-gradient(145deg, rgba(10,20,30,0.95), rgba(6,10,15,0.92));
-  background-size: 140% 140%;
 }
+
 
 .hero-title {
   display: flex;
+  margin-right: 8px;
   flex-direction: column;
   text-align: center;
-  color: var(--white-ice);
+  line-height: 1.1;
   font-size: 26px;
-  line-height: 1;
-  font-weight: 700;
+  color: var(--white-ice);
+  position: relative;
+  overflow: hidden;
   animation: iceBreath 6s ease-in-out infinite alternate;
 }
 
 .hero-title .title-top,
 .hero-title .title-bottom {
   font-size: 32px;
+  font-weight: 700;
 }
 
 /* ============================================================
@@ -126,40 +130,48 @@ html, body, #root {
 .hero-metrics {
   display: flex;
   gap: 16px;
+  align-items: stretch;
 }
 
 .metric {
   background: linear-gradient(135deg, rgba(12,22,32,0.92), rgba(5,10,18,0.9));
-  border: 1px solid var(--border);
   border-radius: 8px;
+  border: 1px solid var(--border);
   padding: 10px 16px;
   min-width: 130px;
 
+  background-size: 220% 220%;
+  background-image:
+    linear-gradient(135deg, rgba(12,22,32,0.92), rgba(5,10,18,0.9)),
+    radial-gradient(120% 120% at 20% 10%, rgba(159,207,255,0.12), transparent 50%),
+    radial-gradient(120% 120% at 80% 80%, rgba(124,202,255,0.12), transparent 55%);
+  background-blend-mode: overlay, normal;
+
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .metric label {
-  color: var(--white-ice);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.8;
-}
-
-.metric.primary strong {
-  color: var(--ice);
-  text-shadow: 0 0 10px rgba(140,200,255,0.5);
-}
-
-.metric.secondary strong {
-  color: var(--silver);
-}
-
-.metric strong {
+  color: var(--white-ice);
+  margin: 0;
   white-space: nowrap;
-  font-size: clamp(28px, 3vw, 40px);
+}
+.metric strong {
+  font-size: clamp(30px, 3vw, 50px);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  max-width: 100%;
+  animation: heatShimmer 16s ease-in-out infinite;
+  color: var(--ice);
 }
 
 /* ============================================================
@@ -212,7 +224,7 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 25px;
 }
 
 .farmer-percentage {
@@ -220,8 +232,7 @@ html, body, #root {
   font-weight: 900;
   color: var(--ice);
   text-shadow: 0 0 12px rgba(150,200,255,0.5);
-  transform: translateY(-6px);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 /* ============================================================
@@ -336,7 +347,7 @@ html, body, #root {
    NOME
 ============================================================ */
 .farmer-name {
-  margin-top: -20px;
+  margin-top: -30px;
   font-size: 32px;
   color: var(--white-ice);
   text-shadow: 0 0 8px rgba(150,200,255,0.5);
@@ -370,9 +381,9 @@ html, body, #root {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 25px;
+  padding: 0;
 }
-
 .card-metric {
   background: linear-gradient(135deg, rgba(12,20,30,0.85), rgba(4,8,14,0.9));
   border: 1px solid rgba(160,200,255,0.35);
@@ -388,17 +399,30 @@ html, body, #root {
 
 .card-metric label {
   color: var(--white-ice);
-  font-size: 22px;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .card-metric span {
-  font-size: clamp(26px, 3vw, 50px);
+  font-size: clamp(26px, 3vw, 54px);
+  font-weight: 800;
   color: var(--silver);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  max-width: 100%;
 }
 
 .card-metric .highlight {
   color: var(--ice);
   text-shadow: 0 0 10px rgba(150,200,255,0.5);
+}
+
+/* Ajuste para o 3º label de todas as métricas em cada card */
+.farmer-right-side > .card-metric > label {
+  font-size: 20px;
 }
 
 /* ============================================================
@@ -418,3 +442,4 @@ html, body, #root {
   0% { background-position: 0 140%; }
   100% { background-position: 0 -40%; }
 }
+

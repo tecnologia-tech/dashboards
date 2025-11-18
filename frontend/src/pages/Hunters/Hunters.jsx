@@ -26,18 +26,15 @@ function getHunterBadge(name) {
 }
 
 function formatCurrency(v) {
-  return v.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-/* CONFIG DOS HUNTERS */
+/* CONFIG DOS HUNTERS – ajuste meta/nomes se precisar */
 const HUNTERS = [
-  { label: "Fernando", db: "Fernando Finatto", meta: 250000 },
-  { label: "Monique", db: "Monique Moreira", meta: 250000 },
-  { label: "Thiago", db: "Thiago Cardoso", meta: 250000 },
-  { label: "Alan", db: "Alan Esteves", meta: 50000 },
+  { label: "Monique", db: "Monique Moreira", meta: 175000 },
+  { label: "Fernando", db: "Fernando Finatto", meta: 175000 },
+  { label: "Thiago", db: "Thiago Cardoso", meta: 175000 },
+  { label: "Alan", db: "Alan Esteves", meta: 175000 },
 ];
 
 export default function Hunters() {
@@ -49,25 +46,27 @@ export default function Hunters() {
       const res = await fetch(
         "https://dashboards-exur.onrender.com/api/dash_geralcswon"
       );
-
       const data = await res.json();
 
       const parsed = data.map((d) => ({
         ...d,
         valor: Number(d.valor) || 0,
         data: new Date(d.data),
+        assigned: d.assigned?.trim() || "",
       }));
 
-      const filtered = parsed.filter(
-        (d) =>
-          d.data >= new Date("2025-11-01") && d.data <= new Date("2025-11-30")
-      );
+      const start = new Date("2025-11-01T00:00:00");
+      const end = new Date("2025-11-30T23:59:59");
+
+      const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
 
       let totalVendas = 0;
       let totalVendido = 0;
 
       let huntersCalc = HUNTERS.map((h) => {
-        const rows = filtered.filter((r) => r.assigned === h.db);
+        const rows = filtered.filter(
+          (r) => r.assigned.toLowerCase() === h.db.trim().toLowerCase()
+        );
 
         const vendas = rows.length;
         const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
@@ -108,7 +107,7 @@ export default function Hunters() {
     <div className="hunters-container">
       {/* LATERAL */}
       <div className="hunters-left">
-        <img src={huntersImg} alt="Hunter" />
+        <img src={huntersImg} alt="Hunters" />
       </div>
 
       <div className="hunters-right">
@@ -116,7 +115,7 @@ export default function Hunters() {
         <div className="witcher-hero">
           <div className="hero-title">
             <span className="title-top">Geral</span>
-            <span className="title-bottom">Hunters</span>
+            <span className="title-bottom">Hunter</span>
           </div>
 
           <div className="hero-metrics">
@@ -146,15 +145,14 @@ export default function Hunters() {
         <div className="hunters-row">
           {hunters.map((h, index) => {
             const photo = getHunterImage(h.nome, index);
-            const pctNumber = (h.vendido / h.meta) * 100;
+            const pctNumber = h.meta > 0 ? (h.vendido / h.meta) * 100 : 0;
             const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
+            const pctLabel = pctCapped.toFixed(0);
 
             return (
-              <div className="hunter-card" key={h.nome}>
+              <div className="hunter-card" key={h.nome} data-pct={pctLabel}>
                 <div className="hunter-left-side">
-                  <div className="hunter-percentage">
-                    {pctCapped.toFixed(0)}%
-                  </div>
+                  <div className="hunter-percentage">{pctLabel}%</div>
 
                   <div className="gauge-wrapper">
                     <Gauge percent={pctCapped} />
@@ -164,7 +162,10 @@ export default function Hunters() {
                         <div
                           key={i}
                           className="fire-particle"
-                          style={{ "--i": i }}
+                          style={{
+                            "--fp-size": "8px",
+                            "--fp-speed": `${10 + (i % 6)}s`,
+                          }}
                         />
                       ))}
                     </div>
@@ -219,11 +220,13 @@ export default function Hunters() {
   );
 }
 
-/* GAUGE */
+/* ========================= GAUGE ========================= */
 function Gauge({ percent }) {
   const pct = Math.min(Math.max(percent, 0), 100);
+
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
+
   const activeLength = circumference / 2;
   const dash = (pct / 100) * activeLength;
 
@@ -232,9 +235,9 @@ function Gauge({ percent }) {
       <svg viewBox="0 0 200 120" preserveAspectRatio="none">
         <defs>
           <linearGradient id="gaugeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="var(--fire)" />
-            <stop offset="50%" stopColor="var(--quen)" />
-            <stop offset="100%" stopColor="var(--blood)" />
+            <stop offset="0%" stopColor="var(--blood)" />
+            <stop offset="50%" stopColor="var(--fire)" />
+            <stop offset="100%" stopColor="var(--quen)" />
           </linearGradient>
         </defs>
 
@@ -242,7 +245,7 @@ function Gauge({ percent }) {
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
-          stroke="var(--metal-light)"
+          stroke="rgba(120,70,40,0.4)"
           strokeWidth="14"
           opacity="0.35"
           strokeLinecap="round"
