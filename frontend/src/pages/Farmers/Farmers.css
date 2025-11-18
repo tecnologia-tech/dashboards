@@ -1,0 +1,420 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
+
+/* ============================================================
+   PALETA GELO OFICIAL
+============================================================ */
+:root {
+  --dark: #061018;
+  --panel: rgba(10, 20, 30, 0.92);
+  --border: rgba(160, 200, 255, 0.25);
+
+  --metal-light: #9db3c8;
+  --frost: #9fcfff;
+  --ice: #7ccaff;
+  --deep-ice: #4a6b85;
+  --silver: #c9ccd1;
+  --white-ice: #e4f5ff;
+}
+
+/* ============================================================
+   BASE
+============================================================ */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+   font-family: "Cinzel", serif;
+}
+
+/* ============================================================
+   LAYOUT
+============================================================ */
+.farmers-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.farmers-left {
+  width: 190px;
+  min-width: 190px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.farmers-left img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.9) contrast(1.1);
+}
+
+/* ============================================================
+   AREA DIREITA
+============================================================ */
+.farmers-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  min-width: 0;
+  position: relative;
+}
+
+/* neve leve */
+.farmers-right::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(4px 18px at 20% 96%, rgba(150,200,255,0.08), transparent 60%),
+    radial-gradient(5px 20px at 55% 99%, rgba(100,160,220,0.07), transparent 55%),
+    radial-gradient(4px 18px at 85% 97%, rgba(217,217,217,0.06), transparent 60%);
+  opacity: 0.1;
+  mix-blend-mode: screen;
+  animation: snowDrift 26s linear infinite;
+}
+
+/* ============================================================
+   HEADER GERAL
+============================================================ */
+.witcher-hero {
+  background: rgba(8, 15, 25, 0.85);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background-image:
+    radial-gradient(220% 140% at 10% 0%, rgba(120,160,200,0.05), transparent 55%),
+    radial-gradient(220% 140% at 90% 30%, rgba(140,180,230,0.05), transparent 55%),
+    linear-gradient(145deg, rgba(10,20,30,0.95), rgba(6,10,15,0.92));
+  background-size: 140% 140%;
+}
+
+.hero-title {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  color: var(--white-ice);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 700;
+  animation: iceBreath 6s ease-in-out infinite alternate;
+}
+
+.hero-title .title-top,
+.hero-title .title-bottom {
+  font-size: 32px;
+}
+
+/* ============================================================
+   METRICAS DO HEADER
+============================================================ */
+.hero-metrics {
+  display: flex;
+  gap: 16px;
+}
+
+.metric {
+  background: linear-gradient(135deg, rgba(12,22,32,0.92), rgba(5,10,18,0.9));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  min-width: 130px;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric label {
+  color: var(--white-ice);
+  font-size: 14px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.metric.primary strong {
+  color: var(--ice);
+  text-shadow: 0 0 10px rgba(140,200,255,0.5);
+}
+
+.metric.secondary strong {
+  color: var(--silver);
+}
+
+.metric strong {
+  white-space: nowrap;
+  font-size: clamp(28px, 3vw, 40px);
+}
+
+/* ============================================================
+   GRID DOS CARDS
+============================================================ */
+.farmers-row {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* ============================================================
+   CARD INDIVIDUAL
+============================================================ */
+.farmer-card {
+  background: linear-gradient(145deg, rgba(10,20,30,0.95), rgba(5,10,18,0.9));
+  border: 2px solid rgba(160,200,255,0.35);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.farmer-card::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    rgba(150,190,255,0.16),
+    rgba(180,220,255,0.18),
+    rgba(140,170,220,0.12),
+    rgba(150,190,255,0.16)
+  );
+  filter: blur(12px);
+  opacity: 0.12;
+  animation: frostSweep 14s linear infinite;
+  pointer-events: none;
+}
+
+/* ============================================================
+   ESQUERDA DO CARD
+============================================================ */
+.farmer-left-side {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.farmer-percentage {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--ice);
+  text-shadow: 0 0 12px rgba(150,200,255,0.5);
+  transform: translateY(-6px);
+  margin-bottom: 10px;
+}
+
+/* ============================================================
+   GAUGE — FUNDO GELO
+============================================================ */
+.gauge-wrapper {
+  position: relative;
+  width: 220px;
+  height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.gauge-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: -14px -8px -26px -8px;
+  pointer-events: none;
+  background: radial-gradient(
+    80% 80% at 50% 90%,
+    rgba(140,190,255,0.18),
+    transparent 70%
+  );
+  opacity: 0.25;
+  filter: blur(16px);
+}
+
+.gauge {
+  width: 220px;
+  height: 140px;
+  margin-top: -50px;
+  position: relative;
+}
+
+.gauge::before {
+  content: "";
+  position: absolute;
+  inset: -6px -4px -18px -4px;
+  background: radial-gradient(
+    90% 70% at 50% 90%,
+    rgba(180,220,255,0.2),
+    transparent 70%
+  );
+  opacity: 0.4;
+  filter: blur(12px);
+  z-index: -1;
+}
+
+.gauge::after {
+  content: "";
+  position: absolute;
+  inset: -10px -6px -24px -6px;
+  background: radial-gradient(
+    90% 70% at 50% 80%,
+    rgba(200,240,255,0.25),
+    transparent 70%
+  );
+  opacity: 0.3;
+  filter: blur(14px);
+  z-index: -2;
+}
+
+/* ============================================================
+   PARTÍCULAS GELADAS
+============================================================ */
+.fire-particle {
+  position: absolute;
+  width: var(--fp-size, 8px);
+  height: var(--fp-size, 8px);
+
+  background: radial-gradient(
+    60% 60% at 50% 50%,
+    rgba(200,240,255,0.9),
+    rgba(150,200,255,0.45),
+    transparent 70%
+  );
+
+  border-radius: 50%;
+  opacity: 0.8;
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  animation: snowFloat var(--fp-speed, 12s) ease-in-out infinite;
+}
+
+@keyframes snowFloat {
+  0%   { transform: translate3d(0,0,0) scale(0.9); opacity: 0.3; }
+  40%  { transform: translate3d(-6px,-18px,0) scale(1); opacity: 0.7; }
+  70%  { transform: translate3d(8px,-32px,0) scale(1.1); opacity: 0.4; }
+  100% { transform: translate3d(-4px,-48px,0) scale(0.8); opacity: 0; }
+}
+
+/* ============================================================
+   FOTO
+============================================================ */
+.farmer-photo {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  object-fit: cover;
+
+  border: 3px solid var(--ice);
+  box-shadow: 0 0 14px rgba(150,200,255,0.4);
+  z-index: 10;
+}
+
+/* ============================================================
+   NOME
+============================================================ */
+.farmer-name {
+  margin-top: -20px;
+  font-size: 32px;
+  color: var(--white-ice);
+  text-shadow: 0 0 8px rgba(150,200,255,0.5);
+  font-weight: 700;
+}
+
+/* ============================================================
+   BADGE
+============================================================ */
+.farmer-badge {
+  margin-top: -6px;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+
+  border: 2px solid var(--ice);
+  box-shadow: 0 0 14px rgba(150,200,255,0.35);
+  clip-path: polygon(
+    50% 0%,
+    95% 8%, 100% 22%,
+    100% 78%, 95% 92%,
+    50% 100%, 5% 92%,
+    0 78%, 0 22%, 5% 8%
+  );
+}
+
+/* ============================================================
+   MÉTRICAS DO CARD
+============================================================ */
+.farmer-right-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-metric {
+  background: linear-gradient(135deg, rgba(12,20,30,0.85), rgba(4,8,14,0.9));
+  border: 1px solid rgba(160,200,255,0.35);
+  border-radius: 10px;
+  padding: 6px 14px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  min-height: 78px;
+}
+
+.card-metric label {
+  color: var(--white-ice);
+  font-size: 22px;
+}
+
+.card-metric span {
+  font-size: clamp(26px, 3vw, 50px);
+  color: var(--silver);
+}
+
+.card-metric .highlight {
+  color: var(--ice);
+  text-shadow: 0 0 10px rgba(150,200,255,0.5);
+}
+
+/* ============================================================
+   ANIMAÇÕES
+============================================================ */
+@keyframes iceBreath {
+  0% { filter: drop-shadow(0 0 2px rgba(150,200,255,0.2)); }
+  100% { filter: drop-shadow(0 0 6px rgba(150,200,255,0.6)); }
+}
+
+@keyframes frostSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes snowDrift {
+  0% { background-position: 0 140%; }
+  100% { background-position: 0 -40%; }
+}

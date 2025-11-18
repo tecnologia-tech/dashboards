@@ -1,9 +1,11 @@
 import React from "react";
 import "./Hunters.css";
-import huntersImg from "../../assets/hunters.png";
+import huntersImg from "../../assets/Hunters/hunters.png";
 
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
-const hunterPhotos = import.meta.glob("../../assets/*.png", { eager: true });
+const hunterPhotos = import.meta.glob("../../assets/Hunters/*.png", {
+  eager: true,
+});
 
 function getRankEmoji(index) {
   if (index === 0) return "🥇";
@@ -14,17 +16,20 @@ function getRankEmoji(index) {
 
 function getHunterImage(name, index) {
   const file = index === 0 ? `${name}1.png` : `${name}.png`;
-  const path = `../../assets/${file}`;
+  const path = `../../assets/Hunters/${file}`;
   return hunterPhotos[path]?.default || null;
 }
 
 function getHunterBadge(name) {
-  const path = `../../assets/${name}Badge.png`;
+  const path = `../../assets/Hunters/${name}Badge.png`;
   return hunterPhotos[path]?.default || null;
 }
 
 function formatCurrency(v) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return v.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 /* CONFIG DOS HUNTERS */
@@ -44,6 +49,7 @@ export default function Hunters() {
       const res = await fetch(
         "https://dashboards-exur.onrender.com/api/dash_geralcswon"
       );
+
       const data = await res.json();
 
       const parsed = data.map((d) => ({
@@ -150,11 +156,9 @@ export default function Hunters() {
                     {pctCapped.toFixed(0)}%
                   </div>
 
-                  {/* === GAUGE CORRIGIDO === */}
                   <div className="gauge-wrapper">
                     <Gauge percent={pctCapped} />
 
-                    {/* 🔥 fogo dentro do arco */}
                     <div className="gauge-fire-clip">
                       {Array.from({ length: 40 }).map((_, i) => (
                         <div
@@ -165,7 +169,6 @@ export default function Hunters() {
                       ))}
                     </div>
 
-                    {/* FOTO — AGORA NO LUGAR CERTO */}
                     {photo && (
                       <img src={photo} className="hunter-photo" alt={h.nome} />
                     )}
@@ -219,10 +222,8 @@ export default function Hunters() {
 /* GAUGE */
 function Gauge({ percent }) {
   const pct = Math.min(Math.max(percent, 0), 100);
-
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
-
   const activeLength = circumference / 2;
   const dash = (pct / 100) * activeLength;
 

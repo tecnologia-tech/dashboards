@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import styles from "./BlackFriday.module.css";
-import logoblackfriday from "../../assets/black.png";
+import logoblackfriday from "../../assets/Black/black.png";
 
 const META_MENSAL = 1300000;
 
@@ -48,19 +48,15 @@ export default function BlackFriday() {
     while (data <= limite) {
       const dia = data.getDay();
       const ehFeriado = feriados.some((f) => isMesmaData(f, data));
-      if (dia !== 0 && dia !== 6 && !ehFeriado) dias += 1;
+      if (dia !== 0 && dia !== 6 && !ehFeriado) dias++;
       data.setDate(data.getDate() + 1);
     }
-
     return dias;
   }
 
-  // LIBERA ÁUDIO
   useEffect(() => {
     const audio = new Audio("/audios/comemora.mp3");
-    audio.loop = false;
     audioRef.current = audio;
-
     audio.play().then(() => {
       audio.pause();
       audio.currentTime = 0;
@@ -70,7 +66,6 @@ export default function BlackFriday() {
     if (salvos) idsAntigosRef.current = JSON.parse(salvos);
   }, []);
 
-  // FETCH PRINCIPAL
   useEffect(() => {
     async function fetchData() {
       try {
@@ -86,7 +81,6 @@ export default function BlackFriday() {
           1,
           0,
           0,
-          0,
           0
         );
         const fimMes = new Date(
@@ -95,8 +89,7 @@ export default function BlackFriday() {
           0,
           23,
           59,
-          59,
-          999
+          59
         );
 
         const pipelines = [
@@ -111,7 +104,7 @@ export default function BlackFriday() {
         const filtrados = rawData.filter((i) => pipelines.includes(i.pipeline));
         const filtradosMes = filtrados.filter((i) => {
           const dt = new Date(i.data);
-          return !Number.isNaN(dt) && dt >= inicioMes && dt <= fimMes;
+          return dt >= inicioMes && dt <= fimMes;
         });
 
         const recentes = [...filtradosMes]
@@ -135,15 +128,16 @@ export default function BlackFriday() {
           0
         );
         const feriados = [new Date(hojeBR.getFullYear(), 10, 20)];
+
         const diasRestantesUteis =
           contarDiasUteis(hojeBR, ultimoDia, feriados) || 1;
 
         const somaHoje = filtradosMes.reduce((acc, i) => {
           const dt = new Date(i.data);
           const mesmoDia =
-            dt.getFullYear() === hojeBR.getFullYear() &&
+            dt.getDate() === hojeBR.getDate() &&
             dt.getMonth() === hojeBR.getMonth() &&
-            dt.getDate() === hojeBR.getDate();
+            dt.getFullYear() === hojeBR.getFullYear();
           return mesmoDia ? acc + Number(i.valor || 0) : acc;
         }, 0);
 
@@ -164,6 +158,7 @@ export default function BlackFriday() {
 
     fetchData();
     fetchOpen();
+
     const interval = setInterval(() => {
       fetchData();
       fetchOpen();
@@ -172,7 +167,6 @@ export default function BlackFriday() {
     return () => clearInterval(interval);
   }, []);
 
-  // ALERTA
   function playSom() {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
@@ -203,12 +197,12 @@ export default function BlackFriday() {
 
   return (
     <div className={styles.root}>
-      {/* BLOCO 1 - HEADER */}
+      {/* BLOCO 1 */}
       <div className={styles.bloco1}>
         <img src={logoblackfriday} className={styles.headerImage} />
       </div>
 
-      {/* BLOCO 2 - META DIÁRIA */}
+      {/* BLOCO 2 */}
       <div className={styles.bloco2}>
         {mostrarVideo ? (
           <video
@@ -219,21 +213,16 @@ export default function BlackFriday() {
             playsInline
           />
         ) : (
-          <>
-            <div className={styles.heroRow}>
-              <div className={styles.heroOrbit}>
-                <span className={styles.heroArrow}>↓</span>
-              </div>
-
-              <div className={styles.heroValue}>
-                {formatarValor(valorDiario)}
-              </div>
+          <div className={styles.heroRow}>
+            <div className={styles.heroOrbit}>
+              <span className={styles.heroArrow}>↓</span>
             </div>
-          </>
+            <div className={styles.heroValue}>{formatarValor(valorDiario)}</div>
+          </div>
         )}
       </div>
 
-      {/* BLOCO 3 - CONTAGEM TOTAL */}
+      {/* BLOCO 3 */}
       <div className={styles.bloco3}>
         <div className={styles.counterRow}>
           <span className={styles.counterLabel}>Contagem total:</span>
@@ -247,13 +236,11 @@ export default function BlackFriday() {
             className={styles.progressFill}
             style={{ width: `${metaProgress * 100}%` }}
           />
-          <div className={styles.progressSparkles} />
         </div>
       </div>
 
-      {/* BLOCO 4 + BLOCO 5 LADO A LADO */}
+      {/* BLOCO 4 + BLOCO 5 */}
       <div className={styles.rowFlex}>
-        {/* TABELA */}
         <div className={styles.bloco4}>
           <table className={styles.tabela}>
             <thead>
@@ -279,7 +266,6 @@ export default function BlackFriday() {
           </table>
         </div>
 
-        {/* PROJEÇÃO */}
         <div className={styles.bloco5}>
           <div className={styles.projecaoTitulo}>Projeção Geral</div>
           <div className={styles.projecaoValor}>{formatarValor(somaOpen)}</div>

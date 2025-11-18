@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import styles from "./LastDance.module.css";
-import logolastdance from "../../assets/lastdance.png";
+import logolastdance from "../../assets/LastDance/lastdance.png";
 
 const META_MENSAL = 1300000;
 
