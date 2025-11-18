@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import FullscreenButton from "./components/FullscreenButton";
 
 const Hunters = lazy(() => import("./pages/Hunters/Hunters"));
 const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
@@ -29,6 +30,7 @@ function AutoRotateRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <FullscreenButton />
       <AutoRotateRoutes />
 
       <Suspense fallback={null}>
