@@ -9,7 +9,7 @@ function getRankEmoji(index) {
   if (index === 0) return "🥇";
   if (index === 1) return "🥈";
   if (index === 2) return "🥉";
-  return "⚔️"; // o último
+  return "⚔️";
 }
 
 function getHunterImage(name, index) {
@@ -46,14 +46,12 @@ export default function Hunters() {
       );
       const data = await res.json();
 
-      // Converte tipos
       const parsed = data.map((d) => ({
         ...d,
         valor: Number(d.valor) || 0,
         data: new Date(d.data),
       }));
 
-      // Período
       const filtered = parsed.filter(
         (d) =>
           d.data >= new Date("2025-11-01") && d.data <= new Date("2025-11-30")
@@ -81,17 +79,16 @@ export default function Hunters() {
         };
       });
 
-      // ranking por vendido
       huntersCalc.sort((a, b) => b.vendido - a.vendido);
 
       setHunters(huntersCalc);
-      // 🔥 Meta geral automática = soma das metas individuais
+
       const metaTotal = HUNTERS.reduce((acc, h) => acc + h.meta, 0);
 
       setTotal({
         vendas: totalVendas,
         vendido: totalVendido,
-        meta: metaTotal, // automático
+        meta: metaTotal,
         ticketMedio: totalVendas ? totalVendido / totalVendas : 0,
       });
     }
@@ -143,21 +140,32 @@ export default function Hunters() {
         <div className="hunters-row">
           {hunters.map((h, index) => {
             const photo = getHunterImage(h.nome, index);
-
-            // porcentagem para bater a meta
             const pctNumber = (h.vendido / h.meta) * 100;
             const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
 
             return (
               <div className="hunter-card" key={h.nome}>
                 <div className="hunter-left-side">
-                  {/* texto usa a mesma % do gauge */}
                   <div className="hunter-percentage">
                     {pctCapped.toFixed(0)}%
                   </div>
 
+                  {/* === GAUGE CORRIGIDO === */}
                   <div className="gauge-wrapper">
                     <Gauge percent={pctCapped} />
+
+                    {/* 🔥 fogo dentro do arco */}
+                    <div className="gauge-fire-clip">
+                      {Array.from({ length: 40 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="fire-particle"
+                          style={{ "--i": i }}
+                        />
+                      ))}
+                    </div>
+
+                    {/* FOTO — AGORA NO LUGAR CERTO */}
                     {photo && (
                       <img src={photo} className="hunter-photo" alt={h.nome} />
                     )}
@@ -208,15 +216,13 @@ export default function Hunters() {
   );
 }
 
-/* GAUGE usando a mesma % do texto e meia-lua correta */
+/* GAUGE */
 function Gauge({ percent }) {
-  // garante 0–100
   const pct = Math.min(Math.max(percent, 0), 100);
 
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
 
-  // só metade do círculo está visível
   const activeLength = circumference / 2;
   const dash = (pct / 100) * activeLength;
 
@@ -231,7 +237,7 @@ function Gauge({ percent }) {
           </linearGradient>
         </defs>
 
-        {/* trilho cinza */}
+        {/* TRILHO */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
@@ -241,7 +247,7 @@ function Gauge({ percent }) {
           strokeLinecap="round"
         />
 
-        {/* arco colorido */}
+        {/* ATIVO */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
