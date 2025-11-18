@@ -22,7 +22,6 @@ html, body, #root {
 }
 
 /* LAYOUT */
-
 .hunters-container {
   display: flex;
   width: 100%;
@@ -30,8 +29,8 @@ html, body, #root {
 }
 
 .hunters-left {
-  width: 220px;
-  min-width: 220px;
+  width: 190px;
+  min-width: 190px;
   background: #000;
   display: flex;
   align-items: center;
@@ -49,10 +48,12 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   padding: 6px;
+
+  min-width: 0;  /* ESSENCIAL */
+  overflow: visible;
 }
 
 /* HERO */
-
 .witcher-hero {
   background: rgba(10,10,10,0.85);
   border: 2px solid var(--border);
@@ -65,34 +66,65 @@ html, body, #root {
 }
 
 .hero-title {
+  display: flex;
+  margin-right: 8px;
+  flex-direction: column;
+  text-align: center;
+  line-height: 1.1;
   font-size: 26px;
   color: var(--quen);
 }
 
+.hero-title .title-top {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.hero-title .title-bottom {
+  font-size: 32px;
+  font-weight: 700;
+}
+
 .hero-metrics {
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  align-items: stretch;
 }
 
 .metric {
   background: rgba(25,25,25,0.9);
   border-radius: 8px;
   border: 1px solid var(--border);
-  padding: 6px 10px;
+  padding: 10px 16px;
+  min-width: 130px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .metric label {
-  font-size: 12px;
-  opacity: .7;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(230,224,210,0.9);
+  margin: 0;
+  white-space: nowrap;
 }
 
 .metric strong {
-  color: var(--fire);
-  font-size: 18px;
+font-size: clamp(30px, 3vw, 50px);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  max-width: 100%;
 }
 
-/* GRID DOS 4 CARDS */
-
+/* GRID DOS CARDS */
 .hunters-row {
   flex: 1;
   display: grid;
@@ -101,7 +133,6 @@ html, body, #root {
 }
 
 /* CARD DO HUNTER */
-
 .hunter-card {
   background: linear-gradient(145deg, rgba(20,18,16,0.92), rgba(10,10,10,0.9));
   border: 2px solid rgba(230,192,104,0.35);
@@ -109,19 +140,19 @@ html, body, #root {
   padding: 16px;
   display: flex;
   gap: 16px;
+   min-width: 0;
+   overflow: visible;
 }
 
-/* ESQUERDA — AGORA 100% EMPILHADO */
-
+/* COLUNA ESQUERDA */
 .hunter-left-side {
   width: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 4px;
 }
 
-/* PORCENTAGEM */
 .hunter-percentage {
   margin-bottom: 12px;
   font-size: 32px;
@@ -129,28 +160,20 @@ html, body, #root {
   color: var(--quen);
 }
 
-/* GAUGE */
-.gauge-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Wrapper com posição relativa */
+/* GAUGE WRAPPER */
 .gauge-wrapper {
   position: relative;
   width: 220px;
-  height: 150px; /* ligeiramente maior que o gauge */
+  height: 150px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
 }
 
-/* Gauge em si */
 .gauge {
   width: 220px;
   height: 140px;
+  margin-top: -50px;
 }
 
 .gauge svg {
@@ -161,60 +184,86 @@ html, body, #root {
 /* FOTO */
 .hunter-photo {
   position: absolute;
-  top: 75%;               /* 🔥 desce a foto dentro do gauge */
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-
-  width: 130px;           /* 🔥 aumentei o tamanho */
-  height: 130px;          /* idem */
-
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   object-fit: cover;
-
-  border: 5px solid rgba(230,192,104,0.9);
+  border: 3px solid rgba(230,192,104,0.9);
   box-shadow: 0 0 14px rgba(0,0,0,0.7);
 }
 
-
 /* NOME */
 .hunter-name {
-   margin-top: 20px; 
-  font-size: 26px;
+  margin-top: -30px;
+  gap: 2px;
+  font-size: 36px;
   font-weight: 700;
   color: var(--quen);
   text-align: center;
 }
 
-/* DIREITA — MÉTRICAS */
+/* BADGE */
+.hunter-badge {
+  margin-top: -6px;
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+  display: block;
+  padding: 4px;
+}
 
+/* COLUNA DIREITA */
 .hunter-right-side {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
 }
 
 .card-metric {
   background: rgba(25,25,25,0.9);
   border: 1px solid rgba(230,192,104,0.35);
-  border-radius: 12px;
-  padding: 14px 18px;
+  border-radius: 10px;
+  padding: 6px 14px;
+
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
+
+  min-height: 78px;
 }
 
 .card-metric label {
-  font-size: 20px;
+  font-size: 30px;
+  font-weight: 600;
   color: rgba(230,224,210,0.95);
+  letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .card-metric span {
-  font-size: 32px;
-  font-weight: 700;
+font-size: clamp(26px, 3vw, 54px); /* 🔥 diminui se precisar */
+  font-weight: 800;
   color: var(--silver);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  max-width: 100%; /* 🔥 nunca ultrapassa o card */
 }
 
 .card-metric .highlight {
   color: var(--fire);
+}
+
+/* CORES */
+.metric.orange strong {
+  color: var(--fire);
+}
+
+.metric.white strong {
+  color: var(--silver);
 }

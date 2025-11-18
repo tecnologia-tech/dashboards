@@ -5,66 +5,220 @@ import huntersImg from "../../assets/hunters.png";
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
 const hunterPhotos = import.meta.glob("../../assets/*.png", { eager: true });
 
-function getHunterImage(name) {
-  const path = `../../assets/${name}.png`;
+function getRankEmoji(index) {
+  if (index === 0) return "🥇";
+  if (index === 1) return "🥈";
+  if (index === 2) return "🥉";
+  return "⚔️"; // o último
+}
+
+function getHunterImage(name, index) {
+  const file = index === 0 ? `${name}1.png` : `${name}.png`;
+  const path = `../../assets/${file}`;
   return hunterPhotos[path]?.default || null;
 }
 
-const huntersData = {
-  total: {
-    vendas: 9,
-    ticketMedio: 13273.53,
-    vendido: 119461.75,
-    meta: 700000,
-  },
-  ranking: [
-    { nome: "Monique", valor: 44000 },
-    { nome: "Fernando", valor: 34894.55 },
-    { nome: "Thiago", valor: 22567.2 },
-    { nome: "Alan", valor: 8000 },
-  ],
-  hunters: [
-    {
-      nome: "Fernando",
-      vendas: 4,
-      ticketMedio: 14348.64,
-      vendido: 57394.55,
-      meta: 200000,
-    },
-    {
-      nome: "Monique",
-      vendas: 5,
-      ticketMedio: 11400,
-      vendido: 57000,
-      meta: 200000,
-    },
-    {
-      nome: "Thiago",
-      vendas: 3,
-      ticketMedio: 14189.07,
-      vendido: 42567.2,
-      meta: 200000,
-    },
-    {
-      nome: "Alan",
-      vendas: 1,
-      ticketMedio: 12456.07,
-      vendido: 12127.2,
-      meta: 100000,
-    },
-  ],
-};
+function getHunterBadge(name) {
+  const path = `../../assets/${name}Badge.png`;
+  return hunterPhotos[path]?.default || null;
+}
 
 function formatCurrency(v) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function Gauge({ valor, meta }) {
-  const pct = Math.min((valor / meta) * 100, 150);
+/* CONFIG DOS HUNTERS */
+const HUNTERS = [
+  { label: "Fernando", db: "Fernando Finatto", meta: 250000 },
+  { label: "Monique", db: "Monique Moreira", meta: 250000 },
+  { label: "Thiago", db: "Thiago Cardoso", meta: 250000 },
+  { label: "Alan", db: "Alan Esteves", meta: 100000 },
+];
+
+export default function Hunters() {
+  const [total, setTotal] = React.useState(null);
+  const [hunters, setHunters] = React.useState([]);
+
+  React.useEffect(() => {
+    async function loadData() {
+      const res = await fetch(
+        "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+      );
+      const data = await res.json();
+
+      // Converte tipos
+      const parsed = data.map((d) => ({
+        ...d,
+        valor: Number(d.valor) || 0,
+        data: new Date(d.data),
+      }));
+
+      // Período
+      const filtered = parsed.filter(
+        (d) =>
+          d.data >= new Date("2025-11-01") && d.data <= new Date("2025-11-30")
+      );
+
+      let totalVendas = 0;
+      let totalVendido = 0;
+
+      let huntersCalc = HUNTERS.map((h) => {
+        const rows = filtered.filter((r) => r.assigned === h.db);
+
+        const vendas = rows.length;
+        const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
+        const ticketMedio = vendas > 0 ? vendido / vendas : 0;
+
+        totalVendas += vendas;
+        totalVendido += vendido;
+
+        return {
+          nome: h.label,
+          vendas,
+          vendido,
+          ticketMedio,
+          meta: h.meta,
+        };
+      });
+
+      // ranking por vendido
+      huntersCalc.sort((a, b) => b.vendido - a.vendido);
+
+      setHunters(huntersCalc);
+      // 🔥 Meta geral automática = soma das metas individuais
+      const metaTotal = HUNTERS.reduce((acc, h) => acc + h.meta, 0);
+
+      setTotal({
+        vendas: totalVendas,
+        vendido: totalVendido,
+        meta: metaTotal, // automático
+        ticketMedio: totalVendas ? totalVendido / totalVendas : 0,
+      });
+    }
+
+    loadData();
+  }, []);
+
+  if (!total) return null;
+
+  return (
+    <div className="hunters-container">
+      {/* LATERAL */}
+      <div className="hunters-left">
+        <img src={huntersImg} alt="Hunter" />
+      </div>
+
+      <div className="hunters-right">
+        {/* HEADER */}
+        <div className="witcher-hero">
+          <div className="hero-title">
+            <span className="title-top">Geral</span>
+            <span className="title-bottom">Hunters</span>
+          </div>
+
+          <div className="hero-metrics">
+            <div className="metric orange">
+              <label>Vendas</label>
+              <strong>{total.vendas}</strong>
+            </div>
+
+            <div className="metric orange">
+              <label>Vendido</label>
+              <strong>{formatCurrency(total.vendido)}</strong>
+            </div>
+
+            <div className="metric white">
+              <label>Meta</label>
+              <strong>{formatCurrency(total.meta)}</strong>
+            </div>
+
+            <div className="metric white">
+              <label>Ticket</label>
+              <strong>{formatCurrency(total.ticketMedio)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* HUNTERS */}
+        <div className="hunters-row">
+          {hunters.map((h, index) => {
+            const photo = getHunterImage(h.nome, index);
+
+            // porcentagem para bater a meta
+            const pctNumber = (h.vendido / h.meta) * 100;
+            const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
+
+            return (
+              <div className="hunter-card" key={h.nome}>
+                <div className="hunter-left-side">
+                  {/* texto usa a mesma % do gauge */}
+                  <div className="hunter-percentage">
+                    {pctCapped.toFixed(0)}%
+                  </div>
+
+                  <div className="gauge-wrapper">
+                    <Gauge percent={pctCapped} />
+                    {photo && (
+                      <img src={photo} className="hunter-photo" alt={h.nome} />
+                    )}
+                  </div>
+
+                  <div className="hunter-name">
+                    {getRankEmoji(index)} {h.nome}
+                  </div>
+
+                  {getHunterBadge(h.nome) && (
+                    <img
+                      src={getHunterBadge(h.nome)}
+                      className="hunter-badge"
+                      alt={`${h.nome} badge`}
+                    />
+                  )}
+                </div>
+
+                <div className="hunter-right-side">
+                  <div className="card-metric">
+                    <label>Vendas</label>
+                    <span className="highlight">{h.vendas}</span>
+                  </div>
+
+                  <div className="card-metric">
+                    <label>Vendido</label>
+                    <span className="highlight">
+                      {formatCurrency(h.vendido)}
+                    </span>
+                  </div>
+
+                  <div className="card-metric">
+                    <label>Ticket</label>
+                    <span>{formatCurrency(h.ticketMedio)}</span>
+                  </div>
+
+                  <div className="card-metric">
+                    <label>Meta</label>
+                    <span>{formatCurrency(h.meta)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* GAUGE usando a mesma % do texto e meia-lua correta */
+function Gauge({ percent }) {
+  // garante 0–100
+  const pct = Math.min(Math.max(percent, 0), 100);
 
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
-  const dash = (pct / 100) * circumference;
+
+  // só metade do círculo está visível
+  const activeLength = circumference / 2;
+  const dash = (pct / 100) * activeLength;
 
   return (
     <div className="gauge">
@@ -77,6 +231,7 @@ function Gauge({ valor, meta }) {
           </linearGradient>
         </defs>
 
+        {/* trilho cinza */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
@@ -86,6 +241,7 @@ function Gauge({ valor, meta }) {
           strokeLinecap="round"
         />
 
+        {/* arco colorido */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
@@ -95,98 +251,6 @@ function Gauge({ valor, meta }) {
           strokeDasharray={`${dash} ${circumference}`}
         />
       </svg>
-    </div>
-  );
-}
-
-export default function Hunters() {
-  const { total, hunters } = huntersData;
-
-  return (
-    <div className="hunters-container">
-      {/* LATERAL ESQUERDA */}
-      <div className="hunters-left">
-        <img src={huntersImg} alt="Hunter" />
-      </div>
-
-      {/* ÁREA PRINCIPAL */}
-      <div className="hunters-right">
-        {/* HERO */}
-        <div className="witcher-hero">
-          <div className="hero-title">Geral dos Hunters</div>
-
-          <div className="hero-metrics">
-            <div className="metric">
-              <label>Vendas</label>
-              <strong>{total.vendas}</strong>
-            </div>
-            <div className="metric">
-              <label>Ticket Médio</label>
-              <strong>{formatCurrency(total.ticketMedio)}</strong>
-            </div>
-            <div className="metric">
-              <label>Vendido</label>
-              <strong>{formatCurrency(total.vendido)}</strong>
-            </div>
-            <div className="metric">
-              <label>Meta</label>
-              <strong>{formatCurrency(total.meta)}</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 HUNTERS */}
-        <div className="hunters-row">
-          {hunters.map((h) => {
-            const photo = getHunterImage(h.nome);
-
-            const pct = Math.min((h.vendido / h.meta) * 100, 100).toFixed(0);
-
-            return (
-              <div className="hunter-card" key={h.nome}>
-                {/* ESQUERDA: tudo empilhado */}
-                <div className="hunter-left-side">
-                  {/* PORCENTAGEM */}
-                  <div className="hunter-percentage">{pct}%</div>
-
-                  {/* GAUGE + FOTO */}
-                  <div className="gauge-wrapper">
-                    <Gauge valor={h.vendido} meta={h.meta} />
-                    {photo && (
-                      <img src={photo} className="hunter-photo" alt={h.nome} />
-                    )}
-                  </div>
-
-                  {/* NOME */}
-                  <div className="hunter-name">{h.nome}</div>
-                </div>
-
-                {/* DIREITA */}
-                <div className="hunter-right-side">
-                  <div className="card-metric">
-                    <label>Vendas</label>
-                    <span className="highlight">{h.vendas}</span>
-                  </div>
-                  <div className="card-metric">
-                    <label>Vendido</label>
-                    <span className="highlight">
-                      {formatCurrency(h.vendido)}
-                    </span>
-                  </div>
-                  <div className="card-metric">
-                    <label>Ticket Médio</label>
-                    <span>{formatCurrency(h.ticketMedio)}</span>
-                  </div>
-                  <div className="card-metric">
-                    <label>Meta</label>
-                    <span>{formatCurrency(h.meta)}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
