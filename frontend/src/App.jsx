@@ -53,7 +53,17 @@ function App() {
       {/* BOTÃO DE FULLSCREEN SEMPRE NO TOPO, NO CENTRO */}
       <FullscreenButton />
 
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          <div
+            style={{
+              width: "100vw",
+              height: "100vh",
+              background: "#000",
+            }}
+          ></div>
+        }
+      >
         <Routes>
           <Route path="/" element={<Navigate to="/hunters" replace />} />
           <Route path="/hunters" element={<Hunters />} />
