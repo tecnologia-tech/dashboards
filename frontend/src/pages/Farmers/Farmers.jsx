@@ -179,7 +179,7 @@ function formatCurrency(v) {
 
 /* CONFIG DOS FARMERS */
 const FARMERS = [
-  { label: "Choco", db: "Victor Biselli", meta: 100000 },
+  { label: "Tchoco", db: "Victor Biselli", meta: 100000 },
   { label: "Texugão", db: "Raul Cruz", meta: 50000 },
   { label: "Cleyton", db: "Cleyton Cruz", meta: 50000 },
   { label: "Andrés", db: "Andrés Apolionario", meta: 0 },
