@@ -18,6 +18,7 @@ import("./pages/Hunters/Hunters");
 import("./pages/Farmers/Farmers");
 import("./pages/LastDance/LastDance");
 import("./pages/BlackFriday/BlackFriday");
+import("./pages/Geral/Geral");
 
 /* ============================================================
    ROTAS COM LAZY
@@ -26,7 +27,7 @@ const Hunters = lazy(() => import("./pages/Hunters/Hunters"));
 const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
-
+const Geral = lazy(() => import("./pages/Geral/Geral"));
 /* ============================================================
    PRELOAD DE IMAGENS PRINCIPAIS
 ============================================================ */
@@ -54,7 +55,7 @@ function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rotas = ["/farmers", "/hunters"];
+  const rotas = ["/geral"];
 
   // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
   const TEMPO_MINUTOS = 3;
@@ -96,7 +97,7 @@ function App() {
           <Route path="/farmers" element={<Farmers />} />
           <Route path="/lastdance" element={<LastDance />} />
           <Route path="/blackfriday" element={<BlackFriday />} />
-
+          <Route path="/geral" element={<Geral />} />
           <Route path="*" element={<Navigate to="/hunters" replace />} />
         </Routes>
       </Suspense>
