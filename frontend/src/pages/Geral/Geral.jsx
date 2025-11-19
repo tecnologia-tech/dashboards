@@ -1,5 +1,5 @@
 import React from "react";
-import lateralImg from "../../assets/geral/geral.png"; // imagem lateral fixa
+import lateralImg from "../../assets/Geral/Geral.png"; // imagem lateral fixa
 
 export default function Geral() {
   return (
