@@ -1,11 +1,267 @@
 import React from "react";
-import "./Hunters.css";
 import huntersImg from "../../assets/Hunters/hunters.png";
 
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
 const hunterPhotos = import.meta.glob("../../assets/Hunters/*.png", {
   eager: true,
 });
+
+const ANIMATION_STYLES = `
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
+
+@keyframes fireSweep {
+  0% { transform: translateY(20%); opacity: 0.05; }
+  25% { transform: translateY(-10%); opacity: 0.14; }
+  50% { transform: translateY(-30%); opacity: 0.08; }
+  75% { transform: translateY(-60%); opacity: 0.12; }
+  100% { transform: translateY(-100%); opacity: 0.05; }
+}
+
+@keyframes ashesRise {
+  0% { background-position: 0 120%, 40% 130%, 80% 118%, 20% 126%; opacity: 0.07; }
+  100% { background-position: 0 -30%, 40% -18%, 80% -20%, 20% -22%; opacity: 0.1; }
+}
+
+@keyframes emberField {
+  0% { opacity: 0.04; transform: translateY(0); }
+  50% { opacity: 0.08; transform: translateY(-8px); }
+  100% { opacity: 0.04; transform: translateY(0); }
+}
+
+@keyframes goldenTextBreath {
+  0% { text-shadow: 0 0 6px rgba(230,192,104,0.26), 0 0 12px rgba(255,122,26,0.16); filter: saturate(1); }
+  50% { text-shadow: 0 0 10px rgba(230,192,104,0.36), 0 0 18px rgba(255,122,26,0.22); filter: saturate(1.07); }
+  100% { text-shadow: 0 0 7px rgba(230,192,104,0.3), 0 0 14px rgba(255,122,26,0.18); filter: saturate(1.02); }
+}
+
+@keyframes heatShimmer {
+  0% { transform: translate3d(0,0,0) skewX(0deg); filter: drop-shadow(0 0 1px rgba(255,122,26,0.2)); }
+  50% { transform: translate3d(0.4px,-0.2px,0) skewX(-0.6deg); filter: drop-shadow(0 0 2px rgba(230,192,104,0.25)); }
+  100% { transform: translate3d(0,0,0) skewX(0deg); filter: drop-shadow(0 0 1px rgba(255,122,26,0.18)); }
+}
+
+@keyframes heatWave {
+  0% { transform: translateY(0) scaleY(1); opacity: 0.03; }
+  45% { transform: translateY(-10px) scaleY(1.06); opacity: 0.06; }
+  100% { transform: translateY(0) scaleY(1); opacity: 0.034; }
+}
+
+@keyframes moltenSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 🔥 GLOW FULL HEIGHT NO CARD INTEIRO */
+.hunter-full-glow {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(230,192,104,0.20) 0%,
+      rgba(255,200,140,0.14) 25%,
+      rgba(255,122,26,0.10) 50%,
+      rgba(230,192,104,0.16) 75%,
+      rgba(255,200,140,0.12) 100%
+    );
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  filter: blur(28px);
+  animation: hunterFullGlowBreath 7s ease-in-out infinite;
+}
+
+@keyframes hunterFullGlowBreath {
+  0% { opacity: 0.35; transform: scaleY(0.96); }
+  50% { opacity: 0.75; transform: scaleY(1.04); }
+  100% { opacity: 0.35; transform: scaleY(0.96); }
+}
+
+/* 🔥 Glow interno da coluna esquerda */
+.hunter-column-glow {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(230,192,104,0.28) 0%,
+      rgba(255,200,140,0.18) 20%,
+      rgba(255,122,26,0.14) 40%,
+      rgba(230,192,104,0.22) 60%,
+      rgba(255,200,140,0.16) 80%,
+      transparent 100%
+    );
+  filter: blur(18px);
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  animation: hunterColumnBreath 9s ease-in-out infinite;
+}
+
+@keyframes hunterColumnBreath {
+  0% { opacity: 0.30; }
+  50% { opacity: 0.60; }
+  100% { opacity: 0.30; }
+}
+
+/* ✨ PARTÍCULAS SUBINDO NO GAUGE (HUNTERS) */
+.hunter-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hunter-particles span {
+  position: absolute;
+  bottom: -12px;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, rgba(255,200,140,0.95), rgba(255,122,26,0.45));
+  border-radius: 999px;
+  filter: blur(1px);
+  opacity: 0.7;
+  animation: hunterParticleRise 4s linear infinite;
+}
+
+@keyframes hunterParticleRise {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.4);
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-140px) translateX(10px) scale(1);
+    opacity: 0;
+  }
+}
+
+.dragonfire {
+  border-color: rgba(255, 181, 104, 0.85) !important;
+  box-shadow: 0 0 18px rgba(255, 138, 46, 0.65), 0 0 46px rgba(255, 196, 120, 0.32);
+  animation: dragonShake 8s ease-in-out infinite;
+}
+
+.dragonfire .dragonfire-layer {
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+.dragonfire .dragonfire-aura {
+  background: radial-gradient(circle at 50% 40%, rgba(255, 208, 142, 0.42), rgba(255, 72, 0, 0.05) 65%, transparent 80%);
+  filter: blur(6px);
+  animation: dragonAuraPulse 5s ease-in-out infinite;
+}
+
+.dragonfire .dragonfire-flames {
+  inset: -12% 2% -28% 2%;
+  background:
+    linear-gradient(180deg, rgba(255, 120, 30, 0.5), transparent 70%),
+    repeating-linear-gradient(180deg, rgba(255, 198, 119, 0.5) 0 12px, rgba(255, 67, 0, 0.15) 12px 24px);
+  opacity: 0.42;
+  clip-path: polygon(0% 35%, 100% 5%, 100% 100%, 0% 100%);
+  animation: dragonFlames 3.4s linear infinite;
+}
+
+.dragonfire .dragonfire-particles {
+  inset: 0;
+  background:
+    radial-gradient(3px 8px at 20% 90%, rgba(255, 255, 255, 0.45), transparent 70%),
+    radial-gradient(4px 10px at 60% 80%, rgba(255, 190, 120, 0.4), transparent 70%),
+    radial-gradient(3px 9px at 80% 95%, rgba(255, 110, 70, 0.35), transparent 70%);
+  animation: dragonParticles 4.6s ease-in-out infinite;
+}
+
+.dragonfire .dragonfire-breath {
+  inset: -40px 5% auto 5%;
+  height: 120px;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 230, 150, 0.45), transparent 68%);
+  animation: dragonBreath 6.6s ease-in-out infinite;
+}
+
+.dragonfire .dragonfire-ring {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border: 3px solid rgba(255, 208, 142, 0.4);
+  border-radius: 999px;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: blur(2px);
+  animation: dragonRing 5.4s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dragonfire-photo {
+  border-color: #ffc86c !important;
+  box-shadow: 0 0 18px rgba(255, 174, 84, 0.65) !important;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes dragonShake {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); }
+  25% { transform: translate3d(0.9px,-0.6px,0) scale(1.006); }
+  50% { transform: translate3d(-0.8px,0.6px,0) scale(1.004); }
+  75% { transform: translate3d(0.5px,0.4px,0) scale(1.006); }
+}
+
+@keyframes dragonFlames {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 -220px, 0 -360px; }
+}
+
+@keyframes dragonParticles {
+  0% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 0.75; transform: translateY(-12px); }
+  100% { opacity: 0.3; transform: translateY(0); }
+}
+
+@keyframes dragonBreath {
+  0%, 100% { opacity: 0.3; transform: translateY(0) scale(0.9); }
+  50% { opacity: 0.7; transform: translateY(-14px) scale(1.05); }
+}
+
+@keyframes dragonAuraPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 0.65; transform: scale(1.05); }
+}
+
+@keyframes dragonRing {
+  0% { opacity: 0.28; transform: translate(-50%, -50%) scale(0.8); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+}
+`;
+
+const HERO_BACKGROUND =
+  "radial-gradient(220% 140% at 10% 0%, rgba(255,122,26,0.06), transparent 55%), radial-gradient(220% 140% at 90% 30%, rgba(230,192,104,0.05), transparent 55%), linear-gradient(145deg, rgba(16,14,12,0.9), rgba(8,8,8,0.92))";
+
+const METRIC_BACKGROUND =
+  "linear-gradient(135deg, rgba(28,26,24,0.92), rgba(18,18,18,0.9)), radial-gradient(120% 120% at 20% 10%, rgba(255,122,26,0.06), transparent 50%), radial-gradient(120% 120% at 80% 80%, rgba(230,192,104,0.05), transparent 55%)";
+const LEFT_BEFORE_BACKGROUND =
+  "radial-gradient(90% 80% at 0% 50%, rgba(255,122,26,0.18), rgba(184,29,19,0.12), transparent 65%)";
+
+const LEFT_AFTER_BACKGROUND =
+  "linear-gradient(180deg, transparent 0%, rgba(255,122,26,0.07) 25%, rgba(184,29,19,0.08) 45%, transparent 70%)";
+
+const CARD_BACKGROUND =
+  "linear-gradient(145deg, rgba(20,18,16,0.92), rgba(10,10,10,0.9)), radial-gradient(120% 130% at 18% 10%, rgba(255,122,26,0.06), transparent 48%), radial-gradient(120% 140% at 80% 80%, rgba(230,192,104,0.05), transparent 55%), linear-gradient(180deg, rgba(16,16,16,0.55), rgba(10,10,10,0.4))";
+
+const CARD_GLOW_BACKGROUND =
+  "radial-gradient(120% 90% at 50% 6%, rgba(255,122,26,0.08), rgba(184,29,19,0.05), transparent 60%), conic-gradient(from 0deg, rgba(255,189,120,0.08), rgba(255,122,26,0.04), rgba(230,192,104,0.12), rgba(255,189,120,0.08))";
+
+const CARD_RUNE_BACKGROUND =
+  "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.13), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,122,26,0.12), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.1), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,122,26,0.1), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.06) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.04), transparent 65%)";
+
+const RIGHT_SPARKS_BACKGROUND =
+  "radial-gradient(4px 18px at 20% 96%, rgba(230,192,104,0.08), transparent 60%), radial-gradient(5px 20px at 55% 99%, rgba(255,122,26,0.07), transparent 55%), radial-gradient(4px 18px at 85% 97%, rgba(217,217,217,0.06), transparent 60%), radial-gradient(3px 16px at 35% 95%, rgba(255,122,26,0.06), transparent 55%)";
+
+const RIGHT_EMBER_BACKGROUND =
+  "radial-gradient(4px 20px at 18% 105%, rgba(230,192,104,0.07), transparent 65%), radial-gradient(5px 22px at 64% 110%, rgba(255,122,26,0.06), transparent 62%), radial-gradient(4px 20px at 86% 108%, rgba(217,217,217,0.05), transparent 60%), radial-gradient(5px 24px at 42% 102%, rgba(255,122,26,0.05), transparent 60%)";
+
+const BADGE_CLIP_PATH =
+  "polygon(50% 0%, 95% 8%, 100% 22%, 100% 78%, 95% 92%, 50% 100%, 5% 92%, 0 78%, 0 22%, 5% 8%)";
 
 function getRankEmoji(index) {
   if (index === 0) return "🥇";
@@ -26,15 +282,29 @@ function getHunterBadge(name) {
 }
 
 function formatCurrency(v) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const value = Number(v) || 0;
+
+  const format = (num, suffix) => {
+    let n = num.toFixed(1);
+    if (n.endsWith(".0")) n = n.slice(0, -2);
+    return `R$ ${n}${suffix}`;
+  };
+
+  if (value >= 1_000_000_000) return format(value / 1_000_000_000, "B");
+  if (value >= 1_000_000) return format(value / 1_000_000, "M");
+  if (value >= 1_000) return format(value / 1_000, "K");
+
+  let n = value.toFixed(1);
+  if (n.endsWith(".0")) n = n.slice(0, -2);
+  return `R$ ${n}`;
 }
 
-/* CONFIG DOS HUNTERS – ajuste meta/nomes se precisar */
+/* CONFIG DOS HUNTERS */
 const HUNTERS = [
-  { label: "Monique", db: "Monique Moreira", meta: 175000 },
-  { label: "Fernando", db: "Fernando Finatto", meta: 175000 },
-  { label: "Thiago", db: "Thiago Cardoso", meta: 175000 },
-  { label: "Alan", db: "Alan Esteves", meta: 175000 },
+  { label: "Monique", db: "Monique Moreira", meta: 200000 },
+  { label: "Fernando", db: "Fernando Finatto", meta: 200000 },
+  { label: "Thiago", db: "Thiago Cardoso", meta: 200000 },
+  { label: "Alan", db: "Alan Esteves", meta: 44000 },
 ];
 
 export default function Hunters() {
@@ -70,7 +340,6 @@ export default function Hunters() {
 
         const vendas = rows.length;
         const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
-        const ticketMedio = vendas > 0 ? vendido / vendas : 0;
 
         totalVendas += vendas;
         totalVendido += vendido;
@@ -79,7 +348,6 @@ export default function Hunters() {
           nome: h.label,
           vendas,
           vendido,
-          ticketMedio,
           meta: h.meta,
         };
       });
@@ -94,7 +362,6 @@ export default function Hunters() {
         vendas: totalVendas,
         vendido: totalVendido,
         meta: metaTotal,
-        ticketMedio: totalVendas ? totalVendido / totalVendas : 0,
       });
     }
 
@@ -104,119 +371,338 @@ export default function Hunters() {
   if (!total) return null;
 
   return (
-    <div className="hunters-container">
-      {/* LATERAL */}
-      <div className="hunters-left">
-        <img src={huntersImg} alt="Hunters" />
-      </div>
+    <>
+      <style>{ANIMATION_STYLES}</style>
 
-      <div className="hunters-right">
-        {/* HEADER */}
-        <div className="witcher-hero">
-          <div className="hero-title">
-            <span className="title-top">Geral</span>
-            <span className="title-bottom">Hunter</span>
-          </div>
+      <div className="flex h-full w-full overflow-hidden bg-black font-['Cinzel'] text-[#f5e7c8]">
+        {/* LATERAL */}
+        <div className="relative flex w-[220px] min-w-[220px] items-center justify-center overflow-hidden bg-black">
+          <img
+            src={huntersImg}
+            alt="Hunters"
+            className="h-full w-full object-cover"
+            style={{ filter: "brightness(0.95) contrast(1.02)" }}
+          />
 
-          <div className="hero-metrics">
-            <div className="metric orange">
-              <label>Vendas</label>
-              <strong>{total.vendas}</strong>
-            </div>
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              inset: "-10% 30% 10% -20%",
+              background: LEFT_BEFORE_BACKGROUND,
+              mixBlendMode: "screen",
+              opacity: 0.32,
+              filter: "blur(20px)",
+              animation: "fireSweep 20s ease-in-out infinite",
+            }}
+          />
 
-            <div className="metric orange">
-              <label>Vendido</label>
-              <strong>{formatCurrency(total.vendido)}</strong>
-            </div>
-
-            <div className="metric white">
-              <label>Meta</label>
-              <strong>{formatCurrency(total.meta)}</strong>
-            </div>
-
-            <div className="metric white">
-              <label>Ticket</label>
-              <strong>{formatCurrency(total.ticketMedio)}</strong>
-            </div>
-          </div>
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: LEFT_AFTER_BACKGROUND,
+              mixBlendMode: "screen",
+              opacity: 0.14,
+            }}
+          />
         </div>
 
-        {/* HUNTERS */}
-        <div className="hunters-row">
-          {hunters.map((h, index) => {
-            const photo = getHunterImage(h.nome, index);
-            const pctNumber = h.meta > 0 ? (h.vendido / h.meta) * 100 : 0;
-            const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
-            const pctLabel = pctCapped.toFixed(0);
+        {/* CONTEÚDO PRINCIPAL */}
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-visible p-1.5 text-[#fdf3da]">
+          {/* HEADER */}
+          <div
+            className="relative z-10 mb-2 flex items-center justify-center rounded-[10px] border-2 border-[rgba(230,192,104,0.25)] px-4 py-4"
+            style={{
+              backgroundImage: HERO_BACKGROUND,
+              backgroundSize: "140% 140%",
+            }}
+          >
+            <div className="flex w-full items-stretch gap-6 flex-nowrap overflow-hidden">
+              {/* TÍTULO GERAL HUNTERS */}
+              <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden text-center text-[26px] leading-tight text-[#e6c068] animate-[goldenTextBreath_5.5s_ease-in-out_infinite_alternate,heatShimmer_16s_ease-in-out_infinite]">
+                <span className="text-[65px] font-bold leading-none">
+                  Geral
+                </span>
+                <span className="text-[60px] font-bold leading-none">
+                  Hunters
+                </span>
 
-            return (
-              <div className="hunter-card" key={h.nome} data-pct={pctLabel}>
-                <div className="hunter-left-side">
-                  <div className="hunter-percentage">{pctLabel}%</div>
+                <span
+                  className="pointer-events-none absolute top-0 left-[-120%] h-full w-[70%]"
+                  style={{
+                    background:
+                      "linear-gradient(120deg, transparent 0%, rgba(230,192,104,0.04) 30%, rgba(255,122,26,0.1) 50%, rgba(230,192,104,0.05) 70%, transparent 100%)",
+                    transform: "skewX(-12deg)",
+                    opacity: 0.08,
+                    animation: "textShimmer 6s linear infinite",
+                  }}
+                />
+              </div>
 
-                  <div className="gauge-wrapper">
-                    <Gauge percent={pctCapped} />
+              {/* 4 CARDS DO HEADER */}
+              {["Vendas", "Vendido", "Percentual", "Meta"].map((label, idx) => {
+                const value = [
+                  total.vendas,
+                  formatCurrency(total.vendido),
+                  `${Math.round((total.vendido / total.meta) * 100)}%`,
+                  formatCurrency(total.meta),
+                ][idx];
 
-                    <div className="gauge-fire-clip">
-                      {Array.from({ length: 40 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="fire-particle"
-                          style={{
-                            "--fp-size": "8px",
-                            "--fp-speed": `${10 + (i % 6)}s`,
-                          }}
-                        />
-                      ))}
+                const highlight = idx < 2;
+
+                return (
+                  <div
+                    key={label}
+                    className="flex-1 flex flex-col items-center justify-center text-center min-w-[150px] gap-[4px] rounded-lg border border-[rgba(230,192,104,0.25)] px-4 py-2"
+                    style={{
+                      backgroundImage: METRIC_BACKGROUND,
+                      backgroundSize: "220% 220%",
+                      backgroundBlendMode: "overlay, normal",
+                    }}
+                  >
+                    <label className="text-[16px] font-semibold uppercase tracking-[0.06em] text-[#e6c068]">
+                      {label}
+                    </label>
+
+                    <strong
+                      className="font-extrabold"
+                      style={{
+                        fontSize: "50px",
+                        color: highlight ? "#ff7a1a" : "#ffffff",
+                        textShadow: highlight
+                          ? "0 0 10px rgba(255,122,26,0.45)"
+                          : "0 0 6px rgba(230,224,210,0.3)",
+                        animation: "heatShimmer 16s ease-in-out infinite",
+                      }}
+                    >
+                      {value}
+                    </strong>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* GRID DE HUNTERS */}
+          <div className="relative z-10 grid flex-1 grid-cols-2 gap-2">
+            {hunters.map((h, index) => {
+              const photo = getHunterImage(h.nome, index);
+              const pctNumber = h.meta > 0 ? (h.vendido / h.meta) * 100 : 0;
+              const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
+              const pctLabel = pctCapped.toFixed(0);
+
+              return (
+                <div
+                  key={h.nome}
+                  className={`relative flex gap-4 overflow-visible rounded-2xl border-2 border-[rgba(230,192,104,0.35)] p-4 ${
+                    pctCapped === 100 ? "dragonfire" : ""
+                  }`}
+                  style={{
+                    backgroundImage: CARD_BACKGROUND,
+                    backgroundSize: "160% 160%",
+                    backgroundBlendMode: "overlay, normal",
+                  }}
+                >
+                  {pctCapped === 100 && (
+                    <>
+                      <span className="dragonfire-layer dragonfire-aura" />
+                      <span className="dragonfire-layer dragonfire-flames" />
+                      <span className="dragonfire-layer dragonfire-particles" />
+                      <span className="dragonfire-layer dragonfire-breath" />
+                      <span className="dragonfire-ring" />
+                    </>
+                  )}
+                  {/* glow full card */}
+                  <div className="pointer-events-none absolute inset-0 hunter-full-glow" />
+
+                  {/* COLUNA ESQUERDA */}
+                  <div className="relative z-10 flex w-[260px] flex-col items-center gap-[19px]">
+                    {/* trilha interna */}
+                    <div className="absolute inset-0 pointer-events-none hunter-column-glow" />
+
+                    {/* porcentagem */}
+                    <div
+                      className="relative mb-3 text-[33px] font-bold text-[#e6c068]"
+                      style={{
+                        textShadow: "0 0 6px rgba(230,192,104,0.35)",
+                        animation:
+                          "goldenTextBreath 5.5s ease-in-out infinite alternate, heatShimmer 12s ease-in-out infinite",
+                      }}
+                    >
+                      {pctLabel}%
                     </div>
 
-                    {photo && (
-                      <img src={photo} className="hunter-photo" alt={h.nome} />
+                    {/* gauge + partículas + foto */}
+                    <div
+                      className="relative flex h-[150px] w-[220px] items-start justify-center"
+                      style={{
+                        background:
+                          "radial-gradient(circle at 50% 70%, rgba(230,192,104,0.14), transparent 75%)",
+                      }}
+                    >
+                      {/* partículas subindo */}
+                      <div className="hunter-particles">
+                        {Array.from({ length: 14 }).map((_, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              left: `${10 + ((i * 6.3) % 80)}%`,
+                              animationDelay: `${i * 0.35}s`,
+                              animationDuration: `${3.4 + (i % 5) * 0.25}s`,
+                              width: `${4 + (i % 3)}px`,
+                              height: `${4 + (i % 3)}px`,
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      <Gauge percent={pctCapped} />
+
+                      {photo && (
+                        <img
+                          src={photo}
+                          className={`absolute left-1/2 top-[40%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(230,192,104,0.9)] object-cover shadow-[0_0_6px_rgba(230,192,104,0.35)] ${
+                            pctCapped === 100 ? "dragonfire-photo" : ""
+                          }`}
+                          alt={h.nome}
+                        />
+                      )}
+                    </div>
+
+                    {/* nome */}
+                    <div
+                      className="relative mt-[-30px] inline-flex items-center justify-center gap-[6px] text-center text-[36px] font-bold text-[#e6c068]"
+                      style={{
+                        textShadow: "0 0 6px rgba(230,192,104,0.35)",
+                        animation:
+                          "goldenTextBreath 5.5s ease-in-out infinite alternate, heatShimmer 14s.ease-in-out infinite",
+                      }}
+                    >
+                      <span
+                        className="mr-1"
+                        style={{
+                          filter: "drop-shadow(0 0 4px rgba(230,192,104,0.4))",
+                        }}
+                      >
+                        {getRankEmoji(index)}
+                      </span>
+                      {h.nome}
+                    </div>
+
+                    {/* badge */}
+                    {getHunterBadge(h.nome) && (
+                      <div className="relative flex items-center justify-center">
+                        <img
+                          src={getHunterBadge(h.nome)}
+                          className="mt-[-6px] h-[110px] w-[110px] object-cover"
+                          style={{
+                            clipPath: BADGE_CLIP_PATH,
+                            border: "3px solid #e6c068",
+                            boxShadow: `
+                              0 0 12px rgba(230,192,104,0.45),
+                              0 0 22px rgba(255,200,140,0.25),
+                              inset 0 0 12px rgba(230,192,104,0.40)
+                            `,
+                            animation:
+                              "goldenTextBreath 6s ease-in-out infinite alternate",
+                            filter: "brightness(1.05) saturate(1.12)",
+                          }}
+                          alt={`${h.nome} badge`}
+                        />
+                        <span
+                          className="pointer-events-none absolute inset-0"
+                          style={{
+                            clipPath: BADGE_CLIP_PATH,
+                            background:
+                              "radial-gradient(circle at 50% 50%, rgba(230,192,104,0.20), transparent 70%)",
+                            mixBlendMode: "screen",
+                            filter: "blur(14px)",
+                          }}
+                        />
+                      </div>
                     )}
                   </div>
 
-                  <div className="hunter-name">
-                    {getRankEmoji(index)} {h.nome}
-                  </div>
+                  {/* COLUNA DIREITA */}
+                  <div className="relative z-10 flex flex-1 flex-col gap-[16px]">
+                    {["Vendas", "Vendido", "Meta"].map((label, idx) => {
+                      const values = [
+                        h.vendas,
+                        formatCurrency(h.vendido),
+                        formatCurrency(h.meta),
+                      ];
+                      const highlighted = idx < 2;
 
-                  {getHunterBadge(h.nome) && (
-                    <img
-                      src={getHunterBadge(h.nome)}
-                      className="hunter-badge"
-                      alt={`${h.nome} badge`}
-                    />
-                  )}
+                      return (
+                        <div
+                          key={label}
+                          className="flex flex-col min-h-[60px] items-center justify-center text-center gap-[2px] rounded-[10px] border border-[rgba(230,192,104,0.35)] px-3 py-1.5"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, rgba(28,26,24,0.92), rgba(18,18,18,0.9))",
+                            backgroundImage: METRIC_BACKGROUND,
+                            backgroundBlendMode: "overlay, normal",
+                          }}
+                        >
+                          <label className="text-[18px] font-semibold tracking-wide text-[#e6c068]">
+                            {label}
+                          </label>
+
+                          <span
+                            className="whitespace-nowrap font-extrabold"
+                            style={{
+                              fontSize: "54px", // <<< EXATAMENTE COMO VOCÊ PEDIU
+                              color:
+                                label === "Meta"
+                                  ? "#ffffff"
+                                  : highlighted
+                                  ? "#ff7a1a"
+                                  : "#e6c068",
+                              textShadow:
+                                label === "Meta"
+                                  ? "0 0 6px rgba(230,224,210,0.3)"
+                                  : highlighted
+                                  ? "0 0 10px rgba(255,122,26,0.4)"
+                                  : "0 0 6px rgba(230,192,104,0.25)",
+                              animation:
+                                "heatShimmer 18s ease-in-out infinite, thermalWaver 4.2s ease-in-out infinite",
+                            }}
+                          >
+                            {values[idx]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+              );
+            })}
+          </div>
 
-                <div className="hunter-right-side">
-                  <div className="card-metric">
-                    <label>Vendas</label>
-                    <span className="highlight">{h.vendas}</span>
-                  </div>
-
-                  <div className="card-metric">
-                    <label>Vendido</label>
-                    <span className="highlight">
-                      {formatCurrency(h.vendido)}
-                    </span>
-                  </div>
-
-                  <div className="card-metric">
-                    <label>Ticket</label>
-                    <span>{formatCurrency(h.ticketMedio)}</span>
-                  </div>
-
-                  <div className="card-metric">
-                    <label>Meta</label>
-                    <span>{formatCurrency(h.meta)}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {/* overlays da direita */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: RIGHT_SPARKS_BACKGROUND,
+              opacity: 0.1,
+              mixBlendMode: "screen",
+              animation: "ashesRise 26s linear infinite",
+              zIndex: 0,
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: RIGHT_EMBER_BACKGROUND,
+              opacity: 0.06,
+              mixBlendMode: "screen",
+              filter: "blur(1px)",
+              animation: "emberField 30s linear infinite",
+              zIndex: 0,
+            }}
+          />
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -231,17 +717,23 @@ function Gauge({ percent }) {
   const dash = (pct / 100) * activeLength;
 
   return (
-    <div className="gauge">
+    <div
+      className="relative mt-[-50px] h-[140px] w-[220px]"
+      style={{
+        animation:
+          "gaugeBreath 18s.ease-in-out infinite, gaugeTremor 9s ease-in-out infinite, heatRipple 16s ease-in-out infinite",
+      }}
+    >
       <svg viewBox="0 0 200 120" preserveAspectRatio="none">
         <defs>
           <linearGradient id="gaugeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="var(--blood)" />
-            <stop offset="50%" stopColor="var(--fire)" />
-            <stop offset="100%" stopColor="var(--quen)" />
+            <stop offset="0%" stopColor="#b81d13" />
+            <stop offset="50%" stopColor="#ff7a1a" />
+            <stop offset="100%" stopColor="#e6c068" />
           </linearGradient>
         </defs>
 
-        {/* TRILHO */}
+        {/* trilho */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
@@ -251,11 +743,12 @@ function Gauge({ percent }) {
           strokeLinecap="round"
         />
 
-        {/* ATIVO */}
+        {/* ativo */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
           stroke="url(#gaugeGlow)"
+          style={{ filter: "drop-shadow(0 0 10px rgba(230,192,104,0.45))" }}
           strokeWidth="14"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circumference}`}
