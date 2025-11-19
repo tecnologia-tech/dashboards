@@ -38,11 +38,7 @@ function usePreloadImages() {
       img.src = src;
     };
 
-    const images = [
-      "/src/assets/hunters.png",
-      "/src/assets/Farmers/Farmers.png",
-      // adicione mais imagens grandes se quiser
-    ];
+    const images = ["/src/assets/Geral/Geral.png"];
 
     images.forEach(preload);
   }, []);
