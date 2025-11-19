@@ -1,8 +1,22 @@
 import { useEffect, useState, useRef } from "react";
-import styles from "./BlackFriday.module.css";
 import logoblackfriday from "../../assets/Black/black.png";
 
 const META_MENSAL = 1300000;
+const ANIMATION_STYLES = `
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
+`;
+const ROOT_BACKGROUND =
+  "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 55%), #000000";
+const BLOCK_BACKGROUND = ROOT_BACKGROUND;
+const HERO_ARROW_SHADOW =
+  "0 0 12px rgba(255, 227, 90, 0.55), 0 0 22px rgba(255, 227, 90, 0.35)";
+const HERO_VALUE_SHADOW =
+  "0 0 10px rgba(255, 38, 38, 0.55), 0 0 22px rgba(255, 38, 38, 0.35)";
+const COUNTER_LABEL_SHADOW = "0 0 10px rgba(255, 227, 90, 0.55)";
+const COUNTER_VALUE_SHADOW = "0 0 12px rgba(255, 38, 38, 0.55)";
+const PROJECTION_LABEL_SHADOW = "0 0 10px rgba(255, 227, 90, 0.55)";
+const PROJECTION_VALUE_SHADOW = "0 0 12px rgba(255, 38, 38, 0.55)";
+const TABLE_HEADER_BG = "#0f0f0f";
 
 export default function BlackFriday() {
   const [dados, setDados] = useState([]);
@@ -196,81 +210,177 @@ export default function BlackFriday() {
   );
 
   return (
-    <div className={styles.root}>
-      {/* BLOCO 1 */}
-      <div className={styles.bloco1}>
-        <img src={logoblackfriday} className={styles.headerImage} />
-      </div>
+    <>
+      <style>{ANIMATION_STYLES}</style>
 
-      {/* BLOCO 2 */}
-      <div className={styles.bloco2}>
-        {mostrarVideo ? (
-          <video
-            className={styles.videoLoop}
-            src="/videos/comemora.mp4"
-            autoPlay
-            loop
-            playsInline
+      <div
+        className="flex h-screen w-full flex-col overflow-hidden text-white"
+        style={{
+          backgroundImage: ROOT_BACKGROUND,
+          fontFamily: "'Baloo 2', sans-serif",
+          padding: "0 1.5vw 1vh 1.5vw",
+          gap: "1.8vh",
+        }}
+      >
+        {/* BLOCO 1 */}
+        <div className="h-[16vh] w-full overflow-hidden rounded-b-[26px] border border-dashed border-[#0a0a0a] border-t-0 shadow-[0_0_18px_rgba(255,38,38,0.35)]">
+          <img
+            src={logoblackfriday}
+            className="h-full w-full object-cover"
+            alt="Black Friday"
           />
-        ) : (
-          <div className={styles.heroRow}>
-            <div className={styles.heroOrbit}>
-              <span className={styles.heroArrow}>↓</span>
+        </div>
+
+        {/* BLOCO 2 */}
+        <div
+          className="relative flex h-[40vh] flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
+          style={{ backgroundImage: BLOCK_BACKGROUND }}
+        >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
+          {mostrarVideo ? (
+            <video
+              className="relative z-[1] h-full w-full rounded-[28px] object-cover"
+              src="/videos/comemora.mp4"
+              autoPlay
+              loop
+              playsInline
+            />
+          ) : (
+            <div className="relative z-[1] flex items-center gap-[2vw]">
+              <div className="flex h-[12rem] w-[12rem] items-center justify-center rounded-full border-[3px] border-dashed border-[rgba(255,230,90,0.4)] bg-[rgba(255,255,255,0.05)]">
+                <span
+                  className="text-[10rem] leading-none text-[#ffe35a]"
+                  style={{ textShadow: HERO_ARROW_SHADOW }}
+                >
+                  ↓
+                </span>
+              </div>
+              <div
+                className="text-[12rem] font-black leading-none text-[#ff2626]"
+                style={{ textShadow: HERO_VALUE_SHADOW }}
+              >
+                {formatarValor(valorDiario)}
+              </div>
             </div>
-            <div className={styles.heroValue}>{formatarValor(valorDiario)}</div>
+          )}
+        </div>
+
+        {/* BLOCO 3 */}
+        <div
+          className="relative flex h-[21vh] flex-col justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
+          style={{ backgroundImage: BLOCK_BACKGROUND }}
+        >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
+          <div className="relative z-[1] flex flex-col items-center gap-[2vh]">
+            <div className="flex items-center justify-center gap-[1vw]">
+              <span
+                className="text-[2.2rem] font-bold text-[#ffe35a]"
+                style={{ textShadow: COUNTER_LABEL_SHADOW }}
+              >
+                Contagem total:
+              </span>
+              <span
+                className="text-[4.5rem] font-black text-[#ff2626]"
+                style={{ textShadow: COUNTER_VALUE_SHADOW }}
+              >
+                {formatarValor(totalVendido)}
+              </span>
+            </div>
+
+            <div className="relative h-[26px] w-[55%] rounded-full border-[3px] border-[#ffe35a] bg-[rgba(255,227,90,0.15)] shadow-[0_0_14px_rgba(255,227,90,0.35)]">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${metaProgress * 100}%`,
+                  background: "linear-gradient(90deg, #ffe35a, #fff2a0)",
+                  transition: "width 0.6s ease-out",
+                }}
+              />
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* BLOCO 3 */}
-      <div className={styles.bloco3}>
-        <div className={styles.counterRow}>
-          <span className={styles.counterLabel}>Contagem total:</span>
-          <span className={styles.counterValueBig}>
-            {formatarValor(totalVendido)}
-          </span>
         </div>
 
-        <div className={styles.progressTrack}>
+        {/* BLOCO 4 + BLOCO 5 */}
+        <div className="flex h-[23vh] gap-[1.5vw]">
           <div
-            className={styles.progressFill}
-            style={{ width: `${metaProgress * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* BLOCO 4 + BLOCO 5 */}
-      <div className={styles.rowFlex}>
-        <div className={styles.bloco4}>
-          <table className={styles.tabela}>
-            <thead>
-              <tr>
-                <th>Lead</th>
-                <th>Empresa</th>
-                <th>Vendedor</th>
-                <th>Pipeline</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dados.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.lead_id}</td>
-                  <td>{item.empresa}</td>
-                  <td>{item.assigned}</td>
-                  <td>{item.pipeline}</td>
-                  <td>{formatarValor(item.valor)}</td>
+            className="relative flex flex-[2] overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
+            style={{ backgroundImage: BLOCK_BACKGROUND }}
+          >
+            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
+            <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
+              <thead>
+                <tr>
+                  {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
+                    (label, idx) => (
+                      <th
+                        key={label}
+                        className={`px-[1vw] py-[0.8vh] text-[1.5rem] font-bold ${
+                          idx === 4 ? "text-right" : ""
+                        }`}
+                        style={{
+                          backgroundColor: TABLE_HEADER_BG,
+                          color: "#ff2626",
+                          textShadow: "0 0 10px rgba(255,38,38,0.45)",
+                        }}
+                      >
+                        {label}
+                      </th>
+                    )
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="text-[1.2rem]">
+                {dados.map((item, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      backgroundColor:
+                        i % 2 === 0
+                          ? "rgba(255,255,255,0.03)"
+                          : "rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
+                      {item.lead_id}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
+                      {item.empresa}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
+                      {item.assigned}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
+                      {item.pipeline}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-right text-[#fff2a0]">
+                      {formatarValor(item.valor)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <div className={styles.bloco5}>
-          <div className={styles.projecaoTitulo}>Projeção Geral</div>
-          <div className={styles.projecaoValor}>{formatarValor(somaOpen)}</div>
+          <div
+            className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] text-center shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
+            style={{ backgroundImage: BLOCK_BACKGROUND }}
+          >
+            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
+            <div
+              className="relative z-[1] text-[2rem] text-[#ffe35a]"
+              style={{ textShadow: PROJECTION_LABEL_SHADOW }}
+            >
+              Projeção Geral
+            </div>
+            <div
+              className="relative z-[1] text-[3.8rem] font-black text-[#ff2626]"
+              style={{ textShadow: PROJECTION_VALUE_SHADOW }}
+            >
+              {formatarValor(somaOpen)}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -132,106 +132,6 @@ const ANIMATION_STYLES = `
   }
 }
 
-.dragonfire {
-  border-color: rgba(255, 181, 104, 0.85) !important;
-  box-shadow: 0 0 18px rgba(255, 138, 46, 0.65), 0 0 46px rgba(255, 196, 120, 0.32);
-  animation: dragonShake 8s ease-in-out infinite;
-}
-
-.dragonfire .dragonfire-layer {
-  position: absolute;
-  inset: -6px;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  z-index: 0;
-}
-
-.dragonfire .dragonfire-aura {
-  background: radial-gradient(circle at 50% 40%, rgba(255, 208, 142, 0.42), rgba(255, 72, 0, 0.05) 65%, transparent 80%);
-  filter: blur(6px);
-  animation: dragonAuraPulse 5s ease-in-out infinite;
-}
-
-.dragonfire .dragonfire-flames {
-  inset: -12% 2% -28% 2%;
-  background:
-    linear-gradient(180deg, rgba(255, 120, 30, 0.5), transparent 70%),
-    repeating-linear-gradient(180deg, rgba(255, 198, 119, 0.5) 0 12px, rgba(255, 67, 0, 0.15) 12px 24px);
-  opacity: 0.42;
-  clip-path: polygon(0% 35%, 100% 5%, 100% 100%, 0% 100%);
-  animation: dragonFlames 3.4s linear infinite;
-}
-
-.dragonfire .dragonfire-particles {
-  inset: 0;
-  background:
-    radial-gradient(3px 8px at 20% 90%, rgba(255, 255, 255, 0.45), transparent 70%),
-    radial-gradient(4px 10px at 60% 80%, rgba(255, 190, 120, 0.4), transparent 70%),
-    radial-gradient(3px 9px at 80% 95%, rgba(255, 110, 70, 0.35), transparent 70%);
-  animation: dragonParticles 4.6s ease-in-out infinite;
-}
-
-.dragonfire .dragonfire-breath {
-  inset: -40px 5% auto 5%;
-  height: 120px;
-  background: radial-gradient(circle at 50% 0%, rgba(255, 230, 150, 0.45), transparent 68%);
-  animation: dragonBreath 6.6s ease-in-out infinite;
-}
-
-.dragonfire .dragonfire-ring {
-  position: absolute;
-  width: 220px;
-  height: 220px;
-  border: 3px solid rgba(255, 208, 142, 0.4);
-  border-radius: 999px;
-  top: 20%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  filter: blur(2px);
-  animation: dragonRing 5.4s linear infinite;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.dragonfire-photo {
-  border-color: #ffc86c !important;
-  box-shadow: 0 0 18px rgba(255, 174, 84, 0.65) !important;
-  position: relative;
-  z-index: 2;
-}
-
-@keyframes dragonShake {
-  0%, 100% { transform: translate3d(0,0,0) scale(1); }
-  25% { transform: translate3d(0.9px,-0.6px,0) scale(1.006); }
-  50% { transform: translate3d(-0.8px,0.6px,0) scale(1.004); }
-  75% { transform: translate3d(0.5px,0.4px,0) scale(1.006); }
-}
-
-@keyframes dragonFlames {
-  0% { background-position: 0 0, 0 0; }
-  100% { background-position: 0 -220px, 0 -360px; }
-}
-
-@keyframes dragonParticles {
-  0% { opacity: 0.3; transform: translateY(0); }
-  50% { opacity: 0.75; transform: translateY(-12px); }
-  100% { opacity: 0.3; transform: translateY(0); }
-}
-
-@keyframes dragonBreath {
-  0%, 100% { opacity: 0.3; transform: translateY(0) scale(0.9); }
-  50% { opacity: 0.7; transform: translateY(-14px) scale(1.05); }
-}
-
-@keyframes dragonAuraPulse {
-  0%, 100% { opacity: 0.35; transform: scale(0.92); }
-  50% { opacity: 0.65; transform: scale(1.05); }
-}
-
-@keyframes dragonRing {
-  0% { opacity: 0.28; transform: translate(-50%, -50%) scale(0.8); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
-}
 `;
 
 const HERO_BACKGROUND =
@@ -493,24 +393,13 @@ export default function Hunters() {
               return (
                 <div
                   key={h.nome}
-                  className={`relative flex gap-4 overflow-visible rounded-2xl border-2 border-[rgba(230,192,104,0.35)] p-4 ${
-                    pctCapped === 100 ? "dragonfire" : ""
-                  }`}
+                  className="relative flex gap-4 overflow-visible rounded-2xl border-2 border-[rgba(230,192,104,0.35)] p-4"
                   style={{
                     backgroundImage: CARD_BACKGROUND,
                     backgroundSize: "160% 160%",
                     backgroundBlendMode: "overlay, normal",
                   }}
                 >
-                  {pctCapped === 100 && (
-                    <>
-                      <span className="dragonfire-layer dragonfire-aura" />
-                      <span className="dragonfire-layer dragonfire-flames" />
-                      <span className="dragonfire-layer dragonfire-particles" />
-                      <span className="dragonfire-layer dragonfire-breath" />
-                      <span className="dragonfire-ring" />
-                    </>
-                  )}
                   {/* glow full card */}
                   <div className="pointer-events-none absolute inset-0 hunter-full-glow" />
 
@@ -560,9 +449,7 @@ export default function Hunters() {
                       {photo && (
                         <img
                           src={photo}
-                          className={`absolute left-1/2 top-[40%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(230,192,104,0.9)] object-cover shadow-[0_0_6px_rgba(230,192,104,0.35)] ${
-                            pctCapped === 100 ? "dragonfire-photo" : ""
-                          }`}
+                          className="absolute left-1/2 top-[40%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(230,192,104,0.9)] object-cover shadow-[0_0_6px_rgba(230,192,104,0.35)]"
                           alt={h.nome}
                         />
                       )}

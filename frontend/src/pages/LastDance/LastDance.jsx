@@ -1,8 +1,27 @@
 import { useEffect, useState, useRef } from "react";
-import styles from "./LastDance.module.css";
 import logolastdance from "../../assets/LastDance/lastdance.png";
 
 const META_MENSAL = 1300000;
+const ANIMATION_STYLES = `
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
+
+@keyframes progressShimmer {
+  0% { background-position: 0% 50%; opacity: 0.25; }
+  50% { opacity: 0.65; }
+  100% { background-position: 140% 50%; opacity: 0.25; }
+}
+`;
+const ROOT_BACKGROUND =
+  "radial-gradient(circle at 10% 20%, rgba(202,208,3,0.25), transparent 45%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.15), transparent 55%), linear-gradient(135deg, #dd044e, #f2266c 40%, #c4034e 100%)";
+const BLOCO2_BACKGROUND =
+  "linear-gradient(135deg, rgba(221,4,78,0.92), rgba(221,4,78,0.75))";
+const BLOCO4_BACKGROUND =
+  "linear-gradient(135deg, rgba(221,4,78,0.85), rgba(221,4,78,0.65))";
+const TABLE_HEADER_BG = "rgba(221,4,78,0.8)";
+const TABLE_ROW_ODD_BG = "rgba(255, 255, 255, 0.06)";
+const TABLE_ROW_EVEN_BG = "rgba(255, 105, 145, 0.22)";
+const PROGRESS_SPARKLES =
+  "radial-gradient(6px 20px at 20% 40%, rgba(255,255,255,0.45), transparent 65%), radial-gradient(8px 30px at 60% 60%, rgba(255,250,165,0.4), transparent 70%), radial-gradient(5px 18px at 85% 20%, rgba(255,255,255,0.35), transparent 65%)";
 
 export default function LastDance() {
   const [dados, setDados] = useState([]);
@@ -202,77 +221,182 @@ export default function LastDance() {
   );
 
   return (
-    <div className={styles.root}>
-      {/* BLOCO 1 - HEADER */}
-      <div className={styles.bloco1}>
-        <img src={logolastdance} className={styles.headerImage} />
-      </div>
+    <>
+      <style>{ANIMATION_STYLES}</style>
 
-      {/* BLOCO 2 - META DIÁRIA */}
-      <div className={styles.bloco2}>
-        {mostrarVideo ? (
-          <video
-            className={styles.videoLoop}
-            src="/videos/comemora.mp4"
-            autoPlay
-            loop
-            playsInline
+      <div
+        className="flex h-screen w-full flex-col overflow-hidden text-white"
+        style={{
+          backgroundImage: ROOT_BACKGROUND,
+          fontFamily: "'Baloo 2', sans-serif",
+          padding: "0 1.5vw 1vh 1.5vw",
+          gap: "1.8vh",
+        }}
+      >
+        {/* BLOCO 1 - HEADER */}
+        <div className="h-[16vh] w-full overflow-hidden rounded-b-[26px] border-[3px] border-[#cad003] border-t-0">
+          <img
+            src={logolastdance}
+            className="h-full w-full object-cover"
+            alt="Last Dance"
           />
-        ) : (
-          <>
-            <div className={styles.heroRow}>
-              <div className={styles.heroOrbit}>
-                <span className={styles.heroArrow}>↓</span>
+        </div>
+
+        {/* BLOCO 2 - META DIÁRIA */}
+        <div
+          className="relative flex h-[32vh] flex-col items-center justify-center overflow-hidden rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+          style={{ backgroundImage: BLOCO2_BACKGROUND }}
+        >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+          {mostrarVideo ? (
+            <video
+              className="relative z-[1] h-full w-full rounded-[26px] object-cover"
+              src="/videos/comemora.mp4"
+              autoPlay
+              loop
+              playsInline
+            />
+          ) : (
+            <div className="relative z-[1] flex items-center gap-[2vw]">
+              <div className="flex h-[12rem] w-[12rem] items-center justify-center rounded-full border-[3px] border-dashed border-[rgba(255,255,255,0.35)] bg-[rgba(255,255,255,0.08)] shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+                <span className="text-[10rem] leading-none text-[#cad003] drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">
+                  ↓
+                </span>
               </div>
 
-              <div className={styles.heroValue}>
+              <div
+                className="text-[12rem] font-black leading-none text-white"
+                style={{
+                  textShadow:
+                    "0 18px 40px rgba(0,0,0,0.55), 0 0 40px rgba(202,208,3,0.85)",
+                }}
+              >
                 {formatarValor(valorDiario)}
               </div>
             </div>
-          </>
-        )}
-      </div>
-
-      {/* BLOCO 3 - CONTAGEM TOTAL */}
-      <div className={styles.bloco3}>
-        <div className={styles.counterRow}>
-          <span className={styles.counterLabel}>Contagem total:</span>
-          <span className={styles.counterValueBig}>
-            {formatarValor(totalVendido)}
-          </span>
+          )}
         </div>
 
-        <div className={styles.progressTrack}>
+        {/* BLOCO 3 - CONTAGEM TOTAL */}
+        <div
+          className="relative flex h-[20vh] flex-col justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+          style={{ background: "rgba(221,4,78,0.75)" }}
+        >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+          <div className="relative z-[1] flex flex-col items-center gap-[2vh]">
+            <div className="flex items-center justify-center gap-[1vw]">
+              <span className="text-[2.2rem] font-bold text-white">
+                Contagem total:
+              </span>
+              <span className="text-[4.5rem] font-black text-[#cad003]">
+                {formatarValor(totalVendido)}
+              </span>
+            </div>
+
+            <div className="relative h-[26px] w-[55%] rounded-full border-[3px] border-[#cad003] bg-[rgba(255,255,255,0.2)]">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${metaProgress * 100}%`,
+                  background:
+                    "linear-gradient(90deg, #cad003, #fffaa5, #ffffff)",
+                  transition: "width 0.6s ease-out",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage: PROGRESS_SPARKLES,
+                  backgroundSize: "140% 100%",
+                  animation: "progressShimmer 3s linear infinite",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* BLOCO 4 + BLOCO 5 LADO A LADO */}
+        <div className="flex h-[26vh] gap-[1.5vw]">
+          {/* TABELA */}
           <div
-            className={styles.progressFill}
-            style={{ width: `${metaProgress * 100}%` }}
-          />
-          <div className={styles.progressSparkles} />
-        </div>
-      </div>
-
-      {/* BLOCO 4 + BLOCO 5 LADO A LADO */}
-      <div className={styles.rowFlex}>
-        {/* TABELA */}
-        <div className={styles.bloco4}>
-          <table className={styles.tabela}>
+            className="relative flex flex-[2] overflow-hidden rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+            style={{ backgroundImage: BLOCO4_BACKGROUND }}
+          >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+          <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
             <thead>
               <tr>
-                <th>Lead</th>
-                <th>Empresa</th>
-                <th>Vendedor</th>
-                <th>Pipeline</th>
-                <th>Valor</th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "12%",
+                  }}
+                >
+                  Lead
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "32%",
+                  }}
+                >
+                  Empresa
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "18%",
+                  }}
+                >
+                  Vendedor
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "18%",
+                  }}
+                >
+                  Pipeline
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold text-right"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "20%",
+                  }}
+                >
+                  Valor
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-[1.2rem]">
               {dados.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.lead_id}</td>
-                  <td>{item.empresa}</td>
-                  <td>{item.assigned}</td>
-                  <td>{item.pipeline}</td>
-                  <td>{formatarValor(item.valor)}</td>
+                <tr
+                  key={i}
+                  style={{
+                    backgroundColor:
+                      i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
+                  }}
+                >
+                  <td className="px-[1vw] py-[0.4vh] align-middle font-semibold text-center">
+                    {item.lead_id}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    {item.empresa}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    {item.assigned}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    {item.pipeline}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-right font-semibold">
+                    {formatarValor(item.valor)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -280,11 +404,20 @@ export default function LastDance() {
         </div>
 
         {/* PROJEÇÃO */}
-        <div className={styles.bloco5}>
-          <div className={styles.projecaoTitulo}>Projeção Geral</div>
-          <div className={styles.projecaoValor}>{formatarValor(somaOpen)}</div>
+        <div
+          className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+          style={{ background: "rgba(221,4,78,0.7)" }}
+        >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+          <div className="relative z-[1] text-[2rem] text-white">
+            Projeção Geral
+          </div>
+          <div className="relative z-[1] text-[3.8rem] font-black text-[#cad003]">
+            {formatarValor(somaOpen)}
+          </div>
         </div>
       </div>
     </div>
-  );
+  </>
+);
 }

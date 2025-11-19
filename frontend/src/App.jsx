@@ -1,45 +1,67 @@
 import React, { Suspense, lazy, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import FullscreenButton from "./components/FullscreenButton";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 
 const Hunters = lazy(() => import("./pages/Hunters/Hunters"));
 const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 
+/* ============================================================
+   AUTO-ROTAÇÃO DE ROTAS A CADA 2 MINUTOS
+============================================================ */
 function AutoRotateRoutes() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const rotas = ["/hunters", "/farmers"];
+  // DEFINA AQUI A ORDEM DAS TELAS
+  const rotas = ["/farmers"];
 
   useEffect(() => {
-    let index = 0;
-    navigate(rotas[index]);
+    // Qual o índice da rota atual na lista?
+    let indexAtual = rotas.indexOf(location.pathname);
 
-    const interval = setInterval(() => {
-      index = (index + 1) % rotas.length;
-      navigate(rotas[index]);
-    }, 2 * 60 * 1000);
+    // Se a rota atual não estiver na lista (ex: "/"), começa na primeira
+    if (indexAtual === -1) indexAtual = 0;
 
-    return () => clearInterval(interval);
-  }, [navigate]);
+    const id = setInterval(() => {
+      indexAtual = (indexAtual + 1) % rotas.length;
+      navigate(rotas[indexAtual], { replace: true });
+    }, 1 * 5 * 1000); // 2 minutos
+
+    return () => clearInterval(id);
+  }, [location.pathname, navigate, rotas]);
 
   return null;
 }
 
+/* ============================================================
+   APP
+============================================================ */
 function App() {
   return (
     <BrowserRouter>
-      <FullscreenButton />
+      {/* Rotação automática */}
       <AutoRotateRoutes />
 
       <Suspense fallback={null}>
         <Routes>
-          <Route path="/" element={<Hunters />} />
+          {/* Raiz redireciona para /hunters */}
+          <Route path="/" element={<Navigate to="/hunters" replace />} />
+
           <Route path="/hunters" element={<Hunters />} />
           <Route path="/farmers" element={<Farmers />} />
           <Route path="/lastdance" element={<LastDance />} />
           <Route path="/blackfriday" element={<BlackFriday />} />
+
+          {/* Rota coringa opcional */}
+          <Route path="*" element={<Navigate to="/hunters" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
