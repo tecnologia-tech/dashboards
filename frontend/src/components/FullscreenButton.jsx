@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 export default function FullscreenButton() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Detecta entrada/saída do modo tela cheia
   useEffect(() => {
     function handleFullscreenChange() {
       const isFull =
@@ -20,48 +19,59 @@ export default function FullscreenButton() {
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-      document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "msfullscreenchange",
+        handleFullscreenChange
+      );
     };
   }, []);
 
   function openFullscreen() {
     const elem = document.documentElement;
 
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch(console.error);
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) {
-      elem.msRequestFullscreen();
-    } else {
-      alert("Modo tela cheia não suportado neste navegador.");
-    }
+    if (elem.requestFullscreen) elem.requestFullscreen().catch(console.error);
+    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+    else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
   }
 
-  // Se estiver em tela cheia, não renderiza o botão
   if (isFullscreen) return null;
 
   return (
     <button
-      id="fullscreenBtn"
       onClick={openFullscreen}
       style={{
         position: "fixed",
-        top: "20px",
-        right: "20px",
-        padding: "10px 18px",
-        background: "#000",
-        border: "2px solid #e6c068",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        padding: "26px 60px",
+        background: "rgba(0,0,0,0.7)",
+        border: "4px solid #e6c068",
         color: "#e6c068",
         fontFamily: "Cinzel, serif",
-        fontSize: "16px",
-        borderRadius: "8px",
+        fontSize: "40px",
+        fontWeight: "700",
+        borderRadius: "12px",
         cursor: "pointer",
-        zIndex: 999999,
+        zIndex: 999999999,
+        letterSpacing: "3px",
+        boxShadow: "0 0 25px rgba(230,192,104,0.55)",
+        transition: "0.2s",
+      }}
+      onMouseEnter={(e) => {
+        e.target.style.boxShadow = "0 0 40px rgba(230,192,104,0.9)";
+        e.target.style.transform = "translate(-50%, -50%) scale(1.05)";
+      }}
+      onMouseLeave={(e) => {
+        e.target.style.boxShadow = "0 0 25px rgba(230,192,104,0.55)";
+        e.target.style.transform = "translate(-50%, -50%) scale(1)";
       }}
     >
-      Tela Cheia
+      ENTRAR EM TELA CHEIA
     </button>
   );
 }
