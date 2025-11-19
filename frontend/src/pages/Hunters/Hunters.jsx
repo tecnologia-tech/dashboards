@@ -201,9 +201,9 @@ function formatCurrency(v) {
 
 /* CONFIG DOS HUNTERS */
 const HUNTERS = [
-  { label: "Monique", db: "Monique Moreira", meta: 200000 },
-  { label: "Fernando", db: "Fernando Finatto", meta: 200000 },
-  { label: "Thiago", db: "Thiago Cardoso", meta: 200000 },
+  { label: "Monique", db: "Monique Moreira", meta: 250000 },
+  { label: "Fernando", db: "Fernando Finatto", meta: 250000 },
+  { label: "Thiago", db: "Thiago Cardoso", meta: 250000 },
   { label: "Alan", db: "Alan Esteves", meta: 50000 },
 ];
 
