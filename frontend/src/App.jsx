@@ -57,7 +57,7 @@ function AutoRotateRoutes() {
   const rotas = ["/farmers", "/hunters"];
 
   // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
-  const TEMPO_MINUTOS = 5;
+  const TEMPO_MINUTOS = 3;
 
   useEffect(() => {
     let indexAtual = rotas.indexOf(location.pathname);
