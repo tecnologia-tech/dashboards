@@ -71,7 +71,7 @@ export default function FullscreenButton() {
         e.target.style.transform = "translate(-50%, -50%) scale(1)";
       }}
     >
-      ENTRAR EM TELA CHEIA
+      TELA CHEIA
     </button>
   );
 }
