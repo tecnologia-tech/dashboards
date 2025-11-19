@@ -34,7 +34,7 @@ function AutoRotateRoutes() {
     const id = setInterval(() => {
       indexAtual = (indexAtual + 1) % rotas.length;
       navigate(rotas[indexAtual], { replace: true });
-    }, 60 * 2000);
+    }, 60 * 3000);
 
     return () => clearInterval(id);
   }, [location.pathname, navigate, rotas]);
