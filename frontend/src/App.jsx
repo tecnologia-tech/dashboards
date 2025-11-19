@@ -7,65 +7,91 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import FullscreenButton from "./components/FullscreenButton";
 
+import FullscreenButton from "./components/FullscreenButton";
+import LoaderPadrao from "./components/LoaderPadrao";
+
+/* ============================================================
+   PRELOAD DOS MÓDULOS – deixa tudo instantâneo
+============================================================ */
+import("./pages/Hunters/Hunters");
+import("./pages/Farmers/Farmers");
+import("./pages/LastDance/LastDance");
+import("./pages/BlackFriday/BlackFriday");
+
+/* ============================================================
+   ROTAS COM LAZY
+============================================================ */
 const Hunters = lazy(() => import("./pages/Hunters/Hunters"));
 const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 
 /* ============================================================
-   AUTO-ROTAÇÃO DE ROTAS A CADA 2 MINUTOS
+   PRELOAD DE IMAGENS PRINCIPAIS
+============================================================ */
+function usePreloadImages() {
+  useEffect(() => {
+    const preload = (src) => {
+      const img = new Image();
+      img.src = src;
+    };
+
+    const images = [
+      "/src/assets/hunters.png",
+      "/src/assets/Farmers/Farmers.png",
+      // adicione mais imagens grandes se quiser
+    ];
+
+    images.forEach(preload);
+  }, []);
+}
+
+/* ============================================================
+   AUTO-ROTAÇÃO DAS ROTAS USANDO MINUTOS DIRETO
 ============================================================ */
 function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // DEFINA AQUI A ORDEM DAS TELAS
   const rotas = ["/farmers", "/hunters"];
 
-  useEffect(() => {
-    // Qual o índice da rota atual na lista?
-    let indexAtual = rotas.indexOf(location.pathname);
+  // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
+  const TEMPO_MINUTOS = 5;
 
-    // Se a rota atual não estiver na lista (ex: "/"), começa na primeira
+  useEffect(() => {
+    let indexAtual = rotas.indexOf(location.pathname);
     if (indexAtual === -1) indexAtual = 0;
 
     const id = setInterval(() => {
       indexAtual = (indexAtual + 1) % rotas.length;
       navigate(rotas[indexAtual], { replace: true });
-    }, 60 * 3000);
+    }, TEMPO_MINUTOS * 60 * 1000);
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    // transforma minutos → ms automaticamente
 
     return () => clearInterval(id);
-  }, [location.pathname, navigate, rotas]);
-
-  return null;
+  }, [location.pathname, navigate]);
 }
 
 /* ============================================================
    APP
 ============================================================ */
 function App() {
+  usePreloadImages(); // acelera troca de rotas
+
   return (
     <BrowserRouter>
       <AutoRotateRoutes />
 
-      {/* BOTÃO DE FULLSCREEN SEMPRE NO TOPO, NO CENTRO */}
+      {/* Botão Tela Cheia fixo no centro */}
       <FullscreenButton />
 
-      <Suspense
-        fallback={
-          <div
-            style={{
-              width: "100vw",
-              height: "100vh",
-              background: "#000",
-            }}
-          ></div>
-        }
-      >
+      {/* FALLBACK MOSTRANDO O LOADER ENQUANTO A PÁGINA CARREGA */}
+      <Suspense fallback={<LoaderPadrao />}>
         <Routes>
           <Route path="/" element={<Navigate to="/hunters" replace />} />
+
           <Route path="/hunters" element={<Hunters />} />
           <Route path="/farmers" element={<Farmers />} />
           <Route path="/lastdance" element={<LastDance />} />
