@@ -204,7 +204,7 @@ const HUNTERS = [
   { label: "Monique", db: "Monique Moreira", meta: 200000 },
   { label: "Fernando", db: "Fernando Finatto", meta: 200000 },
   { label: "Thiago", db: "Thiago Cardoso", meta: 200000 },
-  { label: "Alan", db: "Alan Esteves", meta: 44000 },
+  { label: "Alan", db: "Alan Esteves", meta: 50000 },
 ];
 
 export default function Hunters() {
