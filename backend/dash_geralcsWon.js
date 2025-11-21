@@ -93,7 +93,7 @@ function mapLeadToRow(lead) {
         lead.modifiedTime ??
         new Date().toISOString()
     ),
-    pipeline: lead?.closedStage?.activity?.stageset?.name ?? "INDEFINIDO", // pipeline REAL da vitória!
+    pipeline: lead?.closedStage?.activity?.stageset?.name ?? "INDEFINIDO", // pipeline REAL da vitória
     empresa: lead.primaryAccount?.name ?? "",
     assigned: lead.assignee?.name ?? "",
     valor,
@@ -149,7 +149,10 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
 
       return json.result;
     } catch (err) {
-      console.error(`⚠️ Erro (tentativa ${attempt + 1}): ${err.message}`);
+      console.error(
+        `⚠️ Erro RPC [${method}] tentativa ${attempt + 1}: ${err.message}`
+      );
+
       if (attempt < retries - 1) {
         await sleep(delay);
         delay *= 2;
@@ -227,23 +230,26 @@ export default async function main() {
 
     const tasks = batch.map((id) =>
       limit(async () => {
+        let lead;
+
+        // 💥 Proteção total contra erro 500
         try {
-          const lead = await callRPC("getLead", { leadId: id });
-
-          // ⭐⭐⭐ FILTRO CORRETO: pipeline da vitória
-          const pipelineWon =
-            lead?.closedStage?.activity?.stageset?.name ?? null;
-
-          if (pipelineWon !== "DISNEYLEADS 🟡⚫️") return;
-
-          // ⭐⭐⭐ FILTRO POR MÊS DE NOVEMBRO 2025
-          const dt = new Date(lead.closedTime);
-          if (dt.getMonth() !== 10 || dt.getFullYear() !== 2025) return;
-
-          allRows.push(mapLeadToRow(lead));
+          lead = await callRPC("getLead", { leadId: id });
         } catch (err) {
-          console.warn(`⚠️ Falha no lead ${id}: ${err.message}`);
+          console.warn(`⚠️ Lead ${id} ignorado — erro 500 no Nutshell`);
+          return;
         }
+
+        // ⭐ pipeline da vitória REAL
+        const pipelineWon = lead?.closedStage?.activity?.stageset?.name ?? null;
+
+        if (pipelineWon !== "DISNEYLEADS 🟡⚫️") return;
+
+        // ⭐ filtro por mês
+        const dt = new Date(lead.closedTime);
+        if (dt.getMonth() !== 10 || dt.getFullYear() !== 2025) return;
+
+        allRows.push(mapLeadToRow(lead));
       })
     );
 
