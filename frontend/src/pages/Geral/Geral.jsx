@@ -1,15 +1,24 @@
 import React from "react";
 import { PieChart, Pie, Cell } from "recharts";
+import ReactCountryFlag from "react-country-flag";
 
-const FONT_IMPORT =
-  '@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");\n@keyframes goldenTextBreath {0% {text-shadow: 0 0 4px rgba(230,192,104,0.25), 0 0 9px rgba(255,190,111,0.18);}50% {text-shadow: 0 0 8px rgba(230,192,104,0.35), 0 0 14px rgba(255,190,111,0.26);}100% {text-shadow: 0 0 5px rgba(230,192,104,0.28), 0 0 10px rgba(255,190,111,0.2);}}';
+const FONT_IMPORT = `
+  @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
+  @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
+
+  @keyframes goldenTextBreath {
+    0% { text-shadow: 0 0 4px rgba(230,192,104,0.25), 0 0 9px rgba(255,190,111,0.18); }
+    50% { text-shadow: 0 0 8px rgba(230,192,104,0.35), 0 0 14px rgba(255,190,111,0.26); }
+    100% { text-shadow: 0 0 5px rgba(230,192,104,0.28), 0 0 10px rgba(255,190,111,0.2); }
+  }
+`;
 
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
 
 @keyframes heatShimmer {
   0% { transform: translate3d(0,0,0) skewX(0deg); filter: drop-shadow(0 0 1px rgba(230,192,104,0.15)); }
-  50% { transform: translate3d(0.4px,-0.3px,0) skewX(-0.5deg); filter: drop-shadow(0 0 2px rgba(255,190,111,0.25)); }
+  50% { transform: translate3d(0.5px,-0.3px,0) skewX(-0.6deg); filter: drop-shadow(0 0 2px rgba(255,190,111,0.25)); }
   100% { transform: translate3d(0,0,0) skewX(0deg); filter: drop-shadow(0 0 1px rgba(230,192,104,0.18)); }
 }
 
@@ -19,7 +28,6 @@ const ANIMATION_STYLES = `
   100% { transform: translateY(-80px) translateX(10px) scale(1); opacity: 0; }
 }
 
-/* partículas dos rings */
 .gold-particles {
   position: absolute;
   inset: 0;
@@ -40,59 +48,62 @@ const ANIMATION_STYLES = `
 }
 `;
 
-const HERO_BACKGROUND =
-  "radial-gradient(220% 140% at 10% 0%, rgba(255,190,111,0.05), transparent 55%), radial-gradient(220% 140% at 90% 30%, rgba(230,192,104,0.05), transparent 55%), linear-gradient(145deg, rgba(10,8,6,0.98), rgba(4,2,2,0.96))";
+// fundo listrado da tela inteira
+const STRIPED_BACKGROUND =
+  "repeating-linear-gradient(115deg, #18120c 0 3px, #050302 3px 11px)";
 
 const CARD_BACKGROUND =
-  "linear-gradient(145deg, rgba(12,10,8,0.94), rgba(4,4,4,0.96))";
+  "linear-gradient(145deg, rgba(15,12,9,0.96), rgba(6,5,4,0.92))";
 
 const RUNE_BACKGROUND =
-  "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.08), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.06), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.08), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.08), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.035) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
-
-/* cor única de “linha” que você pediu */
-const BORDER_COLOR = "1px solid rgba(230,192,104,0.4)";
+  "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.10), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.08), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.10), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.05) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
 
 export default function Geral() {
   return (
     <div
       className="w-full h-screen grid grid-rows-[35%_30%_31%_4%] bg-black text-white overflow-hidden font-['Cinzel']"
       style={{
-        backgroundImage: HERO_BACKGROUND,
+        backgroundImage: `
+          ${STRIPED_BACKGROUND},
+          radial-gradient(220% 140% at 10% 0%, rgba(255,190,111,0.12), transparent 55%),
+          radial-gradient(220% 140% at 90% 40%, rgba(230,192,104,0.10), transparent 55%)
+        `,
+        backgroundBlendMode: "normal, overlay, overlay",
         backgroundSize: "cover",
         "--gold-light": "#F2C572",
         "--gold-mid": "#E5A844",
         "--gold-dark": "#C38A28",
+        "--black-main": "#050505",
       }}
     >
       <style>{FONT_IMPORT + "\n" + ANIMATION_STYLES}</style>
 
       <style>{`
         .titulo-card {
-          height: 38px;
+          height: 35px;
           display: flex;
           align-items: center;
           justify-content: center;
           margin-bottom: 0;
-          font-size: 40px;
+          font-size: 42px;
           font-weight: 800;
           font-family: 'Cinzel', serif;
           color: var(--gold-light);
-          letter-spacing: 0.08em;
           text-shadow: 0 0 6px rgba(230,192,104,0.35);
           animation: goldenTextBreath 6s ease-in-out infinite;
           white-space: nowrap;
         }
 
-        /* todos os números em branco */
         .numero-branco,
         .numero-branco * {
-          color: #ffffff !important;
-          text-shadow: none !important;
+            font-family: 'Roboto', sans-serif !important;
+  color: #ffffff !important;
+  text-shadow: none !important;
         }
       `}</style>
 
       {/* ================= RINGS ================= */}
-      <div className="flex justify-between items-center overflow-hidden px-10">
+      <div className="flex justify-around items-center overflow-hidden gap-[1px]">
         <Ring
           title="LTDA"
           value="857,1 mil"
@@ -110,7 +121,7 @@ export default function Geral() {
         <Ring
           title="Bônus"
           value="43,5 mil"
-          estornos="0"
+          estornos=" "
           meta="R$ 300 mil"
           percent={29}
         />
@@ -131,20 +142,20 @@ export default function Geral() {
       </div>
 
       {/* ================= CARDS DO MEIO ================= */}
-      <div className="grid grid-cols-3 gap-[2px] pb-2 px-[4px] auto-rows-fr">
+      <div className="grid grid-cols-3 gap-[1px] pb-2 px-[2px] auto-rows-fr">
         <OnboardingCard />
         <ComprasCard />
         <ImportacaoCard />
       </div>
 
       {/* ================= CSAT + REPUTAÇÃO ================= */}
-      <div className="grid grid-cols-2 gap-[2px] overflow-hidden px-[4px]">
+      <div className="grid grid-cols-2 gap-[1px] overflow-hidden px-[2px]">
         <CSATCard />
         <ReputacaoCard />
       </div>
 
       {/* ================= FOOTER ================= */}
-      <div className="overflow-hidden px-[4px]">
+      <div className="overflow-hidden px-[2px]">
         <DNBCard />
       </div>
     </div>
@@ -153,30 +164,26 @@ export default function Geral() {
 
 //
 // ================================================================
-// RINGS — MENOS POLUIÇÃO, MAIS LEITURA DE LONGE
+// RINGS — sem borda, fundo listrado global
 // ================================================================
 function Ring({ title, value, estornos, meta, percent }) {
-  const size = 280;
+  const size = 300;
   const stroke = 24;
   const radius = (size - stroke) / 2;
   const circ = 2 * Math.PI * radius;
   const dash = (percent / 100) * circ;
 
   return (
-    <div className="flex flex-col items-center overflow-hidden">
+    <div className="flex flex-col items-center overflow-visible">
       <div
         className="relative"
         style={{
           width: size,
           height: size,
-          borderRadius: 30,
-          overflow: "hidden",
-          border: "none",
-          boxShadow: "none",
           background: "transparent",
         }}
       >
-        {/* partículas internas */}
+        {/* partículas */}
         <div className="gold-particles">
           {Array.from({ length: 14 }).map((_, i) => (
             <span
@@ -206,7 +213,7 @@ function Ring({ title, value, estornos, meta, percent }) {
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="rgba(40,40,40,0.8)"
+            stroke="rgba(20,20,20,0.85)"
             strokeWidth={stroke}
             fill="none"
           />
@@ -222,16 +229,15 @@ function Ring({ title, value, estornos, meta, percent }) {
             strokeLinecap="round"
             strokeDasharray={`${dash} ${circ}`}
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            style={{
-              filter: "drop-shadow(0 0 14px rgba(230,192,104,0.55))",
-            }}
+            style={{ filter: "drop-shadow(0 0 14px rgba(230,192,104,0.55))" }}
           />
         </svg>
 
-        {/* centro do ring */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+        {/* centro */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          {/* título */}
           <div
-            className="text-4xl md:text-5xl font-extrabold tracking-wide whitespace-nowrap"
+            className="text-5xl font-extrabold tracking-wide whitespace-nowrap"
             style={{
               color: "#f2d788",
               textShadow: "0 0 6px rgba(230,192,104,0.35)",
@@ -242,37 +248,65 @@ function Ring({ title, value, estornos, meta, percent }) {
             {title}
           </div>
 
-          <div className="mt-1 text-5xl md:text-6xl font-extrabold whitespace-nowrap numero-branco">
+          {/* valor */}
+          <div
+            className="text-6xl font-extrabold whitespace-nowrap numero-branco"
+            style={{
+              WebkitTextStroke: "0.5px #000",
+              textShadow: `
+      0 0 18px rgba(0,0,0,0.85),
+      0 0 32px rgba(0,0,0,0.6),
+      0 0 12px rgba(255,255,255,0.15)
+    `,
+            }}
+          >
             {value}
           </div>
 
+          {/* META — AGORA AQUI */}
           <div
-            className="mt-1 text-2xl font-bold"
+            className="text-3xl font-bold mt-1"
             style={{
-              color: "#e6c068",
-              textShadow: "0 0 6px rgba(230,192,104,0.3)",
+              color: "var(--gold-light)",
+              textShadow: "0 0 6px rgba(230,192,104,0.35)",
             }}
           >
-            Estornos: <span className="numero-branco">{estornos}</span>
+            de{" "}
+            <span className="numero-branco" style={{ textShadow: "none" }}>
+              {meta}
+            </span>
           </div>
         </div>
 
         {/* porcentagem */}
         <div
-          className="absolute left-1/2 -translate-x-1/2 text-5xl md:text-6xl font-extrabold numero-branco"
+          className="absolute left-1/2 -translate-x-1/2 text-6xl font-extrabold numero-branco"
           style={{
-            bottom: -4,
+            bottom: -6,
+            WebkitTextStroke: "1px #000",
+            textShadow: `
+      0 0 18px rgba(0,0,0,0.85),
+      0 0 32px rgba(0,0,0,0.6),
+      0 0 12px rgba(255,255,255,0.15)
+    `,
           }}
         >
           {percent}%
         </div>
       </div>
 
+      {/* ESTORNOS — agora na parte de baixo */}
       <div
-        className="mt-2 text-3xl md:text-4xl font-bold"
-        style={{ color: "var(--gold-light)" }}
+        className="text-2xl font-bold mt-1"
+        style={{
+          color: "#e6c068",
+          textShadow: "0 0 6px rgba(230,192,104,0.3)",
+        }}
       >
-        Meta <span className="numero-branco">{meta}</span>
+        Estornos:{" "}
+        <span className="numero-branco" style={{ textShadow: "none" }}>
+          {estornos}
+        </span>
       </div>
     </div>
   );
@@ -285,30 +319,27 @@ function Ring({ title, value, estornos, meta, percent }) {
 function OnboardingCard() {
   return (
     <div
-      className="flex flex-col rounded-xl px-4 py-1"
+      className="flex flex-col rounded-xl px-3 py-0"
       style={{
-        border: BORDER_COLOR,
         backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
         backgroundBlendMode: "overlay, normal",
-        backgroundSize: "150% 150%, 120% 120%",
+        backgroundSize: "160% 160%, 120% 120%",
+        border: "1px solid rgba(230,192,104,0.40)",
       }}
     >
       <h2 className="titulo-card">Onboarding</h2>
 
-      <div className="flex-1 pt-2 flex items-center justify-between gap-6">
-        <div className="flex flex-col justify-center items-center flex-[0.9]">
-          <div className="text-[92px] font-extrabold leading-none numero-branco">
+      <div className="flex-1 pt-2 flex items-center justify-around overflow-hidden">
+        <div className="flex flex-col justify-center items-center">
+          <div className="text-[96px] font-extrabold leading-none numero-branco">
             98
           </div>
-          <div
-            className="text-3xl"
-            style={{ color: "#e6c068", letterSpacing: "0.08em" }}
-          >
-            CLIENTES
+          <div className="text-3xl" style={{ color: "#e6c068" }}>
+            Clientes
           </div>
         </div>
 
-        <div className="flex flex-col justify-center gap-4 flex-[1.1]">
+        <div className="flex flex-col justify-center gap-4">
           <Person name="Jayanne" count="38" />
           <Person name="Jenifer" count="22" />
           <Person name="Rayssa" count="37" />
@@ -340,8 +371,7 @@ function Person({ name, count }) {
           {name}
         </div>
         <div className="text-2xl">
-          <span className="numero-branco">{count}</span>{" "}
-          <span style={{ color: "#e6c068" }}>Clientes</span>
+          <span className="numero-branco">{count}</span> Clientes
         </div>
       </div>
     </div>
@@ -355,24 +385,23 @@ function Person({ name, count }) {
 function ComprasCard() {
   return (
     <div
-      className="flex flex-col rounded-xl px-4 py-1"
+      className="flex flex-col rounded-xl px-4 py-0"
       style={{
-        border: BORDER_COLOR,
         backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
         backgroundBlendMode: "overlay, normal",
-        backgroundSize: "150% 150%, 120% 120%",
+        backgroundSize: "160% 160%, 120% 120%",
+        border: "1px solid rgba(230,192,104,0.40)",
       }}
     >
       <h2 className="titulo-card">Compras</h2>
 
       <div className="flex-1 pt-2 flex flex-col">
-        {/* linha 1 */}
         <div className="flex justify-between px-4 mb-2">
           <div className="flex flex-col items-center flex-1">
             <div className="text-3xl font-bold text-[var(--gold-light)]">
               Simulações
             </div>
-            <div className="mt-1 text-[56px] font-extrabold leading-none numero-branco">
+            <div className="text-[58px] font-extrabold leading-none mt-1 numero-branco">
               15
             </div>
             <div className="text-xl" style={{ color: "#d0c3a4" }}>
@@ -384,7 +413,7 @@ function ComprasCard() {
             <div className="text-3xl font-bold text-[var(--gold-light)]">
               Entregues
             </div>
-            <div className="mt-1 text-[56px] font-extrabold leading-none numero-branco">
+            <div className="text-[58px] font-extrabold leading-none mt-1 numero-branco">
               177
             </div>
             <div className="text-xl font-bold">
@@ -396,7 +425,6 @@ function ComprasCard() {
           </div>
         </div>
 
-        {/* handovers */}
         <div className="text-center text-3xl font-bold text-[var(--gold-light)] mb-1">
           Handovers
         </div>
@@ -406,13 +434,13 @@ function ComprasCard() {
             <span className="text-xl" style={{ color: "#d0c3a4" }}>
               Em andamento
             </span>
-            <span className="text-[46px] font-extrabold leading-none numero-branco">
+            <span className="text-[50px] font-extrabold leading-none numero-branco">
               7
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[46px] font-extrabold leading-none numero-branco">
+            <span className="text-[50px] font-extrabold leading-none numero-branco">
               42
             </span>
             <span className="text-xl" style={{ color: "#d0c3a4" }}>
@@ -421,15 +449,25 @@ function ComprasCard() {
           </div>
         </div>
 
-        {/* linha separadora no estilo que você gostou */}
+        {/* divisor suave */}
         <div
           className="my-1"
           style={{ borderTop: "1px solid rgba(230,192,104,0.4)" }}
         />
 
-        {/* account */}
         <div className="flex items-center justify-center gap-3 mt-auto pb-2">
-          <img src="/china.png" className="w-10 h-6 rounded-sm" />
+          <ReactCountryFlag
+            countryCode="CN"
+            svg
+            style={{
+              width: "1.5em",
+              height: "1.5em",
+              borderRadius: "6px",
+              boxShadow: "0 0 6px rgba(230,192,104,0.45)",
+            }}
+            title="China"
+          />
+
           <span className="text-2xl font-bold text-[var(--gold-light)]">
             ACCOUNT (MÊS):
           </span>
@@ -455,12 +493,12 @@ function ComprasCard() {
 function ImportacaoCard() {
   return (
     <div
-      className="flex flex-col rounded-xl px-4 py-1 h-full overflow-hidden"
+      className="flex flex-col rounded-xl px-4 py-0 h-full overflow-hidden"
       style={{
-        border: BORDER_COLOR,
         backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
         backgroundBlendMode: "overlay, normal",
-        backgroundSize: "150% 150%, 120% 120%",
+        backgroundSize: "160% 160%, 120% 120%",
+        border: "1px solid rgba(230,192,104,0.40)",
       }}
     >
       <h2 className="titulo-card">Importação</h2>
@@ -471,7 +509,7 @@ function ImportacaoCard() {
             <div className="text-3xl font-bold text-[var(--gold-light)]">
               Total Pedidos
             </div>
-            <div className="mt-1 text-[60px] font-extrabold leading-none numero-branco">
+            <div className="text-[64px] font-extrabold leading-none mt-1 numero-branco">
               274
             </div>
           </div>
@@ -480,24 +518,24 @@ function ImportacaoCard() {
             <div className="text-3xl font-bold text-[var(--gold-light)]">
               Atracam esse mês
             </div>
-            <div className="mt-1 text-[56px] font-extrabold leading-none numero-branco">
+            <div className="text-[60px] font-extrabold leading-none mt-1 numero-branco">
               26
             </div>
           </div>
         </div>
 
-        <div className="text-2xl leading-snug text-center space-y-1 mb-10">
+        <div className="text-2xl leading-snug text-center space-y-1 mb-12">
           <p style={{ color: "#d0c3a4" }}>
             Pedidos na China:{" "}
-            <span className="numero-branco font-bold">188</span>
+            <span className="font-bold numero-branco">188</span>
           </p>
           <p style={{ color: "#d0c3a4" }}>
             Pedidos em Logística:{" "}
-            <span className="numero-branco font-bold">74</span>
+            <span className="font-bold numero-branco">74</span>
           </p>
           <p style={{ color: "#d0c3a4" }}>
             Pedidos no Desembaraço:{" "}
-            <span className="numero-branco font-bold">12</span>
+            <span className="font-bold numero-branco">12</span>
           </p>
         </div>
       </div>
@@ -522,17 +560,17 @@ function CSATCard() {
 
   return (
     <div
-      className="px-4 py-1 flex flex-col rounded-xl"
+      className="px-4 py-0 flex flex-col rounded-xl"
       style={{
-        border: BORDER_COLOR,
         backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
         backgroundBlendMode: "overlay, normal",
-        backgroundSize: "150% 150%, 120% 120%",
+        backgroundSize: "160% 160%, 120% 120%",
+        border: "1px solid rgba(230,192,104,0.40)",
       }}
     >
       <h2 className="titulo-card">CSAT</h2>
 
-      <div className="pt-1 flex flex-col justify-center flex-1 gap-1">
+      <div className="pt-0 flex flex-col justify-center flex-1 gap-1">
         {data.map((i) => (
           <div key={i.label} className="flex items-center gap-4">
             <div className="w-[170px] text-2xl" style={{ color: "#f5e7c8" }}>
@@ -556,7 +594,10 @@ function CSATCard() {
               />
             </div>
 
-            <div className="text-3xl font-bold w-[60px] text-right numero-branco">
+            <div
+              className="text-3xl font-bold w-[60px] text-right numero-branco"
+              style={{ textShadow: "0 0 6px rgba(0,0,0,0.6)" }}
+            >
               {i.value}
             </div>
           </div>
@@ -581,50 +622,49 @@ function ReputacaoCard() {
 
   return (
     <div
-      className="flex flex-col rounded-xl px-2 py-1"
+      className="flex flex-col rounded-xl px-1 py-0"
       style={{
-        border: BORDER_COLOR,
         backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
         backgroundBlendMode: "overlay, normal",
-        backgroundSize: "150% 150%, 120% 120%",
+        backgroundSize: "160% 160%, 120% 120%",
+        border: "1px solid rgba(230,192,104,0.40)",
       }}
     >
       <h2 className="titulo-card">Reputação 12P</h2>
 
-      <div className="flex-1 pt-1 grid grid-cols-[2fr_1fr_1fr] gap-1 items-center">
-        {/* texto esquerdo */}
-        <div className="flex flex-col text-3xl leading-tight space-y-2 pl-2 whitespace-nowrap">
+      <div className="flex-1 pt-0 grid grid-cols-[2fr_1fr_1fr] gap-1 items-center">
+        <div className="flex flex-col text-2xl leading-tight space-y-2 pl-2">
           <div>
-            <span className="font-bold" style={{ color: "#8BCF7A" }}>
+            <span className="font-bold" style={{ color: "var(--gold-light)" }}>
               FATURAMENTO:
             </span>
-            <span className="numero-branco"> R$ 1.290.315,47</span>
+            <span className="text-gray-200"> R$ 1.290.315,47</span>
           </div>
           <div>
             <span className="font-bold" style={{ color: "var(--gold-mid)" }}>
               ESTORNO:
             </span>
-            <span className="numero-branco"> R$ 113.596</span>
+            <span className="text-gray-200"> R$ 113.596</span>
           </div>
           <div>
             <span className="font-bold" style={{ color: "#E85B5B" }}>
               REEMBOLSO:
             </span>
-            <span className="numero-branco"> R$ 59.389</span>
+            <span className="text-gray-200"> R$ 59.389</span>
           </div>
           <div className="pt-2">
             <span className="font-bold" style={{ color: "var(--gold-light)" }}>
               RECLAME AQUI:
             </span>
-            <span className="numero-branco text-3xl font-extrabold"> 0</span>
+            <span className="text-3xl font-extrabold numero-branco"> 0</span>
           </div>
         </div>
 
-        {/* número central */}
         <div className="flex justify-center items-center">
           <div
-            className="text-7xl md:text-8xl font-extrabold numero-branco"
+            className="text-8xl font-extrabold numero-branco"
             style={{
+              WebkitTextStroke: "1px black",
               textShadow: "0 0 12px rgba(230,192,104,0.4)",
               animation: "goldenTextBreath 6s ease-in-out infinite",
             }}
@@ -633,9 +673,8 @@ function ReputacaoCard() {
           </div>
         </div>
 
-        {/* donut */}
         <div className="flex justify-center items-center">
-          <PieChart width={230} height={230}>
+          <PieChart width={240} height={240}>
             <Pie
               data={data}
               cx="50%"
@@ -660,17 +699,17 @@ function ReputacaoCard() {
 
 //
 // =====================================================================
-// FOOTER – DNB / NPS / BHAG
+// FOOTER – DNB
 // =====================================================================
 function DNBCard() {
   return (
     <div
-      className="h-full flex items-center justify-around text-2xl rounded-xl px-4"
+      className="h-full flex items-center justify-around text-2xl rounded-xl"
       style={{
-        border: BORDER_COLOR,
         backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
         backgroundBlendMode: "overlay, normal",
         backgroundSize: "180% 180%, 120% 120%",
+        border: "1px solid rgba(230,192,104,0.40)",
       }}
     >
       <div>
