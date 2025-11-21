@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
 const {
@@ -35,124 +36,105 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-// ✔️ Concorrência reduzida = evita 500 no Nutshell
-const limit = pLimit(3);
 const httpsAgent = new https.Agent({ keepAlive: true });
+const limit = pLimit(10);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Ajusta data UTC → BR
-function toSQLDateFromISO(isoString) {
-  if (!isoString) return null;
+function toSQLDateFromISO(isoString, leadId) {
+  if (!isoString || typeof isoString !== "string") return null;
+
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
 
-  const adjusted = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-  return adjusted.toISOString().slice(0, 19).replace("T", " ");
+  const adjustedDate = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+
+  const datePart = adjustedDate.toISOString().slice(0, 10);
+  const timePart = adjustedDate.toISOString().slice(11, 19);
+
+  return `${datePart} ${timePart}`;
 }
 
-// TAGS
 function formatTags(tags) {
-  if (!Array.isArray(tags)) return null;
-  const valid = tags
-    .map((t) => (typeof t === "object" ? t.name : t))
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+
+  const validTags = tags
+    .map((tag) => (typeof tag === "object" ? tag.name : tag))
     .filter(Boolean);
-  return valid.length ? [...new Set(valid)].join(" | ") : null;
+
+  if (validTags.length === 0) return null;
+
+  const uniqueTags = [...new Set(validTags)];
+  return uniqueTags.join(" | ");
 }
 
-// Extrai número
 function extractNumeroFromLead(lead) {
-  const url = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
-  if (typeof url === "string" && url.includes("/lead/")) {
-    const parts = url.split("/").filter(Boolean);
+  const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
+
+  if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
+    const parts = pathVal.split("/").filter(Boolean);
     const last = parts[parts.length - 1];
-    if (/^\d+$/.test(last)) return last;
+    if (last && /^\d+$/.test(last)) return last;
   }
 
-  if (lead.name) {
+  if (typeof lead.name === "string") {
     const m = lead.name.match(/(\d{3,})/);
     if (m) return m[1];
   }
 
-  return String(lead.id);
+  return String(lead.id ?? lead.leadId ?? "");
 }
 
-// ⭐⭐ PIPELINE REAL DA VITÓRIA (100% igual ao Nutshell)
-function getPipelineDaVitoria(lead) {
-  const events = lead.events ?? [];
+function mapLeadToRow(lead) {
+  const id = String(lead.id ?? lead.leadId);
 
-  for (const ev of events) {
-    if (
-      ev.type === "stageChange" &&
-      ev?.newStage?.isSuccess === true &&
-      ev?.newStage?.stageset?.name
-    ) {
-      return ev.newStage.stageset.name; // 💥 pipeline correto!
-    }
+  if (!id) {
+    console.warn(`⚠️ Lead sem ID encontrado. Lead: ${JSON.stringify(lead)}`);
   }
 
-  return null; // nunca foi realmente ganho
-}
+  const valor = Number(lead.value?.amount ?? 0);
 
-// Mapeia lead → row SQL
-function mapLeadToRow(lead) {
   return {
-    data: toSQLDateFromISO(lead.closedTime),
-    pipeline: getPipelineDaVitoria(lead), // ⭐ AGORA CERTA
+    data: toSQLDateFromISO(
+      lead.closedTime ??
+        lead.dueTime ??
+        lead.modifiedTime ??
+        new Date().toISOString(),
+      id
+    ),
+    pipeline: lead.stageset?.name ?? "",
     empresa: lead.primaryAccount?.name ?? "",
     assigned: lead.assignee?.name ?? "",
-    valor: Number(lead.value?.amount ?? 0),
+    valor,
     numero: extractNumeroFromLead(lead),
     tag: formatTags(lead.tags),
     id_primary_company: lead.primaryAccount?.id ?? "",
     id_primary_person: lead.contacts?.[0]?.id ?? "",
-    lead_id: String(lead.id),
+    lead_id: id,
   };
 }
 
-// 🔥 findLeads ultra estável com 5 tentativas
 async function getAllLeadIds() {
   const ids = [];
 
   for (let page = 1; ; page++) {
-    let leads = null;
-
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      try {
-        leads = await callRPC("findLeads", {
-          query: { status: 10 }, // WON
-          page,
-          limit: 500,
-        });
-        break;
-      } catch (err) {
-        console.error(
-          `❗ findLeads erro (tentativa ${attempt}/5) pág ${page}: ${err.message}`
-        );
-
-        if (attempt < 5) {
-          await sleep(1000 * attempt);
-        } else {
-          console.error(
-            `❌ Falhou permanente na página ${page}. Continuando...`
-          );
-          return ids; // segue com o que existe
-        }
-      }
-    }
+    const leads = await callRPC("findLeads", {
+      query: { status: 10 },
+      page,
+      limit: 500,
+    });
 
     if (!Array.isArray(leads) || leads.length === 0) break;
 
     ids.push(...leads.map((l) => l.id));
   }
 
-  console.log(`📦 ${ids.length} leads WON encontrados.`);
+  console.log(`📦 ${ids.length} leads encontrados.`);
   return ids;
 }
 
-// RPC com retry
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -171,22 +153,39 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
         }),
       });
 
-      if (!res.ok) throw new Error(`Status ${res.status}: ${res.statusText}`);
+      if (!res.ok) {
+        throw new Error(
+          `Erro na requisição (status ${res.status}): ${res.statusText}`
+        );
+      }
 
       const json = await res.json();
-      if (json.error) throw new Error(JSON.stringify(json.error));
+
+      if (json.error) {
+        throw new Error(
+          `Erro na resposta da API: ${JSON.stringify(json.error)}`
+        );
+      }
 
       return json.result;
     } catch (err) {
       console.error(
-        `⚠️ Erro RPC [${method}] tentativa ${attempt + 1}: ${err.message}`
+        `⚠️ Erro na requisição para API (tentativa ${
+          attempt + 1
+        } de ${retries}): ${err.message}`
       );
-      if (attempt < retries - 1) await sleep(delay);
-      delay *= 2;
+
+      if (attempt < retries - 1) {
+        console.log(`⏳ Tentando novamente em ${delay / 1000}s...`);
+        await sleep(delay);
+        delay *= 2;
+      } else {
+        throw new Error(
+          `Erro persistente após ${retries} tentativas: ${err.message}`
+        );
+      }
     }
   }
-
-  throw new Error(`RPC ${method} falhou após ${retries} tentativas.`);
 }
 
 async function ensureTable(client) {
@@ -196,7 +195,7 @@ async function ensureTable(client) {
       pipeline TEXT,
       empresa TEXT,
       assigned TEXT,
-      valor NUMERIC(12,2),
+      valor NUMERIC(12, 2),
       numero TEXT UNIQUE,
       tag TEXT,
       id_primary_company TEXT,
@@ -208,8 +207,7 @@ async function ensureTable(client) {
   await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
-    WHERE a.ctid < b.ctid
-    AND a.numero = b.numero;
+    WHERE a.ctid < b.ctid AND a.numero = b.numero;
   `);
 }
 
@@ -226,18 +224,17 @@ async function upsertRows(client, rows) {
     )
     .join(",");
 
-  await client.query(
-    `
+  const sql = `
     INSERT INTO dash_geralcsWon (${cols.join(",")})
     VALUES ${placeholders}
     ON CONFLICT (lead_id) DO UPDATE SET
     ${cols
       .filter((c) => c !== "lead_id")
-      .map((c) => `${c}=EXCLUDED.${c}`)
+      .map((c) => `${c} = EXCLUDED.${c}`)
       .join(", ")}
-  `,
-    vals
-  );
+  `;
+
+  await client.query(sql, vals);
 }
 
 export default async function main() {
@@ -246,7 +243,9 @@ export default async function main() {
 
   await ensureTable(client);
 
+  const start = Date.now();
   const ids = await getAllLeadIds();
+
   const allRows = [];
 
   for (let i = 0; i < ids.length; i += 100) {
@@ -254,29 +253,29 @@ export default async function main() {
 
     const tasks = batch.map((id) =>
       limit(async () => {
-        let lead;
         try {
-          lead = await callRPC("getLead", { leadId: id });
+          const lead = await callRPC("getLead", { leadId: id });
+          allRows.push(mapLeadToRow(lead));
         } catch (err) {
-          console.warn(`⚠️ Lead ${id} ignorado — erro 500`);
-          return;
+          console.warn(`⚠️ Falha ao processar lead ${id}: ${err.message}`);
         }
-
-        allRows.push(mapLeadToRow(lead));
       })
     );
 
     await Promise.all(tasks);
-
-    if (allRows.length) {
-      await upsertRows(client, allRows);
-      allRows.length = 0;
-    }
+    await upsertRows(client, allRows);
+    allRows.length = 0;
   }
 
   const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
-  console.log(`📊 Total atual no banco: ${countRes.rows[0].count}`);
+  const total = parseInt(countRes.rows[0].count, 10);
+
+  const duration = ((Date.now() - start) / 1000).toFixed(2);
+
+  console.log("✅ Processamento concluído com sucesso!");
+  console.log(`📊 Total atual na tabela: ${total} registros.`);
+  console.log(`⏱️ Tempo total: ${duration}s`);
 
   await client.end();
-  console.log("🏁 Finalizado com sucesso!");
+  console.log("🏁 dash_geralcsWon finalizado com sucesso!\n");
 }
