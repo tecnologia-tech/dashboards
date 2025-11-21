@@ -35,39 +35,37 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
+// 🔥 Concorrência reduzida para evitar 500
+const limit = pLimit(3);
+
 const httpsAgent = new https.Agent({ keepAlive: true });
-const limit = pLimit(10);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Corrige fuso e formata data SQL
+// Ajuste de fuso e formatação SQL
 function toSQLDateFromISO(isoString) {
-  if (!isoString || typeof isoString !== "string") return null;
+  if (!isoString) return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
 
-  const adjusted = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+  const adjusted = new Date(d.getTime() - 3 * 60 * 60 * 1000); // corrige UTC→Brasil
   return adjusted.toISOString().slice(0, 19).replace("T", " ");
 }
 
 function formatTags(tags) {
-  if (!Array.isArray(tags) || tags.length === 0) return null;
+  if (!Array.isArray(tags)) return null;
   const valid = tags
     .map((t) => (typeof t === "object" ? t.name : t))
     .filter(Boolean);
-
-  if (!valid.length) return null;
-
-  return [...new Set(valid)].join(" | ");
+  return valid.length ? [...new Set(valid)].join(" | ") : null;
 }
 
 function extractNumeroFromLead(lead) {
-  const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
-
-  if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
-    const parts = pathVal.split("/").filter(Boolean);
+  const url = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
+  if (typeof url === "string" && url.includes("/lead/")) {
+    const parts = url.split("/").filter(Boolean);
     const last = parts[parts.length - 1];
     if (/^\d+$/.test(last)) return last;
   }
@@ -77,20 +75,19 @@ function extractNumeroFromLead(lead) {
     if (m) return m[1];
   }
 
-  return String(lead.id ?? lead.leadId ?? "");
+  return String(lead.id);
 }
 
-// 🎯 AQUI ESTÁ O PONTO MAIS IMPORTANTE:
-// PEGAR O PIPELINE REAL DA VITÓRIA (não o pipeline atual)
+// ⭐ Pipeline REAL da vitória
 function getPipelineDaVitoria(lead) {
   return lead?.closedStage?.activity?.stageset?.name ?? null;
 }
 
-// Mapeia lead -> row SQL
+// Mapeamento final do lead
 function mapLeadToRow(lead) {
   return {
     data: toSQLDateFromISO(lead.closedTime),
-    pipeline: getPipelineDaVitoria(lead), // <-- CORRIGIDO
+    pipeline: getPipelineDaVitoria(lead), // CORRETO
     empresa: lead.primaryAccount?.name ?? "",
     assigned: lead.assignee?.name ?? "",
     valor: Number(lead.value?.amount ?? 0),
@@ -102,18 +99,41 @@ function mapLeadToRow(lead) {
   };
 }
 
-// Busca todos os leads WON
+// 🔥 findLeads ultra resistente (5 tentativas com fallback)
 async function getAllLeadIds() {
   const ids = [];
+
   for (let page = 1; ; page++) {
-    const leads = await callRPC("findLeads", {
-      query: { status: 10 }, // WON
-      page,
-      limit: 500,
-    });
+    let leads = null;
+
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        leads = await callRPC("findLeads", {
+          query: { status: 10 }, // WON
+          page,
+          limit: 500,
+        });
+        break; // sucesso!
+      } catch (err) {
+        console.error(
+          `❗ findLeads falhou (tentativa ${attempt}/5) na página ${page}: ${err.message}`
+        );
+
+        if (attempt < 5) {
+          await sleep(1000 * attempt); // backoff progressivo
+        } else {
+          console.error(
+            `❌ findLeads falhou permanentemente na página ${page}. Continuando com o que já foi carregado.`
+          );
+          return ids; // retorna o que conseguiu
+        }
+      }
+    }
+
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
   }
+
   console.log(`📦 ${ids.length} leads WON encontrados.`);
   return ids;
 }
@@ -137,9 +157,7 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
         }),
       });
 
-      if (!res.ok) {
-        throw new Error(`Status ${res.status}: ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`Status ${res.status}: ${res.statusText}`);
 
       const json = await res.json();
       if (json.error) throw new Error(JSON.stringify(json.error));
@@ -233,8 +251,7 @@ export default async function main() {
           return;
         }
 
-        const row = mapLeadToRow(lead);
-        allRows.push(row);
+        allRows.push(mapLeadToRow(lead));
       })
     );
 
