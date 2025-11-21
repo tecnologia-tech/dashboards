@@ -54,7 +54,7 @@ function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rotas = ["/geral"];
+  const rotas = ["/hunters", "/farmers"];
 
   // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
   const TEMPO_MINUTOS = 3;
@@ -90,7 +90,7 @@ function App() {
       {/* FALLBACK MOSTRANDO O LOADER ENQUANTO A PÁGINA CARREGA */}
       <Suspense fallback={<LoaderPadrao />}>
         <Routes>
-          <Route path="/" element={<Navigate to="/geral" replace />} />
+          <Route path="/" element={<Navigate to="/hunters" replace />} />
 
           <Route path="/hunters" element={<Hunters />} />
           <Route path="/farmers" element={<Farmers />} />
