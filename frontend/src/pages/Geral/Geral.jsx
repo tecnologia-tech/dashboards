@@ -12,8 +12,8 @@ export default function Geral() {
 
       {/* ==================== ÁREA PRINCIPAL ======================= */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* ==================== FAIXA 1 — RINGS (230px) ============= */}
-        <div className="h-[300px] flex justify-between items-center px-4 m-0 p-0">
+        {/* ===== RINGS (23%) ===== */}
+        <div className="flex-[23] flex justify-between items-center min-h-0">
           <Ring
             title="LTDA"
             value="857,1 mil"
@@ -51,21 +51,21 @@ export default function Geral() {
           />
         </div>
 
-        {/* ==================== FAIXA 2 — CARDS (450px) ============= */}
-        <div className="h-[450px] grid grid-cols-3 m-0 p-0">
+        {/* ===== CARDS (38%) ===== */}
+        <div className="flex-[38] grid grid-cols-3 min-h-0 ga ">
           <OnboardingCard />
           <ComprasCard />
           <ImportacaoCard />
         </div>
 
-        {/* ==================== FAIXA 3 — CSAT + REPUTAÇÃO (350px) === */}
-        <div className="h-[350px] grid grid-cols-2 m-0 p-0">
+        {/* ===== CSAT + REPUTAÇÃO (29%) ===== */}
+        <div className="flex-[29] grid grid-cols-2 min-h-0 ga ">
           <CSATCard />
           <ReputacaoCard />
         </div>
 
-        {/* ==================== FOOTER — DNB (pequeno) ============== */}
-        <div className="h-[50px] m-0 p-0">
+        {/* ===== FOOTER (10%) ===== */}
+        <div className="p-0 m-0">
           <DNBCard />
         </div>
       </div>
@@ -78,8 +78,8 @@ export default function Geral() {
 // RINGS — DOURADOS
 // ================================================================
 function Ring({ title, value, estornos, meta, percent }) {
-  const size = 180;
-  const stroke = 18;
+  const size = 220;
+  const stroke = 20;
   const radius = (size - stroke) / 2;
   const circ = 2 * Math.PI * radius;
   const dash = (percent / 100) * circ;
@@ -120,60 +120,67 @@ function Ring({ title, value, estornos, meta, percent }) {
 
         {/* CENTRO DO RING */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-[#e6c068] text-2xl font-bold">{title}</div>
+          <div className="text-[#e6c068] text-4xl font-bold whitespace-nowrap">
+            {title}
+          </div>
 
           <div
-            className="text-4xl font-extrabold text-white leading-none"
+            className="text-5xl font-extrabold text-white leading-none whitespace-nowrap"
             style={{ WebkitTextStroke: "1px black" }}
           >
             {value}
           </div>
 
-          <div className="text-sm text-gray-300">Estornos: {estornos}</div>
+          <div
+            className="text-3xl text-gray-300 whitespace-nowrap"
+            style={{ WebkitTextStroke: "0.5px black" }}
+          >
+            Estornos: {estornos}
+          </div>
         </div>
 
-        {/* PORCENTAGEM EMBAIXO */}
+        {/* PORCENTAGEM */}
         <div
-          className="absolute left-1/2 -translate-x-1/2 text-3xl font-extrabold text-white"
-          style={{ bottom: 6, WebkitTextStroke: "1px black" }}
+          className="absolute left-1/2 -translate-x-1/2 text-5xl font-extrabold text-white whitespace-nowrap"
+          style={{ bottom: 4, WebkitTextStroke: "1.5px black" }}
         >
           {percent}%
         </div>
       </div>
 
-      <div className="text-lg font-bold text-[#e6c068]">Meta: {meta}</div>
+      <div className="text-4xl font-bold text-[#e6c068] whitespace-nowrap">
+        Meta {meta}
+      </div>
     </div>
   );
 }
 
 //
 // =====================================================================
-// ONBOARDING CARD – GRANDE (450px)
+// ONBOARDING CARD
 // =====================================================================
 function OnboardingCard() {
   return (
-    <div className="bg-[#0a0a0a] border border-[#e6c068] flex flex-col m-0 p-2">
-      <h2 className="text-4xl text-[#e6c068] font-extrabold text-center">
+    <div className="bg-[#0a0a0a] border border-[#e6c068] flex flex-col p-2">
+      <h2 className="text-6xl text-[#e6c068] font-extrabold text-center mb-2">
         Onboarding
       </h2>
 
-      <div className="flex h-full">
-        {/* Número grande */}
-        <div className="flex flex-col justify-center items-center w-[200px]">
+      <div className="flex h-full items-center">
+        <div className="flex flex-col justify-center items-center w-[220px]">
           <div
-            className="text-9xl font-extrabold text-white"
-            style={{ WebkitTextStroke: "2px black" }}
+            className="text-[150px] font-extrabold text-white leading-none"
+            style={{ WebkitTextStroke: "3px black" }}
           >
             98
           </div>
-          <div className="text-3xl text-gray-300">Clientes</div>
+          <div className="text-4xl text-gray-300">Clientes</div>
         </div>
 
-        {/* Lista */}
-        <div className="flex flex-col justify-center gap-4">
-          <Person name="Jayanne Queiroz" count="38" />
-          <Person name="Jenifer Martins" count="22" />
-          <Person name="Rayssa Veloso" count="37" />
+        <div className="flex flex-col justify-center gap-4 ml-6">
+          <Person name="Jayanne" count="38" />
+          <Person name="Jenifer" count="22" />
+          <Person name="Rayssa" count="37" />
         </div>
       </div>
     </div>
@@ -185,9 +192,9 @@ function Person({ name, count }) {
     <div className="flex items-center gap-4">
       <div className="w-16 h-16 rounded-full bg-gray-500"></div>
 
-      <div>
-        <div className="text-2xl text-white font-bold">{name}</div>
-        <div className="text-xl text-gray-300">{count} Clientes</div>
+      <div className="flex flex-col leading-tight">
+        <div className="text-4xl text-white font-bold">{name}</div>
+        <div className="text-3xl text-gray-300">{count} Clientes</div>
       </div>
     </div>
   );
@@ -195,58 +202,70 @@ function Person({ name, count }) {
 
 //
 // =====================================================================
-// COMPRAS – GRANDE
+// COMPRAS CARD
 // =====================================================================
 function ComprasCard() {
   return (
-    <div className="bg-[#0a0a0a] border border-[#e6c068] m-0 p-2 flex flex-col">
-      <h2 className="text-4xl text-[#e6c068] text-center font-bold">Compras</h2>
+    <div className="bg-[#0a0a0a] border border-[#e6c068] p-2 flex flex-col">
+      <h2 className="text-6xl text-[#e6c068] text-center font-extrabold mb-4">
+        Compras
+      </h2>
 
-      <div className="flex justify-between flex-1 px-2">
-        {/* Simulações */}
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-2xl text-[#e6c068] font-bold">Simulações</div>
-          <div
-            className="text-7xl font-extrabold"
-            style={{ WebkitTextStroke: "1px black" }}
-          >
-            15
+      <div className="flex flex-col flex-1 px-6">
+        {/* Linha 1 */}
+        <div className="flex justify-between flex-1 mb-4">
+          <div className="flex flex-col items-center flex-1">
+            <div className="text-4xl text-[#e6c068] font-bold">Simulações</div>
+            <div
+              className="text-[75px] font-extrabold leading-none mt-2"
+              style={{ WebkitTextStroke: "3px black" }}
+            >
+              15
+            </div>
+            <div className="text-3xl text-gray-300 mt-1">Em andamento</div>
           </div>
-          <div className="text-xl text-gray-300">Em andamento</div>
-        </div>
 
-        {/* Entregues */}
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-2xl text-[#e6c068] font-bold">Entregues</div>
-          <div
-            className="text-7xl font-extrabold"
-            style={{ WebkitTextStroke: "1px black" }}
-          >
-            177
-          </div>
-          <div className="text-xl font-bold text-red-400">
-            64.4% <span className="text-white text-lg">de 275</span>
+          <div className="flex flex-col items-center flex-1">
+            <div className="text-4xl text-[#e6c068] font-bold">Entregues</div>
+            <div
+              className="text-[75px] font-extrabold leading-none mt-2"
+              style={{ WebkitTextStroke: "3px black" }}
+            >
+              177
+            </div>
+            <div className="text-3xl font-bold text-red-400 mt-1">
+              64.4% <span className="text-white text-2xl">de 275</span>
+            </div>
           </div>
         </div>
 
         {/* Handovers */}
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-2xl text-[#e6c068] font-bold">Handovers</div>
-          <div
-            className="text-7xl font-extrabold"
-            style={{ WebkitTextStroke: "1px black" }}
-          >
-            7
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-4xl text-[#e6c068] font-bold mb-2">
+            Handovers
           </div>
-          <div className="text-xl text-gray-300">Em andamento</div>
 
-          <div
-            className="text-6xl font-extrabold text-white"
-            style={{ WebkitTextStroke: "1px black" }}
-          >
-            42
+          <div className="flex justify-center items-start ga6">
+            <div className="flex flex-col items-center">
+              <div
+                className="text-[65px] font-extrabold leading-none"
+                style={{ WebkitTextStroke: "3px black" }}
+              >
+                7
+              </div>
+              <div className="text-3xl text-gray-300 mt-1">Em andamento</div>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div
+                className="text-[65px] font-extrabold text-white leading-none"
+                style={{ WebkitTextStroke: "3px black" }}
+              >
+                42
+              </div>
+              <div className="text-3xl text-gray-300 mt-1">Entregues</div>
+            </div>
           </div>
-          <div className="text-xl text-gray-300">Entregues</div>
         </div>
       </div>
     </div>
@@ -255,41 +274,38 @@ function ComprasCard() {
 
 //
 // =====================================================================
-// IMPORTAÇÃO – GRANDE
+// IMPORTAÇÃO CARD
 // =====================================================================
 function ImportacaoCard() {
   return (
-    <div className="bg-[#0a0a0a] border border-[#e6c068] m-0 p-2 flex flex-col">
-      <h2 className="text-4xl text-[#e6c068] font-bold text-center">
+    <div className="bg-[#0a0a0a] border border-[#e6c068] p-2 flex flex-col justify-center items-center">
+      <h2 className="text-6xl text-[#e6c068] font-extrabold text-center mb-4">
         Importação
       </h2>
 
-      <div className="flex justify-between flex-1 px-2">
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-2xl text-gray-300">Total Pedidos</div>
+      <div className="flex justify-center items-start gap-20 mb-4">
+        <div className="flex flex-col items-center">
+          <div className="text-3xl text-gray-300 mb-1">Total Pedidos</div>
           <div
-            className="text-7xl font-extrabold text-white"
-            style={{ WebkitTextStroke: "1px black" }}
+            className="text-[90px] font-extrabold text-white leading-none"
+            style={{ WebkitTextStroke: "2px black" }}
           >
             274
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-2xl text-gray-300">Atracam esse mês</div>
-          <div className="flex items-center">
-            <span className="text-7xl text-[#65b5ff]">⚓</span>
-            <span
-              className="text-7xl text-white font-extrabold"
-              style={{ WebkitTextStroke: "1px black" }}
-            >
-              26
-            </span>
+        <div className="flex flex-col items-center">
+          <div className="text-3xl text-gray-300 mb-1">Atracam esse mês</div>
+          <div
+            className="text-[90px] font-extrabold text-white leading-none"
+            style={{ WebkitTextStroke: "2px black" }}
+          >
+            26
           </div>
         </div>
       </div>
 
-      <div className="text-2xl text-gray-300 mt-2">
+      <div className="text-4xl text-gray-300 leading-snug text-center">
         <p>
           Pedidos na China: <span className="text-white font-bold">188</span>
         </p>
@@ -307,7 +323,7 @@ function ImportacaoCard() {
 
 //
 // =====================================================================
-// CSAT
+// CSAT — CENTRALIZADO E GRANDE
 // =====================================================================
 function CSATCard() {
   const data = [
@@ -321,15 +337,19 @@ function CSATCard() {
   const max = Math.max(...data.map((d) => d.value));
 
   return (
-    <div className="bg-[#0a0a0a] border border-[#e6c068] m-0 p-2 flex flex-col">
-      <div className="text-4xl font-bold text-[#e6c068] text-center">CSAT</div>
+    <div className="bg-[#0a0a0a] border border-[#e6c068] p-2 flex flex-col">
+      <div className="text-4xl font-bold text-[#e6c068] text-center mb-2">
+        CSAT
+      </div>
 
-      <div className="flex flex-col justify-center flex-1">
+      <div className="flex flex-col justify-center flex-1 gap-2">
         {data.map((i) => (
-          <div key={i.label} className="flex items-center">
-            <div className="w-[160px] text-xl text-gray-300">{i.label}</div>
+          <div key={i.label} className="flex items-center gap-3">
+            {/* Label */}
+            <div className="w-[160px] text-2xl text-gray-300">{i.label}</div>
 
-            <div className="flex-1 bg-[#222] h-6 rounded-lg overflow-hidden">
+            {/* Barra */}
+            <div className="flex-1 bg-[#222] h-7 rounded-lg overflow-hidden">
               <div
                 className="h-full"
                 style={{
@@ -339,7 +359,8 @@ function CSATCard() {
               ></div>
             </div>
 
-            <div className="text-2xl font-bold w-[50px] text-right">
+            {/* Valor */}
+            <div className="text-3xl font-bold w-[50px] text-right text-white">
               {i.value}
             </div>
           </div>
@@ -363,59 +384,77 @@ function ReputacaoCard() {
   const COLORS = ["#4caf50", "#ff3b3b", "#ff8c00"];
 
   return (
-    <div className="bg-[#0a0a0a] border border-[#e6c068] m-0 p-2 flex justify-between">
-      <div>
-        <div className="text-4xl text-[#e6c068] font-bold mb-2">
+    <div className="bg-[#0a0a0a] border border-[#e6c068] p-4 flex items-center justify-between">
+      {/* ==== BLOCO ESQUERDO ==== */}
+      <div className="flex flex-col justify-center h-full pl-4">
+        <h2 className="text-5xl font-extrabold text-[#e6c068] mb-4 tracking-wide">
           Reputação 12P
+        </h2>
+
+        <div className="space-y-1 text-2xl leading-snug">
+          <p>
+            <span className="text-green-400 font-bold">FATURAMENTO:</span>{" "}
+            <span className="text-gray-200">R$ 1.290.315,47</span>
+          </p>
+          <p>
+            <span className="text-orange-400 font-bold">ESTORNO:</span>{" "}
+            <span className="text-gray-200">R$ 113.596</span>
+          </p>
+          <p>
+            <span className="text-red-500 font-bold">REEMBOLSO:</span>{" "}
+            <span className="text-gray-200">R$ 59.389</span>
+          </p>
         </div>
 
-        <div className="text-xl text-gray-300 leading-snug">
-          <p>
-            <span className="text-green-400 font-bold">FATURAMENTO:</span> R$
-            1.290.315,47
-          </p>
-          <p>
-            <span className="text-orange-500 font-bold">ESTORNO:</span> R$
-            113.596
-          </p>
-          <p>
-            <span className="text-red-500 font-bold">REEMBOLSO:</span> R$ 59.389
-          </p>
+        <div
+          className="text-7xl font-extrabold text-white mt-4 leading-none"
+          style={{ WebkitTextStroke: "2px black" }}
+        >
+          4,60%
         </div>
 
-        <div className="text-6xl text-white font-extrabold mt-2">4,60%</div>
-
-        <div className="text-[#e6c068] text-3xl font-bold">
-          RECLAME AQUI: <span className="text-white text-5xl ml-3">0</span>
+        <div className="text-[#e6c068] text-3xl font-bold mt-3">
+          RECLAME AQUI:{" "}
+          <span
+            className="text-white text-5xl"
+            style={{ WebkitTextStroke: "1px black" }}
+          >
+            0
+          </span>
         </div>
       </div>
 
-      <PieChart width={260} height={260}>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={60}
-          outerRadius={100}
-          paddingAngle={4}
-          dataKey="value"
-        >
-          {data.map((_, i) => (
-            <Cell key={i} fill={COLORS[i]} />
-          ))}
-        </Pie>
-      </PieChart>
+      {/* ==== GRÁFICO ==== */}
+      <div className="flex justify-center items-center pr-6">
+        <PieChart width={280} height={280}>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={70}
+            outerRadius={120}
+            paddingAngle={4}
+            stroke="#111"
+            strokeWidth={2}
+            dataKey="value"
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={COLORS[i]} />
+            ))}
+          </Pie>
+        </PieChart>
+      </div>
     </div>
   );
 }
 
 //
 // =====================================================================
-// DNB FOOTER – pequeno, compacto
+// FOOTER – DNB
 // =====================================================================
 function DNBCard() {
   return (
-    <div className="bg-[#0a0a0a] border border-[#e6c068] h-full flex items-center justify-around text-2xl">
+    <div className="bg-[#0a0a0a] border border-[#e6c068] h-full flex items-center justify-around text-3xl">
       <div>
         <span className="text-[#8ecf8f] font-bold underline">Dólar</span> $5,34
       </div>
