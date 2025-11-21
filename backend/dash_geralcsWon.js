@@ -35,25 +35,25 @@ const dbCfg = {
   ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
 };
 
-// 🔥 Concorrência reduzida para evitar 500
+// ✔️ Concorrência reduzida = evita 500 no Nutshell
 const limit = pLimit(3);
-
 const httpsAgent = new https.Agent({ keepAlive: true });
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Ajuste de fuso e formatação SQL
+// Ajusta data UTC → BR
 function toSQLDateFromISO(isoString) {
   if (!isoString) return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
 
-  const adjusted = new Date(d.getTime() - 3 * 60 * 60 * 1000); // corrige UTC→Brasil
+  const adjusted = new Date(d.getTime() - 3 * 60 * 60 * 1000);
   return adjusted.toISOString().slice(0, 19).replace("T", " ");
 }
 
+// TAGS
 function formatTags(tags) {
   if (!Array.isArray(tags)) return null;
   const valid = tags
@@ -62,6 +62,7 @@ function formatTags(tags) {
   return valid.length ? [...new Set(valid)].join(" | ") : null;
 }
 
+// Extrai número
 function extractNumeroFromLead(lead) {
   const url = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
   if (typeof url === "string" && url.includes("/lead/")) {
@@ -70,7 +71,7 @@ function extractNumeroFromLead(lead) {
     if (/^\d+$/.test(last)) return last;
   }
 
-  if (typeof lead.name === "string") {
+  if (lead.name) {
     const m = lead.name.match(/(\d{3,})/);
     if (m) return m[1];
   }
@@ -78,16 +79,28 @@ function extractNumeroFromLead(lead) {
   return String(lead.id);
 }
 
-// ⭐ Pipeline REAL da vitória
+// ⭐⭐ PIPELINE REAL DA VITÓRIA (100% igual ao Nutshell)
 function getPipelineDaVitoria(lead) {
-  return lead?.closedStage?.activity?.stageset?.name ?? null;
+  const events = lead.events ?? [];
+
+  for (const ev of events) {
+    if (
+      ev.type === "stageChange" &&
+      ev?.newStage?.isSuccess === true &&
+      ev?.newStage?.stageset?.name
+    ) {
+      return ev.newStage.stageset.name; // 💥 pipeline correto!
+    }
+  }
+
+  return null; // nunca foi realmente ganho
 }
 
-// Mapeamento final do lead
+// Mapeia lead → row SQL
 function mapLeadToRow(lead) {
   return {
     data: toSQLDateFromISO(lead.closedTime),
-    pipeline: getPipelineDaVitoria(lead), // CORRETO
+    pipeline: getPipelineDaVitoria(lead), // ⭐ AGORA CERTA
     empresa: lead.primaryAccount?.name ?? "",
     assigned: lead.assignee?.name ?? "",
     valor: Number(lead.value?.amount ?? 0),
@@ -99,7 +112,7 @@ function mapLeadToRow(lead) {
   };
 }
 
-// 🔥 findLeads ultra resistente (5 tentativas com fallback)
+// 🔥 findLeads ultra estável com 5 tentativas
 async function getAllLeadIds() {
   const ids = [];
 
@@ -113,24 +126,25 @@ async function getAllLeadIds() {
           page,
           limit: 500,
         });
-        break; // sucesso!
+        break;
       } catch (err) {
         console.error(
-          `❗ findLeads falhou (tentativa ${attempt}/5) na página ${page}: ${err.message}`
+          `❗ findLeads erro (tentativa ${attempt}/5) pág ${page}: ${err.message}`
         );
 
         if (attempt < 5) {
-          await sleep(1000 * attempt); // backoff progressivo
+          await sleep(1000 * attempt);
         } else {
           console.error(
-            `❌ findLeads falhou permanentemente na página ${page}. Continuando com o que já foi carregado.`
+            `❌ Falhou permanente na página ${page}. Continuando...`
           );
-          return ids; // retorna o que conseguiu
+          return ids; // segue com o que existe
         }
       }
     }
 
     if (!Array.isArray(leads) || leads.length === 0) break;
+
     ids.push(...leads.map((l) => l.id));
   }
 
@@ -138,7 +152,7 @@ async function getAllLeadIds() {
   return ids;
 }
 
-// RPC comum com retry
+// RPC com retry
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -167,15 +181,12 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
       console.error(
         `⚠️ Erro RPC [${method}] tentativa ${attempt + 1}: ${err.message}`
       );
-
-      if (attempt < retries - 1) {
-        await sleep(delay);
-        delay *= 2;
-      } else {
-        throw err;
-      }
+      if (attempt < retries - 1) await sleep(delay);
+      delay *= 2;
     }
   }
+
+  throw new Error(`RPC ${method} falhou após ${retries} tentativas.`);
 }
 
 async function ensureTable(client) {
@@ -232,6 +243,7 @@ async function upsertRows(client, rows) {
 export default async function main() {
   const client = new Client(dbCfg);
   await client.connect();
+
   await ensureTable(client);
 
   const ids = await getAllLeadIds();
@@ -243,11 +255,10 @@ export default async function main() {
     const tasks = batch.map((id) =>
       limit(async () => {
         let lead;
-
         try {
           lead = await callRPC("getLead", { leadId: id });
         } catch (err) {
-          console.warn(`⚠️ Lead ${id} ignorado — erro 500 no Nutshell`);
+          console.warn(`⚠️ Lead ${id} ignorado — erro 500`);
           return;
         }
 
@@ -257,14 +268,14 @@ export default async function main() {
 
     await Promise.all(tasks);
 
-    if (allRows.length > 0) {
+    if (allRows.length) {
       await upsertRows(client, allRows);
       allRows.length = 0;
     }
   }
 
   const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
-  console.log(`📊 Total atual na tabela: ${countRes.rows[0].count}`);
+  console.log(`📊 Total atual no banco: ${countRes.rows[0].count}`);
 
   await client.end();
   console.log("🏁 Finalizado com sucesso!");
