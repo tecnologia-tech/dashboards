@@ -13,7 +13,7 @@ export default function Geral() {
       {/* ==================== ÁREA PRINCIPAL ======================= */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* ==================== FAIXA 1 — RINGS (230px) ============= */}
-        <div className="h-[230px] flex justify-between items-center px-4 m-0 p-0">
+        <div className="h-[300px] flex justify-between items-center px-4 m-0 p-0">
           <Ring
             title="LTDA"
             value="857,1 mil"
