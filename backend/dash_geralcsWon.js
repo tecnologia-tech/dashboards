@@ -42,7 +42,7 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Ajuste de data
+// Corrige fuso e formata data SQL
 function toSQLDateFromISO(isoString) {
   if (!isoString || typeof isoString !== "string") return null;
   const d = new Date(isoString);
@@ -52,7 +52,6 @@ function toSQLDateFromISO(isoString) {
   return adjusted.toISOString().slice(0, 19).replace("T", " ");
 }
 
-// Tags
 function formatTags(tags) {
   if (!Array.isArray(tags) || tags.length === 0) return null;
   const valid = tags
@@ -64,7 +63,6 @@ function formatTags(tags) {
   return [...new Set(valid)].join(" | ");
 }
 
-// Número do lead
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
 
@@ -82,21 +80,20 @@ function extractNumeroFromLead(lead) {
   return String(lead.id ?? lead.leadId ?? "");
 }
 
-// Mapeia lead
-function mapLeadToRow(lead) {
-  const valor = Number(lead.value?.amount ?? 0);
+// 🎯 AQUI ESTÁ O PONTO MAIS IMPORTANTE:
+// PEGAR O PIPELINE REAL DA VITÓRIA (não o pipeline atual)
+function getPipelineDaVitoria(lead) {
+  return lead?.closedStage?.activity?.stageset?.name ?? null;
+}
 
+// Mapeia lead -> row SQL
+function mapLeadToRow(lead) {
   return {
-    data: toSQLDateFromISO(
-      lead.closedTime ??
-        lead.dueTime ??
-        lead.modifiedTime ??
-        new Date().toISOString()
-    ),
-    pipeline: lead?.closedStage?.activity?.stageset?.name ?? "INDEFINIDO", // pipeline REAL da vitória
+    data: toSQLDateFromISO(lead.closedTime),
+    pipeline: getPipelineDaVitoria(lead), // <-- CORRIGIDO
     empresa: lead.primaryAccount?.name ?? "",
     assigned: lead.assignee?.name ?? "",
-    valor,
+    valor: Number(lead.value?.amount ?? 0),
     numero: extractNumeroFromLead(lead),
     tag: formatTags(lead.tags),
     id_primary_company: lead.primaryAccount?.id ?? "",
@@ -105,23 +102,23 @@ function mapLeadToRow(lead) {
   };
 }
 
-// Busca todos os IDs Won
+// Busca todos os leads WON
 async function getAllLeadIds() {
   const ids = [];
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
-      query: { status: 10 },
+      query: { status: 10 }, // WON
       page,
       limit: 500,
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
     ids.push(...leads.map((l) => l.id));
   }
-  console.log(`📦 ${ids.length} leads Won encontrados.`);
+  console.log(`📦 ${ids.length} leads WON encontrados.`);
   return ids;
 }
 
-// RPC padrão
+// RPC comum com retry
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -163,7 +160,6 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   }
 }
 
-// Cria tabela
 async function ensureTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
@@ -180,7 +176,6 @@ async function ensureTable(client) {
     );
   `);
 
-  // remove duplicatas por numero
   await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
@@ -189,7 +184,6 @@ async function ensureTable(client) {
   `);
 }
 
-// Upsert
 async function upsertRows(client, rows) {
   if (!rows.length) return;
 
@@ -232,7 +226,6 @@ export default async function main() {
       limit(async () => {
         let lead;
 
-        // 💥 Proteção total contra erro 500
         try {
           lead = await callRPC("getLead", { leadId: id });
         } catch (err) {
@@ -240,16 +233,8 @@ export default async function main() {
           return;
         }
 
-        // ⭐ pipeline da vitória REAL
-        const pipelineWon = lead?.closedStage?.activity?.stageset?.name ?? null;
-
-        if (pipelineWon !== "DISNEYLEADS 🟡⚫️") return;
-
-        // ⭐ filtro por mês
-        const dt = new Date(lead.closedTime);
-        if (dt.getMonth() !== 10 || dt.getFullYear() !== 2025) return;
-
-        allRows.push(mapLeadToRow(lead));
+        const row = mapLeadToRow(lead);
+        allRows.push(row);
       })
     );
 
