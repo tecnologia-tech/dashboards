@@ -15,7 +15,7 @@ import LoaderPadrao from "./components/LoaderPadrao";
    TEMPOS CONFIGURÁVEIS (em minutos)
 ============================================================ */
 const TEMPO_ROTACAO = 3; // troca de rota
-const TEMPO_RELOAD = 1; // reload sem sair fullscreen
+const TEMPO_RELOAD = 1; // reload sem perder fullscreen
 
 /* ============================================================
    PRELOAD DOS MÓDULOS – deixa tudo instantâneo
@@ -61,7 +61,7 @@ function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rotas = ["/blackfriday"]; // coloque mais rotas aqui se quiser
+  const rotas = ["/blackfriday"]; // adicione mais aqui se quiser
 
   useEffect(() => {
     let indexAtual = rotas.indexOf(location.pathname);
@@ -85,10 +85,11 @@ function App() {
 
   usePreloadImages();
 
-  // 🔄 RELOAD AUTOMÁTICO (SEM SAIR DO FULLSCREEN)
+  // 🔄 RELOAD SUAVE SEM SAIR DO FULLSCREEN
   useEffect(() => {
     const id = setInterval(() => {
-      navigate(location.pathname, { replace: true }); // recria a rota sem perder fullscreen
+      navigate(location.pathname, { replace: true });
+      // recria o componente → dispara fetch de dados
     }, TEMPO_RELOAD * 60 * 1000);
 
     return () => clearInterval(id);
@@ -103,11 +104,17 @@ function App() {
       <Suspense fallback={<LoaderPadrao />}>
         <Routes>
           <Route path="/" element={<Navigate to="/hunters" replace />} />
-          <Route path="/hunters" element={<Hunters />} />
-          <Route path="/farmers" element={<Farmers />} />
-          <Route path="/lastdance" element={<LastDance />} />
-          <Route path="/blackfriday" element={<BlackFriday />} />
-          <Route path="/geral" element={<Geral />} />
+
+          {/* 🔥 COMPONENTES COM KEY PARA RECRIAR E RECARREGAR DADOS */}
+          <Route path="/hunters" element={<Hunters key="hunters" />} />
+          <Route path="/farmers" element={<Farmers key="farmers" />} />
+          <Route path="/lastdance" element={<LastDance key="lastdance" />} />
+          <Route
+            path="/blackfriday"
+            element={<BlackFriday key="blackfriday" />}
+          />
+          <Route path="/geral" element={<Geral key="geral" />} />
+
           <Route path="*" element={<Navigate to="/hunters" replace />} />
         </Routes>
       </Suspense>
@@ -116,7 +123,7 @@ function App() {
 }
 
 /* ============================================================
-   BROWSER ROUTER WRAPPER
+   BROWSER ROUTER WRAPPER (necessário para navigate e location)
 ============================================================ */
 export default function AppWrapper() {
   return (
