@@ -357,14 +357,14 @@ export default function BlackFriday() {
         >
           <div className="flex items-center gap-[1vw]">
             <span
-              className="text-[2.4rem] font-bold"
+              className="text-[3rem] font-bold"
               style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
             >
               Contagem total:
             </span>
 
             <span
-              className="text-[4.4rem] font-black"
+              className="text-[5rem] font-black"
               style={{ color: NEON_RED, textShadow: RED_GLOW }}
             >
               {formatarValor(totalVendido)}
@@ -451,14 +451,14 @@ export default function BlackFriday() {
             }}
           >
             <span
-              className="text-[2.1rem] font-bold uppercase tracking-[0.18em]"
+              className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
               style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
             >
               Projeção Geral
             </span>
 
             <span
-              className="text-[4rem] font-black"
+              className="text-[6rem] font-black"
               style={{ color: NEON_RED, textShadow: RED_GLOW }}
             >
               {formatarValor(somaOpen)}
