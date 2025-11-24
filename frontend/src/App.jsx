@@ -54,7 +54,7 @@ function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rotas = ["/farmers", "/hunters"];
+  const rotas = ["/farmers", "/hunters", "/blackfriday"];
 
   // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
   const TEMPO_MINUTOS = 3;
