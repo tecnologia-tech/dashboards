@@ -1,6 +1,7 @@
 // pages/BlackFriday/BlackFriday.jsx
 
 import videoFile from "../Video/video.mp4";
+
 import React, { useRef, useEffect } from "react";
 
 export default function BlackFriday() {
