@@ -106,12 +106,7 @@ export default function BlackFriday() {
 
   // Áudio
   useEffect(() => {
-    const audio = new Audio("/audios/comemora.mp3");
-    audioRef.current = audio;
-    audio.play().then(() => {
-      audio.pause();
-      audio.currentTime = 0;
-    });
+    audioRef.current = new Audio("/audios/comemora.mp3");
   }, []);
 
   // Dados API
