@@ -54,7 +54,7 @@ function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rotas = ["/blackfriday", "/blackfriday"];
+  const rotas = ["/blackfriday"];
 
   // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
   const TEMPO_MINUTOS = 3;
@@ -80,18 +80,24 @@ function AutoRotateRoutes() {
 function App() {
   usePreloadImages(); // acelera troca de rotas
 
+  // 🔄 RELOAD AUTOMÁTICO A CADA 1 MINUTO
+  useEffect(() => {
+    const id = setInterval(() => {
+      window.location.reload();
+    }, 60 * 1000);
+
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <BrowserRouter>
       <AutoRotateRoutes />
 
-      {/* Botão Tela Cheia fixo no centro */}
       <FullscreenButton />
 
-      {/* FALLBACK MOSTRANDO O LOADER ENQUANTO A PÁGINA CARREGA */}
       <Suspense fallback={<LoaderPadrao />}>
         <Routes>
           <Route path="/" element={<Navigate to="/hunters" replace />} />
-
           <Route path="/hunters" element={<Hunters />} />
           <Route path="/farmers" element={<Farmers />} />
           <Route path="/lastdance" element={<LastDance />} />
