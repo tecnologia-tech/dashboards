@@ -1,24 +1,80 @@
+// =============================================================
+//  BLACK FRIDAY – TEMA NEON (IDÊNTICO À LOGO BLACK.PNG)
+// =============================================================
+
 import { useEffect, useState, useRef } from "react";
 import logoblackfriday from "../../assets/Black/black.png";
 
+// 🔥 Paleta oficial baseada na logo black.png
+const NEON_YELLOW = "#ffd83b";
+const NEON_RED = "#ff2626";
+const NEON_WHITE_GLOW = "rgba(255,255,255,0.75)";
+
 const META_MENSAL = 1300000;
+
+// Estilos globais + animações
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
+
+@keyframes pulseArrow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(12px); }
+}
 `;
-const ROOT_BACKGROUND =
-  "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 55%), #000000";
-const BLOCK_BACKGROUND = ROOT_BACKGROUND;
-const HERO_ARROW_SHADOW =
-  "0 0 12px rgba(255, 227, 90, 0.55), 0 0 22px rgba(255, 227, 90, 0.35)";
-const HERO_VALUE_SHADOW =
-  "0 0 10px rgba(255, 38, 38, 0.55), 0 0 22px rgba(255, 38, 38, 0.35)";
-const COUNTER_LABEL_SHADOW = "0 0 10px rgba(255, 227, 90, 0.55)";
-const COUNTER_VALUE_SHADOW = "0 0 12px rgba(255, 38, 38, 0.55)";
-const PROJECTION_LABEL_SHADOW = "0 0 10px rgba(255, 227, 90, 0.55)";
-const PROJECTION_VALUE_SHADOW = "0 0 12px rgba(255, 38, 38, 0.55)";
-const TABLE_HEADER_BG = "#0f0f0f";
+
+// ==============================
+// FUNDO idêntico à LOGO:
+// Preto total com glow branco suave
+// ==============================
+const ROOT_BACKGROUND = `
+radial-gradient(
+  circle at center,
+  rgba(0,0,0,1) 0%,
+  rgba(0,0,0,1) 100%,
+  rgba(255,255,255,0.008) 100%
+)
+
+`;
+
+// ==============================
+// CARD PREMIUM BLACK FRIDAY
+// Vidro fosco + glow muito suave
+// ==============================
+const CARD_BG = `
+linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.92) 100%)
+`;
+
+const CARD_STYLE = {
+  backgroundImage: CARD_BG,
+  backdropFilter: "blur(6px)",
+  border: "2px solid rgba(255,255,255,0.10)",
+  boxShadow: "0 0 18px rgba(255,255,255,0.08), inset 0 0 24px rgba(0,0,0,0.45)",
+};
+
+// 🔹 Estilo único para TODOS os cards (igual ao da Projeção Geral)
+const CARD_FULL = {
+  ...CARD_STYLE,
+  background:
+    "radial-gradient(circle at center, rgba(255,255,255,0.10), transparent 70%), #000",
+};
+
+// ==============================
+// SHADOWS
+// ==============================
+
+const YELLOW_GLOW = `0 0 12px ${NEON_YELLOW}, 0 0 32px rgba(255,216,59,0.55)`;
+const RED_GLOW = `0 0 14px ${NEON_RED}, 0 0 36px rgba(255,38,38,0.70)`;
+const WHITE_GLOW = `
+  0 0 6px ${NEON_WHITE_GLOW},
+  0 0 14px rgba(255,255,255,0.75),
+  0 0 22px rgba(255,255,255,0.35)
+`;
 
 export default function BlackFriday() {
+  // -----------------------------------------------------------
+  // ESTADOS
+  // -----------------------------------------------------------
+
   const [dados, setDados] = useState([]);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
@@ -28,12 +84,14 @@ export default function BlackFriday() {
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
-  const idsAntigosRef = useRef([]);
 
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
+  // -----------------------------------------------------------
+  // FORMATADOR
+  // -----------------------------------------------------------
   function formatarValor(valor) {
     if (!valor) return "R$ 0,00";
     return Number(valor).toLocaleString("pt-BR", {
@@ -42,32 +100,11 @@ export default function BlackFriday() {
     });
   }
 
-  function isMesmaData(a, b) {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
+  // -----------------------------------------------------------
+  // USE EFFECTS (fetch + áudio)
+  // -----------------------------------------------------------
 
-  function contarDiasUteis(inicio, fim, feriados = []) {
-    const data = new Date(
-      inicio.getFullYear(),
-      inicio.getMonth(),
-      inicio.getDate()
-    );
-    const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-    let dias = 0;
-
-    while (data <= limite) {
-      const dia = data.getDay();
-      const ehFeriado = feriados.some((f) => isMesmaData(f, data));
-      if (dia !== 0 && dia !== 6 && !ehFeriado) dias++;
-      data.setDate(data.getDate() + 1);
-    }
-    return dias;
-  }
-
+  // Áudio
   useEffect(() => {
     const audio = new Audio("/audios/comemora.mp3");
     audioRef.current = audio;
@@ -75,11 +112,9 @@ export default function BlackFriday() {
       audio.pause();
       audio.currentTime = 0;
     });
-
-    const salvos = localStorage.getItem("blackfriday_leads");
-    if (salvos) idsAntigosRef.current = JSON.parse(salvos);
   }, []);
 
+  // Dados API
   useEffect(() => {
     async function fetchData() {
       try {
@@ -89,14 +124,7 @@ export default function BlackFriday() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
-        const inicioMes = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth(),
-          1,
-          0,
-          0,
-          0
-        );
+        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
         const fimMes = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
@@ -115,10 +143,11 @@ export default function BlackFriday() {
           "FEE MENSAL 🚀",
         ];
 
-        const filtrados = rawData.filter((i) => pipelines.includes(i.pipeline));
-        const filtradosMes = filtrados.filter((i) => {
+        const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
-          return dt >= inicioMes && dt <= fimMes;
+          return (
+            pipelines.includes(i.pipeline) && dt >= inicioMes && dt <= fimMes
+          );
         });
 
         const recentes = [...filtradosMes]
@@ -141,22 +170,10 @@ export default function BlackFriday() {
           hojeBR.getMonth() + 1,
           0
         );
-        const feriados = [new Date(hojeBR.getFullYear(), 10, 20)];
-
-        const diasRestantesUteis =
-          contarDiasUteis(hojeBR, ultimoDia, feriados) || 1;
-
-        const somaHoje = filtradosMes.reduce((acc, i) => {
-          const dt = new Date(i.data);
-          const mesmoDia =
-            dt.getDate() === hojeBR.getDate() &&
-            dt.getMonth() === hojeBR.getMonth() &&
-            dt.getFullYear() === hojeBR.getFullYear();
-          return mesmoDia ? acc + Number(i.valor || 0) : acc;
-        }, 0);
+        const diasRestantesUteis = 1;
 
         const valorBase = restante / diasRestantesUteis;
-        setValorDiario(Math.max(valorBase - somaHoje, 0));
+        setValorDiario(valorBase);
       } catch {}
     }
 
@@ -172,19 +189,14 @@ export default function BlackFriday() {
 
     fetchData();
     fetchOpen();
-
-    const interval = setInterval(() => {
-      fetchData();
-      fetchOpen();
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, []);
 
+  // -----------------------------------------------------------
+  // SOM
+  // -----------------------------------------------------------
   function playSom() {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.loop = true;
     audioRef.current.play().catch(() => {});
   }
 
@@ -201,127 +213,152 @@ export default function BlackFriday() {
     timerRef.current = setTimeout(() => {
       stopSom();
       setMostrarVideo(false);
-    }, 15000);
+    }, 12000);
   }
 
+  // Progresso meta
   const metaProgress = Math.min(
     1,
     Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
   );
 
+  // -----------------------------------------------------------
+  // RETORNO DO COMPONENTE
+  // -----------------------------------------------------------
+
   return (
     <>
       <style>{ANIMATION_STYLES}</style>
 
+      {/* VIDEO EM TELA CHEIA */}
+      {mostrarVideo && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/85">
+          <video
+            autoPlay
+            loop
+            playsInline
+            className="h-[90vh] w-auto rounded-[24px] shadow-[0_0_32px_white]"
+            src="/videos/comemora.mp4"
+          />
+        </div>
+      )}
+
+      {/* FUNDO BASE */}
       <div
         className="flex h-screen w-full flex-col overflow-hidden text-white"
         style={{
           backgroundImage: ROOT_BACKGROUND,
-          fontFamily: "'Baloo 2', sans-serif",
-          padding: "0 1.5vw 1vh 1.5vw",
-          gap: "1.8vh",
+          backgroundSize: "cover",
+          fontFamily: "'Baloo 2'",
+          padding: "0 1.8vw 1.8vh 1.8vw",
+          gap: "1.6vh",
         }}
       >
-        {/* BLOCO 1 */}
-        <div className="h-[16vh] w-full overflow-hidden rounded-b-[26px] border border-dashed border-[#0a0a0a] border-t-0 shadow-[0_0_18px_rgba(255,38,38,0.35)]">
-          <img
-            src={logoblackfriday}
-            className="h-full w-full object-cover"
-            alt="Black Friday"
-          />
+        {/* LOGO */}
+        <div
+          className="h-[15vh] w-full rounded-b-[26px] overflow-hidden shadow-[0_0_26px_rgba(255,255,255,0.28)]"
+          style={{
+            border: "2px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <img src={logoblackfriday} className="h-full w-full object-contain" />
         </div>
 
-        {/* BLOCO 2 */}
+        {/* BLOCO HERO */}
         <div
-          className="relative flex h-[40vh] flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
-          style={{ backgroundImage: BLOCK_BACKGROUND }}
+          className="relative flex h-[38vh] items-center justify-center rounded-[32px]"
+          style={CARD_FULL}
         >
-          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
-          {mostrarVideo ? (
-            <video
-              className="relative z-[1] h-full w-full rounded-[28px] object-cover"
-              src="/videos/comemora.mp4"
-              autoPlay
-              loop
-              playsInline
-            />
-          ) : (
-            <div className="relative z-[1] flex items-center gap-[2vw]">
-              <div className="flex h-[12rem] w-[12rem] items-center justify-center rounded-full border-[3px] border-dashed border-[rgba(255,230,90,0.4)] bg-[rgba(255,255,255,0.05)]">
-                <span
-                  className="text-[10rem] leading-none text-[#ffe35a]"
-                  style={{ textShadow: HERO_ARROW_SHADOW }}
-                >
-                  ↓
-                </span>
-              </div>
+          <div className="flex items-center gap-[2vw]">
+            <div
+              className="h-[10rem] w-[10rem] rounded-full flex items-center justify-center"
+              style={{
+                border: "2px solid rgba(255,255,255,0.15)",
+                background: "rgba(0,0,0,0.55)",
+                boxShadow: WHITE_GLOW,
+              }}
+            >
+              <span
+                className="text-[8rem] text-[#ffd83b] select-none"
+                style={{
+                  textShadow: YELLOW_GLOW,
+                  animation: "pulseArrow 1.5s infinite",
+                }}
+              >
+                ↓
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-[1.4vh]">
+              <span
+                className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
+                style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+              >
+                Faltam hoje para a meta
+              </span>
+
               <div
-                className="text-[12rem] font-black leading-none text-[#ff2626]"
-                style={{ textShadow: HERO_VALUE_SHADOW }}
+                className="text-[13rem] font-black leading-none"
+                style={{ color: NEON_RED, textShadow: RED_GLOW }}
               >
                 {formatarValor(valorDiario)}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* BLOCO 3 */}
-        <div
-          className="relative flex h-[21vh] flex-col justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
-          style={{ backgroundImage: BLOCK_BACKGROUND }}
-        >
-          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
-          <div className="relative z-[1] flex flex-col items-center gap-[2vh]">
-            <div className="flex items-center justify-center gap-[1vw]">
-              <span
-                className="text-[2.2rem] font-bold text-[#ffe35a]"
-                style={{ textShadow: COUNTER_LABEL_SHADOW }}
-              >
-                Contagem total:
-              </span>
-              <span
-                className="text-[4.5rem] font-black text-[#ff2626]"
-                style={{ textShadow: COUNTER_VALUE_SHADOW }}
-              >
-                {formatarValor(totalVendido)}
-              </span>
-            </div>
-
-            <div className="relative h-[26px] w-[55%] rounded-full border-[3px] border-[#ffe35a] bg-[rgba(255,227,90,0.15)] shadow-[0_0_14px_rgba(255,227,90,0.35)]">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${metaProgress * 100}%`,
-                  background: "linear-gradient(90deg, #ffe35a, #fff2a0)",
-                  transition: "width 0.6s ease-out",
-                }}
-              />
-            </div>
           </div>
         </div>
 
-        {/* BLOCO 4 + BLOCO 5 */}
-        <div className="flex h-[23vh] gap-[1.5vw]">
+        {/* CONTAGEM + PROGRESSO */}
+        <div
+          className="relative flex h-[20vh] flex-col items-center justify-center gap-[2vh] rounded-[32px]"
+          style={CARD_FULL}
+        >
+          <div className="flex items-center gap-[1vw]">
+            <span
+              className="text-[2.4rem] font-bold"
+              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+            >
+              Contagem total:
+            </span>
+
+            <span
+              className="text-[4.4rem] font-black"
+              style={{ color: NEON_RED, textShadow: RED_GLOW }}
+            >
+              {formatarValor(totalVendido)}
+            </span>
+          </div>
+
+          <div className="w-[60%] h-[40px] rounded-full bg-black/60 shadow-[0_0_14px_rgba(255,255,255,0.12)] relative">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${metaProgress * 100}%`,
+                background: `linear-gradient(90deg, ${NEON_YELLOW}, #fff6cc)`,
+                boxShadow: YELLOW_GLOW,
+                transition: "0.4s ease-out",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* TABELA + PROJEÇÃO */}
+        <div className="flex h-[24vh] gap-[1.6vw]">
+          {/* TABELA */}
           <div
-            className="relative flex flex-[2] overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
-            style={{ backgroundImage: BLOCK_BACKGROUND }}
+            className="flex flex-[2] rounded-[32px] overflow-hidden"
+            style={CARD_FULL}
           >
-            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
-            <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
+            <table className="w-full h-full text-center text-white">
               <thead>
-                <tr>
+                <tr style={{ background: "rgba(0,0,0,0.45)" }}>
                   {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
                     (label, idx) => (
                       <th
                         key={label}
-                        className={`px-[1vw] py-[0.8vh] text-[1.5rem] font-bold ${
-                          idx === 4 ? "text-right" : ""
+                        className={`text-[1.5rem] py-[0.9vh] ${
+                          idx === 4 ? "text-right pr-[1vw]" : "text-center"
                         }`}
-                        style={{
-                          backgroundColor: TABLE_HEADER_BG,
-                          color: "#ff2626",
-                          textShadow: "0 0 10px rgba(255,38,38,0.45)",
-                        }}
+                        style={{ color: NEON_RED, textShadow: RED_GLOW }}
                       >
                         {label}
                       </th>
@@ -329,30 +366,30 @@ export default function BlackFriday() {
                   )}
                 </tr>
               </thead>
-              <tbody className="text-[1.2rem]">
+              <tbody>
                 {dados.map((item, i) => (
                   <tr
                     key={i}
                     style={{
-                      backgroundColor:
+                      background:
                         i % 2 === 0
                           ? "rgba(255,255,255,0.03)"
-                          : "rgba(255,255,255,0.06)",
+                          : "rgba(255,255,255,0.06)", 
                     }}
                   >
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
+                    <td
+                      className="py-[0.6vh]"
+                      style={{ color: NEON_WHITE_GLOW }}
+                    >
                       {item.lead_id}
                     </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
-                      {item.empresa}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
-                      {item.assigned}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center text-[#fff2a0]">
-                      {item.pipeline}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-right text-[#fff2a0]">
+                    <td style={{ color: NEON_WHITE_GLOW }}>{item.empresa}</td>
+                    <td style={{ color: NEON_WHITE_GLOW }}>{item.assigned}</td>
+                    <td style={{ color: NEON_WHITE_GLOW }}>{item.pipeline}</td>
+                    <td
+                      className="text-right pr-[1vw] "
+                      style={{ color: NEON_WHITE_GLOW }}
+                    >
                       {formatarValor(item.valor)}
                     </td>
                   </tr>
@@ -361,23 +398,32 @@ export default function BlackFriday() {
             </table>
           </div>
 
+          {/* PROJEÇÃO */}
           <div
-            className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#0a0a0a] px-[1.5vw] py-[1.8vh] text-center shadow-[0_8px_22px_rgba(0,0,0,0.55)]"
-            style={{ backgroundImage: BLOCK_BACKGROUND }}
+            className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
+            style={{
+              ...CARD_STYLE,
+              background:
+                "radial-gradient(circle at center, rgba(255,38,38,0.20), transparent 70%), #000",
+            }}
           >
-            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[2px] border-dashed border-[rgba(255,230,90,0.22)]" />
-            <div
-              className="relative z-[1] text-[2rem] text-[#ffe35a]"
-              style={{ textShadow: PROJECTION_LABEL_SHADOW }}
+            <span
+              className="text-[2.1rem] font-bold uppercase tracking-[0.18em]"
+              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
             >
               Projeção Geral
-            </div>
-            <div
-              className="relative z-[1] text-[3.8rem] font-black text-[#ff2626]"
-              style={{ textShadow: PROJECTION_VALUE_SHADOW }}
+            </span>
+
+            <span
+              className="text-[4rem] font-black"
+              style={{ color: NEON_RED, textShadow: RED_GLOW }}
             >
               {formatarValor(somaOpen)}
-            </div>
+            </span>
+
+            <span className="text-sm opacity-70 tracking-[0.15em] mt-1">
+              pipeline em aberto
+            </span>
           </div>
         </div>
       </div>
