@@ -463,10 +463,6 @@ export default function BlackFriday() {
             >
               {formatarValor(somaOpen)}
             </span>
-
-            <span className="text-sm opacity-70 tracking-[0.15em] mt-1">
-              pipeline em aberto
-            </span>
           </div>
         </div>
       </div>

@@ -17,7 +17,18 @@ const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://dashboards-five-sigma.vercel.app",
+      "http://localhost:5173",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 const pool = new Pool({
