@@ -23,8 +23,7 @@ const ANIMATION_STYLES = `
 `;
 
 // ==============================
-// FUNDO idêntico à LOGO:
-// Preto total com glow branco suave
+// FUNDO idêntico à LOGO
 // ==============================
 const ROOT_BACKGROUND = `
 radial-gradient(
@@ -33,12 +32,10 @@ radial-gradient(
   rgba(0,0,0,1) 100%,
   rgba(255,255,255,0.008) 100%
 )
-
 `;
 
 // ==============================
 // CARD PREMIUM BLACK FRIDAY
-// Vidro fosco + glow muito suave
 // ==============================
 const CARD_BG = `
 linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.92) 100%)
@@ -51,7 +48,6 @@ const CARD_STYLE = {
   boxShadow: "0 0 18px rgba(255,255,255,0.08), inset 0 0 24px rgba(0,0,0,0.45)",
 };
 
-// 🔹 Estilo único para TODOS os cards (igual ao da Projeção Geral)
 const CARD_FULL = {
   ...CARD_STYLE,
   background:
@@ -61,7 +57,6 @@ const CARD_FULL = {
 // ==============================
 // SHADOWS
 // ==============================
-
 const YELLOW_GLOW = `0 0 12px ${NEON_YELLOW}, 0 0 32px rgba(255,216,59,0.55)`;
 const RED_GLOW = `0 0 14px ${NEON_RED}, 0 0 36px rgba(255,38,38,0.70)`;
 const WHITE_GLOW = `
@@ -74,7 +69,6 @@ export default function BlackFriday() {
   // -----------------------------------------------------------
   // ESTADOS
   // -----------------------------------------------------------
-
   const [dados, setDados] = useState([]);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
@@ -100,17 +94,22 @@ export default function BlackFriday() {
     });
   }
 
+  const valorFormatado = formatarValor(valorDiario);
+
+  // Garante que separa corretamente MESMO com espaços invisíveis
+  const partes = valorFormatado.replace(/\s+/g, " ").trim().split(" ");
+
+  const moeda = partes[0] || "R$";
+  const numero = partes[1] || "0,00";
+
   // -----------------------------------------------------------
   // USE EFFECTS (fetch + áudio)
   // -----------------------------------------------------------
 
-  // Áudio
   useEffect(() => {
     audioRef.current = new Audio("/audios/comemora.mp3");
   }, []);
 
-  // Dados API
-  // Dados API
   useEffect(() => {
     async function fetchData() {
       try {
@@ -139,9 +138,6 @@ export default function BlackFriday() {
           "FEE MENSAL 🚀",
         ];
 
-        // =============================
-        // FILTRAR VENDAS DO MÊS
-        // =============================
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
@@ -149,28 +145,21 @@ export default function BlackFriday() {
           );
         });
 
-        // 3 mais recentes
         const recentes = [...filtradosMes]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
+
         setDados(recentes);
 
-        // SOMA DO MÊS
         const somaMes = filtradosMes.reduce(
           (acc, i) => acc + Number(i.valor || 0),
           0
         );
         setTotalVendido(somaMes);
 
-        // =============================
-        // VALOR QUE FALTA PRA META
-        // =============================
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        // =============================
-        // DIAS ÚTEIS RESTANTES (INCLUINDO HOJE)
-        // =============================
         function contarDiasUteisRestantes() {
           const hoje = new Date();
           const ultimoDia = new Date(
@@ -186,16 +175,13 @@ export default function BlackFriday() {
             d.setDate(d.getDate() + 1)
           ) {
             const diaSemana = d.getDay();
-            if (diaSemana !== 0 && diaSemana !== 6) dias++; // 0 = domingo, 6 = sábado
+            if (diaSemana !== 0 && diaSemana !== 6) dias++;
           }
           return dias;
         }
 
         const diasRestantesUteis = contarDiasUteisRestantes();
 
-        // =============================
-        // VENDAS DO DIA (DESCONTAR DA META)
-        // =============================
         const vendasHoje = filtradosMes.filter((i) => {
           const dt = new Date(i.data);
           return dt.toDateString() === hojeBR.toDateString();
@@ -206,9 +192,6 @@ export default function BlackFriday() {
           0
         );
 
-        // =============================
-        // META DIÁRIA AJUSTADA
-        // =============================
         const valorBase =
           diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
 
@@ -237,6 +220,7 @@ export default function BlackFriday() {
   // -----------------------------------------------------------
   // SOM
   // -----------------------------------------------------------
+
   function playSom() {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
@@ -259,7 +243,6 @@ export default function BlackFriday() {
     }, 12000);
   }
 
-  // Progresso meta
   const metaProgress = Math.min(
     1,
     Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
@@ -340,12 +323,56 @@ export default function BlackFriday() {
                 Faltam hoje para a meta
               </span>
 
-              <div
-                className="text-[13rem] font-black leading-none"
-                style={{ color: NEON_RED, textShadow: RED_GLOW }}
-              >
-                {formatarValor(valorDiario)}
+              {/* ===== NOVO TEXTO DO VALOR DIÁRIO ===== */}
+              <div className="flex items-end gap-[1rem] leading-none">
+                {/* R$ EM BRANCO NEON */}
+                <span
+                  style={{
+                    fontFamily: "'Baloo 2'",
+                    fontSize: "13rem",
+                    fontWeight: 900,
+                    color: "white",
+                    WebkitTextStroke: "0.6px rgba(255,255,255,0.95)",
+                    textShadow: `
+        0 0 6px rgba(255,255,255,0.8),
+        0 0 18px rgba(255,255,255,0.5),
+        0 0 28px rgba(255,255,255,0.35)
+      `,
+                    lineHeight: "1",
+                  }}
+                >
+                  {moeda}
+                </span>
+
+                {/* NÚMEROS AINDA MAIS BONITOS – NEONLIGHT PREMIUM */}
+                <span
+                  style={{
+                    fontFamily: "'NeonLight Regular', sans-serif",
+                    fontSize: "13rem",
+                    fontWeight: 400,
+
+                    // 🔥 preenchimento mais forte (para ficar bonito e legível)
+                    color: "rgba(255,255,255,0.92)",
+
+                    // 🔥 contorno neon leve
+                    WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
+
+                    // 🔥 glow mais elegante e suave
+                    textShadow: `
+        0 0 8px rgba(255,255,255,0.9),
+        0 0 20px rgba(255,255,255,0.6),
+        0 0 36px rgba(255,255,255,0.45)
+      `,
+
+                    letterSpacing: "-0.01em",
+                    lineHeight: "1",
+                  }}
+                >
+                  {numero}
+                </span>
               </div>
+
+              {/* ===== FIM ===== */}
             </div>
           </div>
         </div>
@@ -386,7 +413,6 @@ export default function BlackFriday() {
 
         {/* TABELA + PROJEÇÃO */}
         <div className="flex h-[24vh] gap-[1.6vw]">
-          {/* TABELA */}
           <div
             className="flex flex-[2] rounded-[32px] overflow-hidden"
             style={CARD_FULL}
@@ -409,6 +435,7 @@ export default function BlackFriday() {
                   )}
                 </tr>
               </thead>
+
               <tbody className="text-[1.7rem]">
                 {dados.map((item, i) => (
                   <tr
@@ -426,11 +453,13 @@ export default function BlackFriday() {
                     >
                       {item.lead_id}
                     </td>
+
                     <td style={{ color: NEON_WHITE_GLOW }}>{item.empresa}</td>
                     <td style={{ color: NEON_WHITE_GLOW }}>{item.assigned}</td>
                     <td style={{ color: NEON_WHITE_GLOW }}>{item.pipeline}</td>
+
                     <td
-                      className="text-right pr-[1vw] "
+                      className="text-right pr-[1vw]"
                       style={{ color: NEON_WHITE_GLOW }}
                     >
                       {formatarValor(item.valor)}
@@ -441,7 +470,7 @@ export default function BlackFriday() {
             </table>
           </div>
 
-          {/* PROJEÇÃO */}
+          {/* PROJEÇÃO GERAL */}
           <div
             className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
             style={{

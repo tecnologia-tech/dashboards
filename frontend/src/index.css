@@ -1,6 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@font-face {
+  font-family: 'NeonLight Regular';
+  src: url('/src/assets/fonts/NeonLight-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
 
 html,
 body,
