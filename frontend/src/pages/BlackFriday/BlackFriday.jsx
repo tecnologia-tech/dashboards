@@ -115,6 +115,7 @@ export default function BlackFriday() {
   }, []);
 
   // Dados API
+  // Dados API
   useEffect(() => {
     async function fetchData() {
       try {
@@ -143,6 +144,9 @@ export default function BlackFriday() {
           "FEE MENSAL 🚀",
         ];
 
+        // =============================
+        // FILTRAR VENDAS DO MÊS
+        // =============================
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
@@ -150,31 +154,75 @@ export default function BlackFriday() {
           );
         });
 
+        // 3 mais recentes
         const recentes = [...filtradosMes]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
-
         setDados(recentes);
 
+        // SOMA DO MÊS
         const somaMes = filtradosMes.reduce(
           (acc, i) => acc + Number(i.valor || 0),
           0
         );
         setTotalVendido(somaMes);
 
+        // =============================
+        // VALOR QUE FALTA PRA META
+        // =============================
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        const ultimoDia = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth() + 1,
+        // =============================
+        // DIAS ÚTEIS RESTANTES (INCLUINDO HOJE)
+        // =============================
+        function contarDiasUteisRestantes() {
+          const hoje = new Date();
+          const ultimoDia = new Date(
+            hoje.getFullYear(),
+            hoje.getMonth() + 1,
+            0
+          );
+
+          let dias = 0;
+          for (
+            let d = new Date(hoje);
+            d <= ultimoDia;
+            d.setDate(d.getDate() + 1)
+          ) {
+            const diaSemana = d.getDay();
+            if (diaSemana !== 0 && diaSemana !== 6) dias++; // 0 = domingo, 6 = sábado
+          }
+          return dias;
+        }
+
+        const diasRestantesUteis = contarDiasUteisRestantes();
+
+        // =============================
+        // VENDAS DO DIA (DESCONTAR DA META)
+        // =============================
+        const vendasHoje = filtradosMes.filter((i) => {
+          const dt = new Date(i.data);
+          return dt.toDateString() === hojeBR.toDateString();
+        });
+
+        const totalHoje = vendasHoje.reduce(
+          (acc, i) => acc + Number(i.valor || 0),
           0
         );
-        const diasRestantesUteis = 1;
 
-        const valorBase = restante / diasRestantesUteis;
-        setValorDiario(valorBase);
-      } catch {}
+        // =============================
+        // META DIÁRIA AJUSTADA
+        // =============================
+        const valorBase =
+          diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
+
+        const metaAjustada = Math.max(valorBase - totalHoje, 0);
+
+        setValorDiario(metaAjustada);
+      } catch (err) {
+        console.log("Erro ao buscar dados:", err);
+      }
     }
 
     async function fetchOpen() {
@@ -374,7 +422,7 @@ export default function BlackFriday() {
                       background:
                         i % 2 === 0
                           ? "rgba(255,255,255,0.03)"
-                          : "rgba(255,255,255,0.06)", 
+                          : "rgba(255,255,255,0.06)",
                     }}
                   >
                     <td
