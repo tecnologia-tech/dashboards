@@ -320,30 +320,11 @@ export default function BlackFriday() {
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
               >
-                Faltam hoje para a meta
+                Faltam hoje para a meta R$
               </span>
 
               {/* ===== NOVO TEXTO DO VALOR DIÁRIO ===== */}
               <div className="flex items-end gap-[1rem] leading-none">
-                {/* R$ EM BRANCO NEON */}
-                <span
-                  style={{
-                    fontFamily: "'Baloo 2'",
-                    fontSize: "13rem",
-                    fontWeight: 900,
-                    color: "white",
-                    WebkitTextStroke: "0.6px rgba(255,255,255,0.95)",
-                    textShadow: `
-        0 0 6px rgba(255,255,255,0.8),
-        0 0 18px rgba(255,255,255,0.5),
-        0 0 28px rgba(255,255,255,0.35)
-      `,
-                    lineHeight: "1",
-                  }}
-                >
-                  {moeda}
-                </span>
-
                 {/* NÚMEROS AINDA MAIS BONITOS – NEONLIGHT PREMIUM */}
                 <span
                   style={{
