@@ -134,7 +134,7 @@ export default function BlackFriday() {
           "CONSULTORIA LANNISTER 🦁",
           "REPEDIDO 🏆",
           "GANHO PRODUTO 🧸",
-          "GANHO FRETE 🚢",
+          "BONUS PARCEIROS 🚢🧾💱",
           "FEE MENSAL 🚀",
         ];
 
