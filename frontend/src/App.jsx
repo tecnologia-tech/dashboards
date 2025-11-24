@@ -12,6 +12,12 @@ import FullscreenButton from "./components/FullscreenButton";
 import LoaderPadrao from "./components/LoaderPadrao";
 
 /* ============================================================
+   TEMPOS CONFIGURÁVEIS (em minutos)
+============================================================ */
+const TEMPO_ROTACAO = 3; // troca de rota
+const TEMPO_RELOAD = 1; // reload sem sair fullscreen
+
+/* ============================================================
    PRELOAD DOS MÓDULOS – deixa tudo instantâneo
 ============================================================ */
 import("./pages/Hunters/Hunters");
@@ -28,6 +34,7 @@ const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 const Geral = lazy(() => import("./pages/Geral/Geral"));
+
 /* ============================================================
    PRELOAD DE IMAGENS PRINCIPAIS
 ============================================================ */
@@ -48,16 +55,13 @@ function usePreloadImages() {
 }
 
 /* ============================================================
-   AUTO-ROTAÇÃO DAS ROTAS USANDO MINUTOS DIRETO
+   AUTO-ROTAÇÃO DAS ROTAS
 ============================================================ */
 function AutoRotateRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rotas = ["/blackfriday"];
-
-  // 🔥 DEFINA O TEMPO EM MINUTOS AQUI
-  const TEMPO_MINUTOS = 3;
+  const rotas = ["/blackfriday"]; // coloque mais rotas aqui se quiser
 
   useEffect(() => {
     let indexAtual = rotas.indexOf(location.pathname);
@@ -66,31 +70,32 @@ function AutoRotateRoutes() {
     const id = setInterval(() => {
       indexAtual = (indexAtual + 1) % rotas.length;
       navigate(rotas[indexAtual], { replace: true });
-    }, TEMPO_MINUTOS * 60 * 1000);
-    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    // transforma minutos → ms automaticamente
+    }, TEMPO_ROTACAO * 60 * 1000);
 
     return () => clearInterval(id);
   }, [location.pathname, navigate]);
 }
 
 /* ============================================================
-   APP
+   COMPONENTE APP
 ============================================================ */
 function App() {
-  usePreloadImages(); // acelera troca de rotas
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // 🔄 RELOAD AUTOMÁTICO A CADA 1 MINUTO
+  usePreloadImages();
+
+  // 🔄 RELOAD AUTOMÁTICO (SEM SAIR DO FULLSCREEN)
   useEffect(() => {
     const id = setInterval(() => {
-      window.location.reload();
-    }, 60 * 1000);
+      navigate(location.pathname, { replace: true }); // recria a rota sem perder fullscreen
+    }, TEMPO_RELOAD * 60 * 1000);
 
     return () => clearInterval(id);
-  }, []);
+  }, [location.pathname, navigate]);
 
   return (
-    <BrowserRouter>
+    <>
       <AutoRotateRoutes />
 
       <FullscreenButton />
@@ -106,8 +111,17 @@ function App() {
           <Route path="*" element={<Navigate to="/hunters" replace />} />
         </Routes>
       </Suspense>
-    </BrowserRouter>
+    </>
   );
 }
 
-export default App;
+/* ============================================================
+   BROWSER ROUTER WRAPPER
+============================================================ */
+export default function AppWrapper() {
+  return (
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+}
