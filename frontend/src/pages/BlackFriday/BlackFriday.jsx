@@ -409,7 +409,7 @@ export default function BlackFriday() {
                   )}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-[1.7rem]">
                 {dados.map((item, i) => (
                   <tr
                     key={i}
