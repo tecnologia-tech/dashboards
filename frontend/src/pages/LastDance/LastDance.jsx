@@ -39,7 +39,6 @@ export default function LastDance() {
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
-<<<<<<< ours
 function formatarValor(valor) {
   if (!valor) return "R$ 0,00";
   return Number(valor).toLocaleString("pt-BR", {
@@ -74,29 +73,6 @@ function contarDiasUteis(inicio, fim, feriados = []) {
     inicio.getFullYear(),
     inicio.getMonth(),
     inicio.getDate()
-=======
-  function formatarValor(valor) {
-    if (!valor) return "R$ 0,00";
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  }
-
-  function isMesmaData(a, b) {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
-
-  function contarDiasUteis(inicio, fim, feriados = []) {
-    const data = new Date(
-      inicio.getFullYear(),
-      inicio.getMonth(),
-      inicio.getDate()
->>>>>>> theirs
     );
     const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
     let dias = 0;
@@ -246,7 +222,6 @@ function calcularMetaPlanejadaHoje(
           return mesmoDia ? acc + Number(i.valor || 0) : acc;
         }, 0);
 
-<<<<<<< ours
         const valoresPorDia = filtradosMes.reduce((acc, item) => {
           const chave = formatarDiaChave(new Date(item.data));
           acc[chave] = (acc[chave] || 0) + Number(item.valor || 0);
@@ -266,10 +241,6 @@ function calcularMetaPlanejadaHoje(
           META_MENSAL
         );
         setValorDiario(Math.max(metaPlanejadaHoje - somaHoje, 0));
-=======
-        const valorBase = restante / diasRestantesUteis;
-        setValorDiario(Math.max(valorBase - somaHoje, 0));
->>>>>>> theirs
       } catch {}
     }
 
