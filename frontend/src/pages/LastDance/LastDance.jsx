@@ -275,11 +275,11 @@ export default function LastDance() {
 
         {/* BLOCO 3 - CONTAGEM TOTAL */}
         <div
-          className="relative flex h-[20vh] flex-col justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+          className="relative flex h-[20vh] flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
           style={{ background: "rgba(221,4,78,0.75)" }}
         >
           <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-          <div className="relative z-[1] flex flex-col items-center gap-[2vh]">
+          <div className="relative z-[1] flex flex-col items-center gap-[1vh]">
             <div className="flex items-center justify-center gap-[1vw]">
               <span className="text-[2.2rem] font-bold text-white">
                 Contagem total vendida:
@@ -289,24 +289,41 @@ export default function LastDance() {
               </span>
             </div>
 
-            <div className="relative h-[26px] w-[55%] rounded-full border-[3px] border-[#cad003] bg-[rgba(255,255,255,0.2)]">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${metaProgress * 100}%`,
-                  background:
-                    "linear-gradient(90deg, #cad003, #fffaa5, #ffffff)",
-                  transition: "width 0.6s ease-out",
-                }}
-              />
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  backgroundImage: PROGRESS_SPARKLES,
-                  backgroundSize: "140% 100%",
-                  animation: "progressShimmer 3s linear infinite",
-                }}
-              />
+            <div className="relative flex h-[52px] w-[60%] max-w-[78vw] items-center">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-[1.1vw] text-[1.15rem] font-bold leading-none">
+                <span
+                  className="text-[#cad003]"
+                  style={{ textShadow: "0 0 12px rgba(0,0,0,0.55)" }}
+                >
+                  0
+                </span>
+                <span
+                  className="whitespace-nowrap text-white"
+                  style={{ textShadow: "0 0 12px rgba(0,0,0,0.55)" }}
+                >
+                  {formatarValor(META_MENSAL)}
+                </span>
+              </div>
+
+              <div className="relative h-[38px] w-full overflow-hidden rounded-full border-[3px] border-[#cad003] bg-[rgba(255,255,255,0.18)] shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${metaProgress * 100}%`,
+                    background:
+                      "linear-gradient(90deg, #cad003, #fffaa5, #ffffff)",
+                    transition: "width 0.45s ease-out",
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-full"
+                  style={{
+                    backgroundImage: PROGRESS_SPARKLES,
+                    backgroundSize: "140% 100%",
+                    animation: "progressShimmer 3s linear infinite",
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -315,61 +332,38 @@ export default function LastDance() {
         <div className="flex h-[26vh] gap-[1.5vw]">
           {/* TABELA */}
           <div
-            className="relative flex flex-[2] overflow-hidden rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+            className="relative flex flex-[2] rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
             style={{ backgroundImage: BLOCO4_BACKGROUND }}
           >
             <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-            <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
+            <table className="relative z-[1] h-full w-full table-fixed border-collapse text-center text-white">
+              <colgroup>
+                <col className="w-[10%]" />
+                <col className="w-[32%]" />
+                <col className="w-[20%]" />
+                <col className="w-[20%]" />
+                <col className="w-[18%]" />
+              </colgroup>
               <thead>
-                <tr>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "12%",
-                    }}
-                  >
+                <tr style={{ backgroundColor: TABLE_HEADER_BG }}>
+                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
                     Lead
                   </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "32%",
-                    }}
-                  >
+                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
                     Empresa
                   </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "18%",
-                    }}
-                  >
+                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
                     Vendedor
                   </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "18%",
-                    }}
-                  >
+                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
                     Pipeline
                   </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold text-right"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "20%",
-                    }}
-                  >
+                  <th className="px-[0.9vw] py-[0.7vh] text-right text-[1.4rem] font-bold pr-[1vw]">
                     Valor
                   </th>
                 </tr>
               </thead>
-              <tbody className="text-[1.2rem]">
+              <tbody className="text-[1.25rem] leading-[1.2]">
                 {dados.map((item, i) => (
                   <tr
                     key={i}
@@ -378,19 +372,19 @@ export default function LastDance() {
                         i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
                     }}
                   >
-                    <td className="px-[1vw] py-[0.4vh] align-middle font-semibold text-center">
+                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-center font-semibold">
                       {item.lead_id}
                     </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    <td className="truncate px-[0.8vw] py-[0.55vh] align-middle text-center">
                       {item.empresa}
                     </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-center">
                       {item.assigned}
                     </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-center">
                       {item.pipeline}
                     </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-right font-semibold">
+                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-right font-semibold pr-[0.8vw]">
                       {formatarValor(item.valor)}
                     </td>
                   </tr>
