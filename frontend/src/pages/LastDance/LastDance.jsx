@@ -118,19 +118,15 @@ export default function LastDance() {
           999
         );
 
-        const pipelines = [
-          "IMPORTAÇÃO CONJUNTA 🧩",
-          "CONSULTORIA LANNISTER 🦁",
-          "REPEDIDO 🏆",
-          "GANHO PRODUTO 🧸",
-          "GANHO FRETE 🚢",
-          "FEE MENSAL 🚀",
-        ];
+        const pipelineIds = ["71", "23", "47", "59", "35", "63"];
 
-        const filtrados = rawData.filter((i) => pipelines.includes(i.pipeline));
-        const filtradosMes = filtrados.filter((i) => {
+        const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
-          return !Number.isNaN(dt) && dt >= inicioMes && dt <= fimMes;
+          return (
+            pipelineIds.includes(String(i.pipeline_id)) &&
+            dt >= inicioMes &&
+            dt <= fimMes
+          );
         });
 
         const recentes = [...filtradosMes]
@@ -322,102 +318,102 @@ export default function LastDance() {
             className="relative flex flex-[2] overflow-hidden rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
             style={{ backgroundImage: BLOCO4_BACKGROUND }}
           >
-          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-          <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
-            <thead>
-              <tr>
-                <th
-                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                  style={{
-                    backgroundColor: TABLE_HEADER_BG,
-                    width: "12%",
-                  }}
-                >
-                  Lead
-                </th>
-                <th
-                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                  style={{
-                    backgroundColor: TABLE_HEADER_BG,
-                    width: "32%",
-                  }}
-                >
-                  Empresa
-                </th>
-                <th
-                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                  style={{
-                    backgroundColor: TABLE_HEADER_BG,
-                    width: "18%",
-                  }}
-                >
-                  Vendedor
-                </th>
-                <th
-                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                  style={{
-                    backgroundColor: TABLE_HEADER_BG,
-                    width: "18%",
-                  }}
-                >
-                  Pipeline
-                </th>
-                <th
-                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold text-right"
-                  style={{
-                    backgroundColor: TABLE_HEADER_BG,
-                    width: "20%",
-                  }}
-                >
-                  Valor
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-[1.2rem]">
-              {dados.map((item, i) => (
-                <tr
-                  key={i}
-                  style={{
-                    backgroundColor:
-                      i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
-                  }}
-                >
-                  <td className="px-[1vw] py-[0.4vh] align-middle font-semibold text-center">
-                    {item.lead_id}
-                  </td>
-                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
-                    {item.empresa}
-                  </td>
-                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
-                    {item.assigned}
-                  </td>
-                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
-                    {item.pipeline}
-                  </td>
-                  <td className="px-[1vw] py-[0.4vh] align-middle text-right font-semibold">
-                    {formatarValor(item.valor)}
-                  </td>
+            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+            <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
+              <thead>
+                <tr>
+                  <th
+                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                    style={{
+                      backgroundColor: TABLE_HEADER_BG,
+                      width: "12%",
+                    }}
+                  >
+                    Lead
+                  </th>
+                  <th
+                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                    style={{
+                      backgroundColor: TABLE_HEADER_BG,
+                      width: "32%",
+                    }}
+                  >
+                    Empresa
+                  </th>
+                  <th
+                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                    style={{
+                      backgroundColor: TABLE_HEADER_BG,
+                      width: "18%",
+                    }}
+                  >
+                    Vendedor
+                  </th>
+                  <th
+                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                    style={{
+                      backgroundColor: TABLE_HEADER_BG,
+                      width: "18%",
+                    }}
+                  >
+                    Pipeline
+                  </th>
+                  <th
+                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold text-right"
+                    style={{
+                      backgroundColor: TABLE_HEADER_BG,
+                      width: "20%",
+                    }}
+                  >
+                    Valor
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* PROJEÇÃO */}
-        <div
-          className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-          style={{ background: "rgba(221,4,78,0.7)" }}
-        >
-          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-          <div className="relative z-[1] text-[2rem] text-white">
-            Projeção Geral
+              </thead>
+              <tbody className="text-[1.2rem]">
+                {dados.map((item, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      backgroundColor:
+                        i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
+                    }}
+                  >
+                    <td className="px-[1vw] py-[0.4vh] align-middle font-semibold text-center">
+                      {item.lead_id}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                      {item.empresa}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                      {item.assigned}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                      {item.pipeline}
+                    </td>
+                    <td className="px-[1vw] py-[0.4vh] align-middle text-right font-semibold">
+                      {formatarValor(item.valor)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="relative z-[1] text-[3.8rem] font-black text-[#cad003]">
-            {formatarValor(somaOpen)}
+
+          {/* PROJEÇÃO */}
+          <div
+            className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+            style={{ background: "rgba(221,4,78,0.7)" }}
+          >
+            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+            <div className="relative z-[1] text-[2rem] text-white">
+              Projeção Geral
+            </div>
+            <div className="relative z-[1] text-[3.8rem] font-black text-[#cad003]">
+              {formatarValor(somaOpen)}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </>
-);
+    </>
+  );
 }
