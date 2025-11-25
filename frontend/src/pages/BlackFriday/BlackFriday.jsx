@@ -314,7 +314,7 @@ export default function BlackFriday() {
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
               >
-                Faltam hoje para a meta R$
+                Faltam hoje para a meta diária R$
               </span>
 
               {/* ===== NOVO TEXTO DO VALOR DIÁRIO ===== */}
@@ -354,7 +354,7 @@ export default function BlackFriday() {
 
         {/* CONTAGEM + PROGRESSO */}
         <div
-          className="relative flex h-[20vh] flex-col items-center justify-center gap-[2vh] rounded-[32px]"
+          className="relative flex h-[20vh] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
           style={CARD_FULL}
         >
           <div className="flex items-center gap-[1vw]">
@@ -373,36 +373,66 @@ export default function BlackFriday() {
             </span>
           </div>
 
-          <div className="w-[60%] h-[40px] rounded-full bg-black/60 shadow-[0_0_14px_rgba(255,255,255,0.12)] relative">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${metaProgress * 100}%`,
-                background: `linear-gradient(90deg, ${NEON_YELLOW}, #fff6cc)`,
-                boxShadow: YELLOW_GLOW,
-                transition: "0.4s ease-out",
-              }}
-            />
+          {/* BARRA COM INDICADORES INTERNOS — AGORA MAIS PRÓXIMA DO TEXTO */}
+          <div className="relative w-[60%] h-[48px] flex items-center justify-center mt-[-1.2vh]">
+            {/* LABEL ESQUERDA (0) */}
+            <span
+              className="absolute left-0 bottom-[-20px] text-[1.3rem] font-bold"
+              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+            >
+              0
+            </span>
+
+            {/* LABEL DIREITA (META_MENSAL) */}
+            <span
+              className="absolute right-0 bottom-[-20px] text-[1.3rem] font-bold whitespace-nowrap"
+              style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
+            >
+              {formatarValor(META_MENSAL)}
+            </span>
+
+            {/* BARRA DE PROGRESSO */}
+            <div className="w-full h-[36px] rounded-full bg-black/60 shadow-[0_0_10px_rgba(255,255,255,0.10)] overflow-hidden">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${metaProgress * 100}%`,
+                  background: `linear-gradient(90deg, ${NEON_YELLOW}, #fffef2)`,
+                  boxShadow: YELLOW_GLOW,
+                  transition: "0.4s ease-out",
+                }}
+              />
+            </div>
           </div>
         </div>
 
         {/* TABELA + PROJEÇÃO */}
         <div className="flex h-[24vh] gap-[1.6vw]">
           <div
-            className="flex flex-[2] rounded-[32px] overflow-hidden"
+            className="flex flex-[2] rounded-[32px] overflow-visible"
             style={CARD_FULL}
           >
-            <table className="w-full h-full text-center text-white">
+            <table className="w-full h-full text-center text-white table-fixed">
+              <colgroup>
+                <col className="w-[10%]" /> {/* Lead */}
+                <col className="w-[32%]" /> {/* Empresa */}
+                <col className="w-[20%]" /> {/* Vendedor */}
+                <col className="w-[20%]" /> {/* Pipeline */}
+                <col className="w-[18%]" /> {/* Valor */}
+              </colgroup>
+
               <thead>
                 <tr style={{ background: "rgba(0,0,0,0.45)" }}>
                   {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
                     (label, idx) => (
                       <th
                         key={label}
-                        className={`text-[1.5rem] py-[0.9vh] ${
-                          idx === 4 ? "text-right pr-[1vw]" : "text-center"
-                        }`}
-                        style={{ color: NEON_RED, textShadow: RED_GLOW }}
+                        className="text-[1.45rem] py-[0.6vh]"
+                        style={{
+                          color: NEON_RED,
+                          textShadow: RED_GLOW,
+                          textAlign: idx === 4 ? "center" : "center", // ✅ AGORA CENTRALIZADO
+                        }}
                       >
                         {label}
                       </th>
@@ -411,31 +441,48 @@ export default function BlackFriday() {
                 </tr>
               </thead>
 
-              <tbody className="text-[1.7rem]">
+              <tbody className="text-[1.55rem] leading-[1.15]">
                 {dados.map((item, i) => (
                   <tr
                     key={i}
                     style={{
                       background:
                         i % 2 === 0
-                          ? "rgba(255,255,255,0.03)"
-                          : "rgba(255,255,255,0.06)",
+                          ? "rgba(255,255,255,0.025)"
+                          : "rgba(255,255,255,0.05)",
                     }}
                   >
                     <td
-                      className="py-[0.6vh]"
+                      className="py-[0.4vh] text-center"
                       style={{ color: NEON_WHITE_GLOW }}
                     >
                       {item.lead_id}
                     </td>
 
-                    <td style={{ color: NEON_WHITE_GLOW }}>{item.empresa}</td>
-                    <td style={{ color: NEON_WHITE_GLOW }}>{item.assigned}</td>
-                    <td style={{ color: NEON_WHITE_GLOW }}>{item.pipeline}</td>
+                    <td
+                      className="text-center truncate px-[0.4vw]"
+                      style={{ color: NEON_WHITE_GLOW }}
+                    >
+                      {item.empresa}
+                    </td>
 
                     <td
-                      className="text-right pr-[1vw]"
+                      className="text-center"
                       style={{ color: NEON_WHITE_GLOW }}
+                    >
+                      {item.assigned}
+                    </td>
+
+                    <td
+                      className="text-center"
+                      style={{ color: NEON_WHITE_GLOW }}
+                    >
+                      {item.pipeline}
+                    </td>
+
+                    <td
+                      className="text-center pr-[1vw]" // ✅ permanece alinhado à direita
+                      style={{ color: NEON_WHITE_GLOW, whiteSpace: "nowrap" }}
                     >
                       {formatarValor(item.valor)}
                     </td>
