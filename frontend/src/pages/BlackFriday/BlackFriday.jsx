@@ -20,6 +20,24 @@ const ANIMATION_STYLES = `
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(12px); }
 }
+
+@keyframes progressFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 180% 50%; }
+}
+
+@keyframes shineSweep {
+  0% { transform: translateX(-80%) skewX(-12deg); opacity: 0; }
+  35% { opacity: 0.9; }
+  60% { opacity: 0; }
+  100% { transform: translateX(130%) skewX(-12deg); opacity: 0; }
+}
+
+@keyframes goalPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,216,59,0.38); transform: scale(1); }
+  70% { box-shadow: 0 0 0 10px rgba(255,216,59,0); transform: scale(1.05); }
+  100% { box-shadow: 0 0 0 0 rgba(255,216,59,0); transform: scale(1); }
+}
 `;
 
 // ==============================
@@ -241,6 +259,7 @@ export default function BlackFriday() {
     1,
     Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
   );
+  const metaPercent = Math.round(metaProgress * 100);
 
   // -----------------------------------------------------------
   // RETORNO DO COMPONENTE
@@ -373,36 +392,66 @@ export default function BlackFriday() {
             </span>
           </div>
 
-          {/* BARRA COM INDICADORES INTERNOS — AGORA MAIS PRÓXIMA DO TEXTO */}
-          <div className="relative w-[60%] h-[48px] flex items-center justify-center mt-[-1.2vh]">
-            {/* LABEL ESQUERDA (0) */}
-            <span
-              className="absolute left-0 bottom-[-20px] text-[1.3rem] font-bold"
-              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+          {/* BARRA + META */}
+          <div className="relative w-[62%] mt-[0.4vh] flex items-center gap-[12px]">
+            <div
+              className="relative flex-1 h-[34px] rounded-full overflow-hidden"
+              style={{
+                background: "linear-gradient(90deg, #0f0f0f, #161616)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+              }}
             >
-              0
-            </span>
+              {/* PREENCHIMENTO COM ANIMAÇÃO */}
+              <div
+                className="h-full rounded-full relative"
+                style={{
+                  width: `${metaProgress * 100}%`,
+                  background: `linear-gradient(90deg, ${NEON_YELLOW} 0%, #fff7bf 55%, #ffd83b 100%)`,
+                  boxShadow: YELLOW_GLOW,
+                  transition: "width 1s cubic-bezier(0.25, 1, 0.5, 1)",
+                  backgroundSize: "160% 100%",
+                  animation:
+                    metaProgress > 0
+                      ? "progressFlow 3s linear infinite"
+                      : "none",
+                }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 90%)",
+                    transform: "translateX(-60%) skewX(-10deg)",
+                    animation:
+                      metaProgress > 0
+                        ? "shineSweep 3.2s ease-in-out infinite"
+                        : "none",
+                  }}
+                />
+              </div>
 
-            {/* LABEL DIREITA (META_MENSAL) */}
+              {/* PORCENTAGEM NO CENTRO */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span
+                  className="text-[2rem] font-extrabold uppercase tracking-[0.16em]"
+                  style={{
+                    color: "rgba(0,0,0,0.82)",
+                    textShadow: "0 0 12px rgba(255,255,255,0.55)",
+                    letterSpacing: "0.16em",
+                  }}
+                >
+                  {metaPercent}%
+                </span>
+              </div>
+            </div>
+
             <span
-              className="absolute right-0 bottom-[-20px] text-[1.3rem] font-bold whitespace-nowrap"
+              className="text-[1.2rem] font-bold whitespace-nowrap"
               style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
             >
               {formatarValor(META_MENSAL)}
             </span>
-
-            {/* BARRA DE PROGRESSO */}
-            <div className="w-full h-[36px] rounded-full bg-black/60 shadow-[0_0_10px_rgba(255,255,255,0.10)] overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${metaProgress * 100}%`,
-                  background: `linear-gradient(90deg, ${NEON_YELLOW}, #fffef2)`,
-                  boxShadow: YELLOW_GLOW,
-                  transition: "0.4s ease-out",
-                }}
-              />
-            </div>
           </div>
         </div>
 
