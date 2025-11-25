@@ -165,27 +165,30 @@ export default function BlackFriday() {
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        function contarDiasUteisRestantes() {
-          const hoje = new Date();
+        function isDiaUtil(d) {
+          const diaSemana = d.getDay();
+          return diaSemana !== 0 && diaSemana !== 6;
+        }
+
+        function contarDiasUteisRestantes(dataRef) {
           const ultimoDia = new Date(
-            hoje.getFullYear(),
-            hoje.getMonth() + 1,
+            dataRef.getFullYear(),
+            dataRef.getMonth() + 1,
             0
           );
 
           let dias = 0;
           for (
-            let d = new Date(hoje);
+            let d = new Date(dataRef);
             d <= ultimoDia;
             d.setDate(d.getDate() + 1)
           ) {
-            const diaSemana = d.getDay();
-            if (diaSemana !== 0 && diaSemana !== 6) dias++;
+            if (isDiaUtil(d)) dias++;
           }
           return dias;
         }
 
-        const diasRestantesUteis = contarDiasUteisRestantes();
+        const diasRestantesUteis = contarDiasUteisRestantes(hojeBR);
 
         const vendasHoje = filtradosMes.filter((i) => {
           const dt = new Date(i.data);
@@ -202,7 +205,61 @@ export default function BlackFriday() {
 
         const metaAjustada = Math.max(valorBase - totalHoje, 0);
 
-        setValorDiario(metaAjustada);
+        let valorDiarioAjustado = metaAjustada;
+
+        let ontemRef = new Date(hojeBR);
+        ontemRef.setDate(ontemRef.getDate() - 1);
+
+        while (
+          !isDiaUtil(ontemRef) &&
+          ontemRef.getTime() >= inicioMes.getTime()
+        ) {
+          ontemRef.setDate(ontemRef.getDate() - 1);
+        }
+
+        if (isDiaUtil(ontemRef) && ontemRef.getTime() >= inicioMes.getTime()) {
+          const fimOntem = new Date(
+            ontemRef.getFullYear(),
+            ontemRef.getMonth(),
+            ontemRef.getDate(),
+            23,
+            59,
+            59,
+            999
+          );
+
+          const vendasOntem = filtradosMes.filter((i) => {
+            const dt = new Date(i.data);
+            return dt.toDateString() === ontemRef.toDateString();
+          });
+
+          const vendidoOntem = vendasOntem.reduce(
+            (acc, i) => acc + Number(i.valor || 0),
+            0
+          );
+
+          const totalVendidoAteOntem = filtradosMes
+            .filter((i) => new Date(i.data) <= fimOntem)
+            .reduce((acc, i) => acc + Number(i.valor || 0), 0);
+
+          const faltanteAteOntem = Math.max(
+            META_MENSAL - totalVendidoAteOntem,
+            0
+          );
+
+          const diasUteisRestantesOntem = contarDiasUteisRestantes(ontemRef);
+
+          const metaDiariaOntem =
+            diasUteisRestantesOntem > 0
+              ? (faltanteAteOntem + vendidoOntem) / diasUteisRestantesOntem
+              : 0;
+
+          const saldoOntem = metaDiariaOntem - vendidoOntem;
+
+          valorDiarioAjustado = Math.max(metaAjustada + saldoOntem, 0);
+        }
+
+        setValorDiario(valorDiarioAjustado);
       } catch (err) {
         console.log("Erro ao buscar dados:", err);
       }
@@ -248,10 +305,8 @@ export default function BlackFriday() {
     }, 12000);
   }
 
-  const metaProgress = Math.min(
-    1,
-    Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
-  );
+  const restanteProjetado = Math.max(faltamParaMetaMensal - valorDiario, 0);
+  const metaProgress = Math.min(1, Math.max(0, 1 - restanteProjetado / META_MENSAL));
   const metaPercent = Math.round(metaProgress * 100);
 
   // -----------------------------------------------------------
