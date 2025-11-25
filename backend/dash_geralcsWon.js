@@ -91,7 +91,9 @@ function mapLeadToRow(lead) {
   const empresa = lead.primaryAccount?.name ?? "";
   const assigned = lead.assignee?.name ?? "";
   const tag = formatTags(lead.tags);
-  const pipeline = lead.stageset?.name ?? "";
+  const stagesetId = lead.stageset?.id;
+  const stagesetName = lead.stageset?.name;
+  const pipeline = stagesetId && stagesetName ? `${stagesetId} - ${stagesetName}` : null;
 
   const data = toSQLDateFromISO(
     lead.closedTime ??
@@ -129,6 +131,16 @@ async function getAllLeadIds() {
   }
   console.log(`📦 ${ids.length} leads encontrados.`);
   return ids;
+}
+async function getAllStageSets() {
+  const result = await callRPC("findStageSets", { query: {}, orderBy: "id" });
+  if (!Array.isArray(result)) return [];
+  return result
+    .filter((s) => s && s.id !== undefined && s.id !== null)
+    .map((s) => ({
+      stageset_id: String(s.id),
+      name: s.name ?? "",
+    }));
 }
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -196,6 +208,12 @@ async function ensureTable(client) {
     );
   `);
   await client.query(`
+    CREATE TABLE IF NOT EXISTS pipelines_nutshell (
+      stageset_id TEXT PRIMARY KEY,
+      name TEXT
+    );
+  `);
+  await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
     WHERE a.ctid < b.ctid
@@ -223,12 +241,31 @@ async function upsertRows(client, rows) {
   `;
   await client.query(sql, vals);
 }
+async function upsertStageSets(client, stagesets) {
+  if (!Array.isArray(stagesets) || !stagesets.length) return;
+  const cols = ["stageset_id", "name"];
+  const vals = stagesets.flatMap((s) => cols.map((c) => s[c]));
+  const placeholders = stagesets
+    .map(
+      (_, i) =>
+        `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
+    )
+    .join(",");
+
+  const sql = `INSERT INTO pipelines_nutshell (${cols.join(",")})
+    VALUES ${placeholders}
+    ON CONFLICT (stageset_id) DO UPDATE SET name = EXCLUDED.name`;
+  await client.query(sql, vals);
+}
 
 export default async function main() {
   const client = new Client(dbCfg);
   await client.connect();
 
   await ensureTable(client);
+  const stagesets = await getAllStageSets();
+  await upsertStageSets(client, stagesets);
+  console.log(`🍺 Pipelines armazenados: ${stagesets.length}`);
 
   const start = Date.now();
   const ids = await getAllLeadIds();
