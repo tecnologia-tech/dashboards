@@ -305,8 +305,8 @@ export default function BlackFriday() {
     }, 12000);
   }
 
-  const restanteProjetado = Math.max(faltamParaMetaMensal - valorDiario, 0);
-  const metaProgress = Math.min(1, Math.max(0, 1 - restanteProjetado / META_MENSAL));
+  // PROGRESSO REAL DA META MENSAL
+  const metaProgress = Math.min(1, totalVendido / META_MENSAL);
   const metaPercent = Math.round(metaProgress * 100);
 
   // -----------------------------------------------------------
