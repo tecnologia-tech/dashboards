@@ -362,7 +362,7 @@ export default function BlackFriday() {
               className="text-[3rem] font-bold"
               style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
             >
-              Contagem total:
+              Contagem total vendida:
             </span>
 
             <span

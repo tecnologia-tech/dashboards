@@ -282,7 +282,7 @@ export default function LastDance() {
           <div className="relative z-[1] flex flex-col items-center gap-[2vh]">
             <div className="flex items-center justify-center gap-[1vw]">
               <span className="text-[2.2rem] font-bold text-white">
-                Contagem total:
+                Contagem total vendida:
               </span>
               <span className="text-[4.5rem] font-black text-[#cad003]">
                 {formatarValor(totalVendido)}
