@@ -128,14 +128,13 @@ function calcularMetaPlanejadaHoje(
   hojeChave,
   metaMensal
 ) {
+  let restante = metaMensal;
   let sobra = 0;
-  let somaRealizadaAteOntem = 0;
 
   for (let i = 0; i < diasUteis.length; i++) {
     const dia = diasUteis[i];
     const chave = formatarDiaChave(dia);
     const diasRestantes = diasUteis.length - i;
-    const restante = Math.max(metaMensal - somaRealizadaAteOntem, 0);
     const baseDia = diasRestantes > 0 ? restante / diasRestantes : 0;
     const metaDia = baseDia + sobra;
     const realizadoDia = valoresPorDia[chave] || 0;
@@ -144,11 +143,12 @@ function calcularMetaPlanejadaHoje(
       return metaDia;
     }
 
-    sobra = Math.max(metaDia - realizadoDia, 0);
-    somaRealizadaAteOntem += realizadoDia;
+    const deficit = Math.max(metaDia - realizadoDia, 0);
+    sobra = deficit;
+    restante = Math.max(restante - realizadoDia, 0);
   }
 
-  return 0;
+  return Math.max(restante, 0);
 }
 
   const valorFormatado = formatarValor(valorDiario);
