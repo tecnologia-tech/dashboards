@@ -1,6 +1,7 @@
 // =============================================================
 //  BLACK FRIDAY – TEMA NEON (IDÊNTICO À LOGO BLACK.PNG)
 // =============================================================
+import metaVideo from "../../assets/Black/comemora.mp4";
 
 import { useEffect, useState, useRef } from "react";
 import logoblackfriday from "../../assets/Black/black.png";
@@ -11,7 +12,6 @@ const NEON_RED = "#ff2626";
 const NEON_WHITE_GLOW = "rgba(255,255,255,0.75)";
 
 const META_MENSAL = 1000000;
-
 // Estilos globais + animações
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
@@ -108,6 +108,17 @@ function formatarValor(valor) {
   });
 }
 
+function parseCurrencyToNumber(valor) {
+  const cleaned = String(valor || "")
+    .replace(/\s/g, "")
+    .replace("R$", "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
 // ==============================
 // COMPONENTE PRINCIPAL
 // ==============================
@@ -120,6 +131,7 @@ export default function BlackFriday() {
   const [totalEstornos, setTotalEstornos] = useState(0);
   const [percentualEstornos, setPercentualEstornos] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
+  const [metaBatida, setMetaBatida] = useState(false);
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
@@ -160,9 +172,6 @@ export default function BlackFriday() {
   // ==============================
   // FETCH PRINCIPAL (VENDAS / META DIÁRIA)
   // ==============================
-  // ==============================
-  // FETCH PRINCIPAL (VENDAS / META DIÁRIA)
-  // ==============================
   useEffect(() => {
     async function fetchData() {
       try {
@@ -176,7 +185,7 @@ export default function BlackFriday() {
 
         const pipelineIds = ["71", "23", "47"];
 
-        // Filtra vendas do mês apenas nos pipelines corretos
+        // Filtra vendas do mês apenas nos pipelines corretos (Black Friday)
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
@@ -240,6 +249,7 @@ export default function BlackFriday() {
 
         // ✅ SETA VALORES NA TELA
         setValorDiario(metaFinalHoje);
+        setMetaBatida(metaFinalHoje <= 0);
         setTotalVendido(somaAteHoje);
 
         // ✅ DEBUG
@@ -263,24 +273,38 @@ export default function BlackFriday() {
       }
     }
 
+    async function fetchOpen() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
+        );
+        const data = await r.json();
+        if (!Array.isArray(data)) return;
+        setSomaOpen(data.reduce((acc, i) => acc + Number(i.valor || 0), 0));
+      } catch {
+        // silencioso
+      }
+    }
+
     fetchData();
+    fetchOpen();
   }, []);
 
   // ==============================
-  // ESTORNOS
+  // ESTORNOS + REEMBOLSOS (FRONT)
   // ==============================
   useEffect(() => {
-    async function calcularEstornosEPercentual() {
+    async function calcularDevolucoes() {
       try {
         const rGeral = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const vendas = await rGeral.json();
 
-        const rEstornos = await fetch(
+        const rReembolso = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_reembolso`
         );
-        const reembolsos = await rEstornos.json();
+        const reembolsos = await rReembolso.json();
 
         if (!Array.isArray(vendas) || !Array.isArray(reembolsos)) return;
 
@@ -295,6 +319,7 @@ export default function BlackFriday() {
           999
         );
 
+        // TOTAL GERAL DO MÊS (dash_geralcswon)
         const totalGeral = vendas
           .filter((i) => {
             const dt = new Date(i.data);
@@ -302,40 +327,65 @@ export default function BlackFriday() {
           })
           .reduce((acc, i) => acc + Number(i.valor || 0), 0);
 
-        const totalEstornos = reembolsos
-          .filter((item) => {
-            const dt = new Date(item?.Data_de_Devolucao);
-            return (
-              dt >= inicioMes &&
-              dt <= fimMes &&
-              item?.Devolucao_Status === "Feito ✅"
-            );
-          })
-          .reduce((acc, item) => {
-            const valorSanitizado = String(item?.Estorno_R || "0")
-              .replace(/\s/g, "")
-              .replace("R$", "")
-              .replace(/\./g, "")
-              .replace(",", ".");
-            const valor = parseFloat(valorSanitizado);
-            return acc + (Number.isFinite(valor) ? valor : 0);
-          }, 0);
+        // Filtra apenas registros de devolução do mês atual
+        const devolucoesMes = reembolsos.filter((item) => {
+          const raw = item?.Data_de_Devolucao;
+          if (!raw) return false;
+          const dt = new Date(raw);
+          if (Number.isNaN(dt.getTime())) return false;
+          return dt >= inicioMes && dt <= fimMes;
+        });
 
-        setTotalEstornos(totalEstornos);
+        // SOMA ESTORNOS: só Devolucao_Status = "Feito ✅"
+        const totalEstornosCalc = devolucoesMes
+          .filter((item) => item?.Devolucao_Status === "Feito ✅")
+          .reduce(
+            (acc, item) => acc + parseCurrencyToNumber(item?.Estorno_R),
+            0
+          );
 
+        // SOMA REEMBOLSOS:
+        //   - só Devolucao_Status = "Feito ✅"
+        //   - Status != 'Acordo Judicial' e != 'Acordo Extrajudicial'
+        const totalReembolsosCalc = devolucoesMes
+          .filter(
+            (item) =>
+              item?.Devolucao_Status === "Feito ✅" &&
+              !["Acordo Judicial", "Acordo Extrajudicial"].includes(
+                item?.Status || ""
+              )
+          )
+          .reduce(
+            (acc, item) => acc + parseCurrencyToNumber(item?.Reembolso_R),
+            0
+          );
+
+        const totalDevolucoes = totalEstornosCalc + totalReembolsosCalc;
         const percentual =
-          totalGeral > 0 ? (totalEstornos / totalGeral) * 100 : 0;
+          totalGeral > 0 ? (totalDevolucoes / totalGeral) * 100 : 0;
+
+        setTotalEstornos(totalDevolucoes);
         setPercentualEstornos(percentual);
 
-        console.log("DEBUG totalGeral:", totalGeral);
-        console.log("DEBUG totalEstornos:", totalEstornos);
-        console.log("DEBUG percentualEstornos:", percentual);
+        console.group("DEBUG DEVOLUÇÕES (FRONT)");
+        console.log("totalGeral (SUM valor dash_geralcswon):", totalGeral);
+        console.log(
+          "totalEstornosCalc (SUM Estorno_R - Feito ✅):",
+          totalEstornosCalc
+        );
+        console.log(
+          "totalReembolsosCalc (SUM Reembolso_R - Feito ✅ sem Acordo):",
+          totalReembolsosCalc
+        );
+        console.log("totalDevolucoes:", totalDevolucoes);
+        console.log("percentualEstornos:", percentual);
+        console.groupEnd();
       } catch (err) {
-        console.log("Erro ao calcular estornos:", err);
+        console.log("Erro ao calcular devoluções:", err);
       }
     }
 
-    calcularEstornosEPercentual();
+    calcularDevolucoes();
   }, []);
 
   // ==============================
@@ -386,57 +436,80 @@ export default function BlackFriday() {
         </div>
 
         {/* BLOCO HERO */}
+        {/* BLOCO HERO */}
         <div
           className="relative flex h-[38vh] items-center justify-center rounded-[32px]"
           style={CARD_FULL}
         >
           <div className="flex items-center gap-[2vw]">
-            <div
-              className="h-[10rem] w-[10rem] rounded-full flex items-center justify-center"
-              style={{
-                border: "2px solid rgba(255,255,255,0.15)",
-                background: "rgba(0,0,0,0.55)",
-                boxShadow: WHITE_GLOW,
-              }}
-            >
-              <span
-                className="text-[8rem] text-[#ffd83b] select-none"
-                style={{
-                  textShadow: YELLOW_GLOW,
-                  animation: "pulseArrow 1.5s infinite",
-                }}
-              >
-                ↓
-              </span>
-            </div>
+            {/* REMOVIDO O CÍRCULO DA SETA */}
 
             <div className="flex flex-col gap-[1.4vh]">
               <span
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
               >
-                Faltam hoje para a meta diária
+                {metaBatida
+                  ? "META DIÁRIA BATIDA!!!"
+                  : "FALTAM HOJE PARA A META DIÁRIA"}
               </span>
 
-              <div className="flex items-end gap-[1rem] leading-none">
-                <span
-                  style={{
-                    fontFamily: "'NeonLight Regular', sans-serif",
-                    fontSize: "13rem",
-                    fontWeight: 400,
-                    color: "rgba(255,255,255,0.92)",
-                    WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
-                    textShadow: `
-                      0 0 8px rgba(255,255,255,0.9),
-                      0 0 20px rgba(255,255,255,0.6),
-                      0 0 36px rgba(255,255,255,0.45)
-                    `,
-                    letterSpacing: "-0.01em",
-                    lineHeight: "1",
-                  }}
-                >
-                  {numero}
-                </span>
+              <div className="flex items-center justify-center leading-none mt-[1vh]">
+                {metaBatida ? (
+                  <video
+                    id="metaVideo"
+                    src={metaVideo}
+                    autoPlay
+                    loop
+                    playsInline
+                    muted
+                    className="rounded-[28px]"
+                    style={{
+                      height: "22vh",
+                      width: "32vw",
+                      objectFit: "cover",
+                      boxShadow: `
+        0 0 18px rgba(255,255,255,0.85),
+        0 0 32px rgba(255,216,59,0.75),
+        0 0 48px rgba(255,216,59,0.55)
+      `,
+                      border: "2px solid rgba(255,216,59,0.45)",
+                      transition: "all 0.3s ease-in-out",
+                    }}
+                    onLoadedData={() => {
+                      const v = document.getElementById("metaVideo");
+                      if (v) {
+                        setTimeout(() => {
+                          try {
+                            v.muted = false;
+                            v.volume = 1.0;
+                            v.play().catch(() => {});
+                          } catch {}
+                        }, 300); // pequeno delay força audio habilitar
+                      }
+                    }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      fontFamily: "'NeonLight Regular', sans-serif",
+                      fontSize: "13rem",
+                      fontWeight: 400,
+                      color: "rgba(255,255,255,0.92)",
+                      WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
+                      textShadow: `
+        0 0 8px rgba(255,255,255,0.9),
+        0 0 20px rgba(255,255,255,0.6),
+        0 0 36px rgba(255,255,255,0.45)
+      `,
+                      letterSpacing: "-0.01em",
+                      lineHeight: "1",
+                      transition: "opacity 0.25s ease-in-out",
+                    }}
+                  >
+                    {numero}
+                  </span>
+                )}
               </div>
             </div>
           </div>
