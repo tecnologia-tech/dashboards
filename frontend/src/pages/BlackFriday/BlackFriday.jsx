@@ -367,7 +367,7 @@ export default function BlackFriday() {
 
             <span
               className="text-[5rem] font-black"
-              style={{ color: NEON_RED, textShadow: RED_GLOW }}
+              style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
             >
               {formatarValor(totalVendido)}
             </span>
