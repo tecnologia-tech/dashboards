@@ -86,6 +86,7 @@ export default function BlackFriday() {
   // -----------------------------------------------------------
   // FORMATADOR
   // -----------------------------------------------------------
+<<<<<<< ours
 function formatarValor(valor) {
   if (!valor) return "R$ 0,00";
   return Number(valor).toLocaleString("pt-BR", {
@@ -150,6 +151,15 @@ function calcularMetaPlanejadaHoje(
 
   return Math.max(restante, 0);
 }
+=======
+  function formatarValor(valor) {
+    if (!valor) return "R$ 0,00";
+    return Number(valor).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+>>>>>>> theirs
 
   const valorFormatado = formatarValor(valorDiario);
 
@@ -212,6 +222,28 @@ function calcularMetaPlanejadaHoje(
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
+        function contarDiasUteisRestantes() {
+          const hoje = new Date();
+          const ultimoDia = new Date(
+            hoje.getFullYear(),
+            hoje.getMonth() + 1,
+            0
+          );
+
+          let dias = 0;
+          for (
+            let d = new Date(hoje);
+            d <= ultimoDia;
+            d.setDate(d.getDate() + 1)
+          ) {
+            const diaSemana = d.getDay();
+            if (diaSemana !== 0 && diaSemana !== 6) dias++;
+          }
+          return dias;
+        }
+
+        const diasRestantesUteis = contarDiasUteisRestantes();
+
         const vendasHoje = filtradosMes.filter((i) => {
           const dt = new Date(i.data);
           return dt.toDateString() === hojeBR.toDateString();
@@ -222,6 +254,7 @@ function calcularMetaPlanejadaHoje(
           0
         );
 
+<<<<<<< ours
         const valoresPorDia = filtradosMes.reduce((acc, item) => {
           const chave = formatarDiaChave(new Date(item.data));
           acc[chave] = (acc[chave] || 0) + Number(item.valor || 0);
@@ -237,6 +270,12 @@ function calcularMetaPlanejadaHoje(
           META_MENSAL
         );
         const metaAjustada = Math.max(metaPlanejadaHoje - totalHoje, 0);
+=======
+        const valorBase =
+          diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
+
+        const metaAjustada = Math.max(valorBase - totalHoje, 0);
+>>>>>>> theirs
 
         setValorDiario(metaAjustada);
       } catch (err) {
