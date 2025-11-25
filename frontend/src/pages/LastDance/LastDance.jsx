@@ -68,27 +68,6 @@ function ehDiaUtilConsiderandoFeriados(date, feriados = []) {
   return dia !== 0 && dia !== 6 && !ehFeriado;
 }
 
-function calcularSobraAnterior(valoresPorDia, inicio, hoje, base, feriados) {
-  let sobra = 0;
-  const cursor = new Date(
-    inicio.getFullYear(),
-    inicio.getMonth(),
-    inicio.getDate()
-  );
-
-  while (cursor < hoje) {
-    if (ehDiaUtilConsiderandoFeriados(cursor, feriados)) {
-      const chave = formatarDiaChave(cursor);
-      const realizado = valoresPorDia[chave] || 0;
-      const deficit = base - realizado;
-      if (deficit > 0) sobra += deficit;
-    }
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  return sobra;
-}
-
 function contarDiasUteis(inicio, fim, feriados = []) {
   const data = new Date(
     inicio.getFullYear(),
@@ -105,8 +84,55 @@ function contarDiasUteis(inicio, fim, feriados = []) {
       data.setDate(data.getDate() + 1);
     }
 
-    return dias;
+  return dias;
+}
+
+function listarDiasUteisComFeriados(inicio, fim, feriados = []) {
+  const dias = [];
+  const data = new Date(
+    inicio.getFullYear(),
+    inicio.getMonth(),
+    inicio.getDate()
+  );
+  const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+
+  while (data <= limite) {
+    if (ehDiaUtilConsiderandoFeriados(data, feriados)) {
+      dias.push(new Date(data));
+    }
+    data.setDate(data.getDate() + 1);
   }
+  return dias;
+}
+
+function calcularMetaPlanejadaHoje(
+  valoresPorDia,
+  diasUteis,
+  hojeChave,
+  metaMensal
+) {
+  let sobra = 0;
+  let somaRealizadaAteOntem = 0;
+
+  for (let i = 0; i < diasUteis.length; i++) {
+    const dia = diasUteis[i];
+    const chave = formatarDiaChave(dia);
+    const diasRestantes = diasUteis.length - i;
+    const restante = Math.max(metaMensal - somaRealizadaAteOntem, 0);
+    const baseDia = diasRestantes > 0 ? restante / diasRestantes : 0;
+    const metaDia = baseDia + sobra;
+    const realizadoDia = valoresPorDia[chave] || 0;
+
+    if (chave === hojeChave) {
+      return metaDia;
+    }
+
+    sobra = Math.max(metaDia - realizadoDia, 0);
+    somaRealizadaAteOntem += realizadoDia;
+  }
+
+  return 0;
+}
 
   // LIBERA ÁUDIO
   useEffect(() => {
@@ -200,22 +226,18 @@ function contarDiasUteis(inicio, fim, feriados = []) {
           return acc;
         }, {});
 
-        const totalDiasUteisMes = contarDiasUteis(
+        const diasUteisMes = listarDiasUteisComFeriados(
           inicioMes,
           ultimoDia,
           feriados
         );
-        const basePlanejada =
-          totalDiasUteisMes > 0 ? META_MENSAL / totalDiasUteisMes : 0;
-        const sobraAnterior = calcularSobraAnterior(
+        const hojeChave = formatarDiaChave(hojeBR);
+        const metaPlanejadaHoje = calcularMetaPlanejadaHoje(
           valoresPorDia,
-          inicioMes,
-          hojeBR,
-          basePlanejada,
-          feriados
+          diasUteisMes,
+          hojeChave,
+          META_MENSAL
         );
-
-        const metaPlanejadaHoje = basePlanejada + sobraAnterior;
         setValorDiario(Math.max(metaPlanejadaHoje - somaHoje, 0));
       } catch {}
     }

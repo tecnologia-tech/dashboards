@@ -106,41 +106,49 @@ function ehDiaUtil(date) {
   return diaSemana !== 0 && diaSemana !== 6;
 }
 
-function contarDiasUteisNoIntervalo(inicio, fim) {
+function listarDiasUteis(inicio, fim) {
+  const dias = [];
   const cursor = new Date(
     inicio.getFullYear(),
     inicio.getMonth(),
     inicio.getDate()
   );
   const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-  let dias = 0;
 
   while (cursor <= limite) {
-    if (ehDiaUtil(cursor)) dias++;
+    if (ehDiaUtil(cursor)) dias.push(new Date(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return dias;
 }
 
-function calcularSobraAnterior(valoresPorDia, inicio, hoje, baseDiaria) {
+function calcularMetaPlanejadaHoje(
+  valoresPorDia,
+  diasUteis,
+  hojeChave,
+  metaMensal
+) {
   let sobra = 0;
-  const cursor = new Date(
-    inicio.getFullYear(),
-    inicio.getMonth(),
-    inicio.getDate()
-  );
+  let somaRealizadaAteOntem = 0;
 
-  while (cursor < hoje) {
-    if (ehDiaUtil(cursor)) {
-      const chave = formatarDiaChave(cursor);
-      const realizado = valoresPorDia[chave] || 0;
-      const deficit = baseDiaria - realizado;
-      if (deficit > 0) sobra += deficit;
+  for (let i = 0; i < diasUteis.length; i++) {
+    const dia = diasUteis[i];
+    const chave = formatarDiaChave(dia);
+    const diasRestantes = diasUteis.length - i;
+    const restante = Math.max(metaMensal - somaRealizadaAteOntem, 0);
+    const baseDia = diasRestantes > 0 ? restante / diasRestantes : 0;
+    const metaDia = baseDia + sobra;
+    const realizadoDia = valoresPorDia[chave] || 0;
+
+    if (chave === hojeChave) {
+      return metaDia;
     }
-    cursor.setDate(cursor.getDate() + 1);
+
+    sobra = Math.max(metaDia - realizadoDia, 0);
+    somaRealizadaAteOntem += realizadoDia;
   }
 
-  return sobra;
+  return 0;
 }
 
   const valorFormatado = formatarValor(valorDiario);
@@ -220,20 +228,14 @@ function calcularSobraAnterior(valoresPorDia, inicio, hoje, baseDiaria) {
           return acc;
         }, {});
 
-        const totalDiasUteisMes = contarDiasUteisNoIntervalo(
-          inicioMes,
-          fimMes
-        );
-        const basePlanejada =
-          totalDiasUteisMes > 0 ? META_MENSAL / totalDiasUteisMes : 0;
-        const sobraAnterior = calcularSobraAnterior(
+        const diasUteisMes = listarDiasUteis(inicioMes, fimMes);
+        const hojeChave = formatarDiaChave(hojeBR);
+        const metaPlanejadaHoje = calcularMetaPlanejadaHoje(
           valoresPorDia,
-          inicioMes,
-          hojeBR,
-          basePlanejada
+          diasUteisMes,
+          hojeChave,
+          META_MENSAL
         );
-
-        const metaPlanejadaHoje = basePlanejada + sobraAnterior;
         const metaAjustada = Math.max(metaPlanejadaHoje - totalHoje, 0);
 
         setValorDiario(metaAjustada);
