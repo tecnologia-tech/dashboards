@@ -203,8 +203,12 @@ export default function Farmers() {
         assigned: d.assigned?.trim() || "",
       }));
 
-      const start = new Date("2025-11-01T00:00:00");
-      const end = new Date("2025-11-30T23:59:59");
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth(); // 0 = janeiro, 11 = dezembro
+
+      const start = new Date(year, month, 1, 0, 0, 0);
+      const end = new Date(year, month + 1, 0, 23, 59, 59);
 
       const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
 
