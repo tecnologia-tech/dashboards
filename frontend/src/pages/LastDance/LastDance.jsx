@@ -39,27 +39,61 @@ export default function LastDance() {
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
-  function formatarValor(valor) {
-    if (!valor) return "R$ 0,00";
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
+function formatarValor(valor) {
+  if (!valor) return "R$ 0,00";
+  return Number(valor).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatarDiaChave(date) {
+  const ano = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const dia = String(date.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function isMesmaData(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function ehDiaUtilConsiderandoFeriados(date, feriados = []) {
+  const dia = date.getDay();
+  const ehFeriado = feriados.some((f) => isMesmaData(f, date));
+  return dia !== 0 && dia !== 6 && !ehFeriado;
+}
+
+function calcularSobraAnterior(valoresPorDia, inicio, hoje, base, feriados) {
+  let sobra = 0;
+  const cursor = new Date(
+    inicio.getFullYear(),
+    inicio.getMonth(),
+    inicio.getDate()
+  );
+
+  while (cursor < hoje) {
+    if (ehDiaUtilConsiderandoFeriados(cursor, feriados)) {
+      const chave = formatarDiaChave(cursor);
+      const realizado = valoresPorDia[chave] || 0;
+      const deficit = base - realizado;
+      if (deficit > 0) sobra += deficit;
+    }
+    cursor.setDate(cursor.getDate() + 1);
   }
 
-  function isMesmaData(a, b) {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
+  return sobra;
+}
 
-  function contarDiasUteis(inicio, fim, feriados = []) {
-    const data = new Date(
-      inicio.getFullYear(),
-      inicio.getMonth(),
-      inicio.getDate()
+function contarDiasUteis(inicio, fim, feriados = []) {
+  const data = new Date(
+    inicio.getFullYear(),
+    inicio.getMonth(),
+    inicio.getDate()
     );
     const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
     let dias = 0;
@@ -150,8 +184,6 @@ export default function LastDance() {
           0
         );
         const feriados = [new Date(hojeBR.getFullYear(), 10, 20)];
-        const diasRestantesUteis =
-          contarDiasUteis(hojeBR, ultimoDia, feriados) || 1;
 
         const somaHoje = filtradosMes.reduce((acc, i) => {
           const dt = new Date(i.data);
@@ -162,8 +194,29 @@ export default function LastDance() {
           return mesmoDia ? acc + Number(i.valor || 0) : acc;
         }, 0);
 
-        const valorBase = restante / diasRestantesUteis;
-        setValorDiario(Math.max(valorBase - somaHoje, 0));
+        const valoresPorDia = filtradosMes.reduce((acc, item) => {
+          const chave = formatarDiaChave(new Date(item.data));
+          acc[chave] = (acc[chave] || 0) + Number(item.valor || 0);
+          return acc;
+        }, {});
+
+        const totalDiasUteisMes = contarDiasUteis(
+          inicioMes,
+          ultimoDia,
+          feriados
+        );
+        const basePlanejada =
+          totalDiasUteisMes > 0 ? META_MENSAL / totalDiasUteisMes : 0;
+        const sobraAnterior = calcularSobraAnterior(
+          valoresPorDia,
+          inicioMes,
+          hojeBR,
+          basePlanejada,
+          feriados
+        );
+
+        const metaPlanejadaHoje = basePlanejada + sobraAnterior;
+        setValorDiario(Math.max(metaPlanejadaHoje - somaHoje, 0));
       } catch {}
     }
 

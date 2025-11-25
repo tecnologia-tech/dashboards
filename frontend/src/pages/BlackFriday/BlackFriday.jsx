@@ -86,13 +86,62 @@ export default function BlackFriday() {
   // -----------------------------------------------------------
   // FORMATADOR
   // -----------------------------------------------------------
-  function formatarValor(valor) {
-    if (!valor) return "R$ 0,00";
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
+function formatarValor(valor) {
+  if (!valor) return "R$ 0,00";
+  return Number(valor).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatarDiaChave(date) {
+  const ano = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const dia = String(date.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function ehDiaUtil(date) {
+  const diaSemana = date.getDay();
+  return diaSemana !== 0 && diaSemana !== 6;
+}
+
+function contarDiasUteisNoIntervalo(inicio, fim) {
+  const cursor = new Date(
+    inicio.getFullYear(),
+    inicio.getMonth(),
+    inicio.getDate()
+  );
+  const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+  let dias = 0;
+
+  while (cursor <= limite) {
+    if (ehDiaUtil(cursor)) dias++;
+    cursor.setDate(cursor.getDate() + 1);
   }
+  return dias;
+}
+
+function calcularSobraAnterior(valoresPorDia, inicio, hoje, baseDiaria) {
+  let sobra = 0;
+  const cursor = new Date(
+    inicio.getFullYear(),
+    inicio.getMonth(),
+    inicio.getDate()
+  );
+
+  while (cursor < hoje) {
+    if (ehDiaUtil(cursor)) {
+      const chave = formatarDiaChave(cursor);
+      const realizado = valoresPorDia[chave] || 0;
+      const deficit = baseDiaria - realizado;
+      if (deficit > 0) sobra += deficit;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return sobra;
+}
 
   const valorFormatado = formatarValor(valorDiario);
 
@@ -155,28 +204,6 @@ export default function BlackFriday() {
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        function contarDiasUteisRestantes() {
-          const hoje = new Date();
-          const ultimoDia = new Date(
-            hoje.getFullYear(),
-            hoje.getMonth() + 1,
-            0
-          );
-
-          let dias = 0;
-          for (
-            let d = new Date(hoje);
-            d <= ultimoDia;
-            d.setDate(d.getDate() + 1)
-          ) {
-            const diaSemana = d.getDay();
-            if (diaSemana !== 0 && diaSemana !== 6) dias++;
-          }
-          return dias;
-        }
-
-        const diasRestantesUteis = contarDiasUteisRestantes();
-
         const vendasHoje = filtradosMes.filter((i) => {
           const dt = new Date(i.data);
           return dt.toDateString() === hojeBR.toDateString();
@@ -187,10 +214,27 @@ export default function BlackFriday() {
           0
         );
 
-        const valorBase =
-          diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
+        const valoresPorDia = filtradosMes.reduce((acc, item) => {
+          const chave = formatarDiaChave(new Date(item.data));
+          acc[chave] = (acc[chave] || 0) + Number(item.valor || 0);
+          return acc;
+        }, {});
 
-        const metaAjustada = Math.max(valorBase - totalHoje, 0);
+        const totalDiasUteisMes = contarDiasUteisNoIntervalo(
+          inicioMes,
+          fimMes
+        );
+        const basePlanejada =
+          totalDiasUteisMes > 0 ? META_MENSAL / totalDiasUteisMes : 0;
+        const sobraAnterior = calcularSobraAnterior(
+          valoresPorDia,
+          inicioMes,
+          hojeBR,
+          basePlanejada
+        );
+
+        const metaPlanejadaHoje = basePlanejada + sobraAnterior;
+        const metaAjustada = Math.max(metaPlanejadaHoje - totalHoje, 0);
 
         setValorDiario(metaAjustada);
       } catch (err) {
