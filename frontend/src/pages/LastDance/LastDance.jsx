@@ -5,12 +5,36 @@ const META_MENSAL = 1300000;
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
 
+@keyframes pulseArrow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(12px); }
+}
+
+@keyframes progressFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 180% 50%; }
+}
+
+@keyframes shineSweep {
+  0% { transform: translateX(-80%) skewX(-12deg); opacity: 0; }
+  35% { opacity: 0.9; }
+  60% { opacity: 0; }
+  100% { transform: translateX(130%) skewX(-12deg); opacity: 0; }
+}
+
+@keyframes goalPulse {
+  0% { box-shadow: 0 0 0 0 rgba(202,208,3,0.35); transform: scale(1); }
+  70% { box-shadow: 0 0 0 10px rgba(202,208,3,0); transform: scale(1.05); }
+  100% { box-shadow: 0 0 0 0 rgba(202,208,3,0); transform: scale(1); }
+}
+
 @keyframes progressShimmer {
   0% { background-position: 0% 50%; opacity: 0.25; }
   50% { opacity: 0.65; }
   100% { background-position: 140% 50%; opacity: 0.25; }
 }
 `;
+
 const ROOT_BACKGROUND =
   "radial-gradient(circle at 10% 20%, rgba(202,208,3,0.25), transparent 45%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.15), transparent 55%), linear-gradient(135deg, #dd044e, #f2266c 40%, #c4034e 100%)";
 const BLOCO2_BACKGROUND =
@@ -23,6 +47,29 @@ const TABLE_ROW_EVEN_BG = "rgba(255, 105, 145, 0.22)";
 const PROGRESS_SPARKLES =
   "radial-gradient(6px 20px at 20% 40%, rgba(255,255,255,0.45), transparent 65%), radial-gradient(8px 30px at 60% 60%, rgba(255,250,165,0.4), transparent 70%), radial-gradient(5px 18px at 85% 20%, rgba(255,255,255,0.35), transparent 65%)";
 
+const GOLD = "#cad003";
+const PINK = "#dd044e";
+const WHITE_GLOW = "rgba(255,255,255,0.85)";
+const GOLD_GLOW = `0 0 12px ${GOLD}, 0 0 28px rgba(202,208,3,0.55)`;
+const PINK_GLOW = `0 0 14px ${PINK}, 0 0 32px rgba(221,4,78,0.65)`;
+
+const CARD_BG = `
+linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.82) 100%)
+`;
+
+const CARD_STYLE = {
+  backgroundImage: CARD_BG,
+  backdropFilter: "blur(6px)",
+  border: "2px solid rgba(255,255,255,0.12)",
+  boxShadow: "0 0 18px rgba(0,0,0,0.45), inset 0 0 24px rgba(0,0,0,0.45)",
+};
+
+const CARD_FULL = {
+  ...CARD_STYLE,
+  background:
+    "radial-gradient(circle at center, rgba(255,255,255,0.12), transparent 70%), #d1044e",
+};
+
 export default function LastDance() {
   const [dados, setDados] = useState([]);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
@@ -33,7 +80,6 @@ export default function LastDance() {
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
-  const idsAntigosRef = useRef([]);
 
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
@@ -46,49 +92,12 @@ export default function LastDance() {
     });
   }
 
-  function isMesmaData(a, b) {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
+  const numero = formatarValor(valorDiario);
 
-  function contarDiasUteis(inicio, fim, feriados = []) {
-    const data = new Date(
-      inicio.getFullYear(),
-      inicio.getMonth(),
-      inicio.getDate()
-    );
-    const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-    let dias = 0;
-
-    while (data <= limite) {
-      const dia = data.getDay();
-      const ehFeriado = feriados.some((f) => isMesmaData(f, data));
-      if (dia !== 0 && dia !== 6 && !ehFeriado) dias += 1;
-      data.setDate(data.getDate() + 1);
-    }
-
-    return dias;
-  }
-
-  // LIBERA ÁUDIO
   useEffect(() => {
-    const audio = new Audio("/audios/comemora.mp3");
-    audio.loop = false;
-    audioRef.current = audio;
-
-    audio.play().then(() => {
-      audio.pause();
-      audio.currentTime = 0;
-    });
-
-    const salvos = localStorage.getItem("lastdance_leads");
-    if (salvos) idsAntigosRef.current = JSON.parse(salvos);
+    audioRef.current = new Audio("/audios/comemora.mp3");
   }, []);
 
-  // FETCH PRINCIPAL
   useEffect(() => {
     async function fetchData() {
       try {
@@ -98,27 +107,17 @@ export default function LastDance() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
-        const inicioMes = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth(),
-          1,
-          0,
-          0,
-          0,
-          0
-        );
+        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
         const fimMes = new Date(
           hojeBR.getFullYear(),
           hojeBR.getMonth() + 1,
           0,
           23,
           59,
-          59,
-          999
+          59
         );
 
         const pipelineIds = ["71", "23", "47", "59", "35", "63"];
-
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
@@ -143,27 +142,104 @@ export default function LastDance() {
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        const ultimoDia = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth() + 1,
+        function isDiaUtil(d) {
+          const diaSemana = d.getDay();
+          return diaSemana !== 0 && diaSemana !== 6;
+        }
+
+        function contarDiasUteisRestantes(dataRef) {
+          const ultimoDia = new Date(
+            dataRef.getFullYear(),
+            dataRef.getMonth() + 1,
+            0
+          );
+
+          let dias = 0;
+          for (
+            let d = new Date(dataRef);
+            d <= ultimoDia;
+            d.setDate(d.getDate() + 1)
+          ) {
+            if (isDiaUtil(d)) dias++;
+          }
+          return dias;
+        }
+
+        const diasRestantesUteis = contarDiasUteisRestantes(hojeBR);
+
+        const vendasHoje = filtradosMes.filter((i) => {
+          const dt = new Date(i.data);
+          return dt.toDateString() === hojeBR.toDateString();
+        });
+
+        const totalHoje = vendasHoje.reduce(
+          (acc, i) => acc + Number(i.valor || 0),
           0
         );
-        const feriados = [new Date(hojeBR.getFullYear(), 10, 20)];
-        const diasRestantesUteis =
-          contarDiasUteis(hojeBR, ultimoDia, feriados) || 1;
 
-        const somaHoje = filtradosMes.reduce((acc, i) => {
-          const dt = new Date(i.data);
-          const mesmoDia =
-            dt.getFullYear() === hojeBR.getFullYear() &&
-            dt.getMonth() === hojeBR.getMonth() &&
-            dt.getDate() === hojeBR.getDate();
-          return mesmoDia ? acc + Number(i.valor || 0) : acc;
-        }, 0);
+        const valorBase =
+          diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
 
-        const valorBase = restante / diasRestantesUteis;
-        setValorDiario(Math.max(valorBase - somaHoje, 0));
-      } catch {}
+        const metaAjustada = Math.max(valorBase - totalHoje, 0);
+
+        let valorDiarioAjustado = metaAjustada;
+
+        let ontemRef = new Date(hojeBR);
+        ontemRef.setDate(ontemRef.getDate() - 1);
+
+        while (
+          !isDiaUtil(ontemRef) &&
+          ontemRef.getTime() >= inicioMes.getTime()
+        ) {
+          ontemRef.setDate(ontemRef.getDate() - 1);
+        }
+
+        if (isDiaUtil(ontemRef) && ontemRef.getTime() >= inicioMes.getTime()) {
+          const fimOntem = new Date(
+            ontemRef.getFullYear(),
+            ontemRef.getMonth(),
+            ontemRef.getDate(),
+            23,
+            59,
+            59,
+            999
+          );
+
+          const vendasOntem = filtradosMes.filter((i) => {
+            const dt = new Date(i.data);
+            return dt.toDateString() === ontemRef.toDateString();
+          });
+
+          const vendidoOntem = vendasOntem.reduce(
+            (acc, i) => acc + Number(i.valor || 0),
+            0
+          );
+
+          const totalVendidoAteOntem = filtradosMes
+            .filter((i) => new Date(i.data) <= fimOntem)
+            .reduce((acc, i) => acc + Number(i.valor || 0), 0);
+
+          const faltanteAteOntem = Math.max(
+            META_MENSAL - totalVendidoAteOntem,
+            0
+          );
+
+          const diasUteisRestantesOntem = contarDiasUteisRestantes(ontemRef);
+
+          const metaDiariaOntem =
+            diasUteisRestantesOntem > 0
+              ? (faltanteAteOntem + vendidoOntem) / diasUteisRestantesOntem
+              : 0;
+
+          const saldoOntem = metaDiariaOntem - vendidoOntem;
+
+          valorDiarioAjustado = Math.max(metaAjustada + saldoOntem, 0);
+        }
+
+        setValorDiario(valorDiarioAjustado);
+      } catch (err) {
+        console.log("Erro ao buscar dados:", err);
+      }
     }
 
     async function fetchOpen() {
@@ -186,11 +262,9 @@ export default function LastDance() {
     return () => clearInterval(interval);
   }, []);
 
-  // ALERTA
   function playSom() {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.loop = true;
     audioRef.current.play().catch(() => {});
   }
 
@@ -207,29 +281,46 @@ export default function LastDance() {
     timerRef.current = setTimeout(() => {
       stopSom();
       setMostrarVideo(false);
-    }, 15000);
+    }, 12000);
   }
 
   const metaProgress = Math.min(
     1,
     Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
   );
+  const metaPercent = Math.round(metaProgress * 100);
 
   return (
     <>
       <style>{ANIMATION_STYLES}</style>
+
+      {mostrarVideo && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/85">
+          <video
+            autoPlay
+            loop
+            playsInline
+            className="h-[90vh] w-auto rounded-[24px] shadow-[0_0_32px_rgba(202,208,3,0.55)]"
+            src="/videos/comemora.mp4"
+          />
+        </div>
+      )}
 
       <div
         className="flex h-screen w-full flex-col overflow-hidden text-white"
         style={{
           backgroundImage: ROOT_BACKGROUND,
           fontFamily: "'Baloo 2', sans-serif",
-          padding: "0 1.5vw 1vh 1.5vw",
-          gap: "1.8vh",
+          padding: "0 1.8vw 1.8vh 1.8vw",
+          gap: "1.6vh",
         }}
       >
-        {/* BLOCO 1 - HEADER */}
-        <div className="h-[16vh] w-full overflow-hidden rounded-b-[26px] border-[3px] border-[#cad003] border-t-0">
+        <div
+          className="h-[15vh] w-full rounded-b-[26px] overflow-hidden shadow-[0_0_26px_rgba(255,255,255,0.28)]"
+          style={{
+            border: "2px solid rgba(255,255,255,0.12)",
+          }}
+        >
           <img
             src={logolastdance}
             className="h-full w-full object-cover"
@@ -237,105 +328,159 @@ export default function LastDance() {
           />
         </div>
 
-        {/* BLOCO 2 - META DIÁRIA */}
         <div
-          className="relative flex h-[32vh] flex-col items-center justify-center overflow-hidden rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-          style={{ backgroundImage: BLOCO2_BACKGROUND }}
+          className="relative flex h-[38vh] items-center justify-center rounded-[32px]"
+          style={{ ...CARD_FULL, background: BLOCO2_BACKGROUND }}
         >
-          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-          {mostrarVideo ? (
-            <video
-              className="relative z-[1] h-full w-full rounded-[26px] object-cover"
-              src="/videos/comemora.mp4"
-              autoPlay
-              loop
-              playsInline
-            />
-          ) : (
-            <div className="relative z-[1] flex items-center gap-[2vw]">
-              <div className="flex h-[12rem] w-[12rem] items-center justify-center rounded-full border-[3px] border-dashed border-[rgba(255,255,255,0.35)] bg-[rgba(255,255,255,0.08)] shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
-                <span className="text-[10rem] leading-none text-[#cad003] drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">
-                  ↓
-                </span>
-              </div>
-
-              <div
-                className="text-[12rem] font-black leading-none text-white"
+          <div className="flex items-center gap-[2vw]">
+            <div
+              className="h-[10rem] w-[10rem] rounded-full flex items-center justify-center"
+              style={{
+                border: "2px dashed rgba(255,255,255,0.35)",
+                background: "rgba(0,0,0,0.35)",
+                boxShadow: GOLD_GLOW,
+              }}
+            >
+              <span
+                className="text-[8rem] text-[#cad003] select-none"
                 style={{
-                  textShadow:
-                    "0 18px 40px rgba(0,0,0,0.55), 0 0 40px rgba(202,208,3,0.85)",
+                  textShadow: GOLD_GLOW,
+                  animation: "pulseArrow 1.5s infinite",
                 }}
               >
-                {formatarValor(valorDiario)}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* BLOCO 3 - CONTAGEM TOTAL */}
-        <div
-          className="relative flex h-[20vh] flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-          style={{ background: "rgba(221,4,78,0.75)" }}
-        >
-          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-          <div className="relative z-[1] flex flex-col items-center gap-[1vh]">
-            <div className="flex items-center justify-center gap-[1vw]">
-              <span className="text-[2.2rem] font-bold text-white">
-                Contagem total vendida:
-              </span>
-              <span className="text-[4.5rem] font-black text-[#cad003]">
-                {formatarValor(totalVendido)}
+                ↓
               </span>
             </div>
 
-            <div className="relative flex h-[52px] w-[60%] max-w-[78vw] items-center">
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-[1.1vw] text-[1.15rem] font-bold leading-none">
-                <span
-                  className="text-[#cad003]"
-                  style={{ textShadow: "0 0 12px rgba(0,0,0,0.55)" }}
-                >
-                  0
-                </span>
-                <span
-                  className="whitespace-nowrap text-white"
-                  style={{ textShadow: "0 0 12px rgba(0,0,0,0.55)" }}
-                >
-                  {formatarValor(META_MENSAL)}
-                </span>
-              </div>
+            <div className="flex flex-col gap-[1.4vh]">
+              <span
+                className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
+                style={{ color: GOLD, textShadow: GOLD_GLOW }}
+              >
+                Faltam hoje para a meta diária
+              </span>
 
-              <div className="relative h-[38px] w-full overflow-hidden rounded-full border-[3px] border-[#cad003] bg-[rgba(255,255,255,0.18)] shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
-                <div
-                  className="h-full rounded-full"
+              <div className="flex items-end gap-[1rem] leading-none">
+                <span
                   style={{
-                    width: `${metaProgress * 100}%`,
-                    background:
-                      "linear-gradient(90deg, #cad003, #fffaa5, #ffffff)",
-                    transition: "width 0.45s ease-out",
+                    fontFamily: "'Baloo 2', sans-serif",
+                    fontSize: "13rem",
+                    fontWeight: 900,
+                    color: "rgba(255,255,255,0.95)",
+                    textShadow: `
+        0 0 8px rgba(255,255,255,0.9),
+        0 0 20px rgba(221,4,78,0.6),
+        0 0 36px rgba(202,208,3,0.65)
+      `,
+                    letterSpacing: "-0.01em",
+                    lineHeight: "1",
                   }}
-                />
-                <div
-                  className="pointer-events-none absolute inset-0 rounded-full"
-                  style={{
-                    backgroundImage: PROGRESS_SPARKLES,
-                    backgroundSize: "140% 100%",
-                    animation: "progressShimmer 3s linear infinite",
-                  }}
-                />
+                >
+                  {numero}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* BLOCO 4 + BLOCO 5 LADO A LADO */}
-        <div className="flex h-[26vh] gap-[1.5vw]">
-          {/* TABELA */}
+        <div
+          className="relative flex h-[20vh] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
+          style={{
+            ...CARD_FULL,
+            background: "linear-gradient(135deg, rgba(221,4,78,0.82), rgba(221,4,78,0.65))",
+          }}
+        >
+          <div className="flex items-center gap-[1vw]">
+            <span
+              className="text-[3rem] font-bold"
+              style={{ color: GOLD, textShadow: GOLD_GLOW }}
+            >
+              Contagem total vendida:
+            </span>
+
+            <span
+              className="text-[5rem] font-black"
+              style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
+            >
+              {formatarValor(totalVendido)}
+            </span>
+          </div>
+
+          <div className="relative w-[62%] mt-[0.4vh] flex items-center gap-[12px]">
+            <div
+              className="relative flex-1 h-[34px] rounded-full overflow-hidden"
+              style={{
+                background: "linear-gradient(90deg, rgba(0,0,0,0.45), rgba(0,0,0,0.7))",
+                border: "1px solid rgba(255,255,255,0.14)",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+              }}
+            >
+              <div
+                className="h-full rounded-full relative"
+                style={{
+                  width: `${metaProgress * 100}%`,
+                  background: `linear-gradient(90deg, ${GOLD} 0%, #fffaa5 55%, ${GOLD} 100%)`,
+                  boxShadow: GOLD_GLOW,
+                  transition: "width 1s cubic-bezier(0.25, 1, 0.5, 1)",
+                  backgroundSize: "160% 100%",
+                  animation:
+                    metaProgress > 0
+                      ? "progressFlow 3s linear infinite"
+                      : "none",
+                }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 90%)",
+                    transform: "translateX(-60%) skewX(-10deg)",
+                    animation:
+                      metaProgress > 0
+                        ? "shineSweep 3.2s ease-in-out infinite"
+                        : "none",
+                  }}
+                />
+              </div>
+
+              <div
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{
+                  backgroundImage: PROGRESS_SPARKLES,
+                  backgroundSize: "140% 100%",
+                  animation: "progressShimmer 3s linear infinite",
+                }}
+              />
+
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span
+                  className="text-[2rem] font-extrabold uppercase tracking-[0.16em]"
+                  style={{
+                    color: "rgba(0,0,0,0.82)",
+                    textShadow: "0 0 12px rgba(255,255,255,0.55)",
+                    letterSpacing: "0.16em",
+                  }}
+                >
+                  {metaPercent}%
+                </span>
+              </div>
+            </div>
+
+            <span
+              className="text-[1.2rem] font-bold whitespace-nowrap"
+              style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
+            >
+              {formatarValor(META_MENSAL)}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex h-[24vh] gap-[1.6vw]">
           <div
-            className="relative flex flex-[2] rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-            style={{ backgroundImage: BLOCO4_BACKGROUND }}
+            className="flex flex-[2] rounded-[32px] overflow-visible"
+            style={{ ...CARD_FULL, background: BLOCO4_BACKGROUND }}
           >
-            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-            <table className="relative z-[1] h-full w-full table-fixed border-collapse text-center text-white">
+            <table className="w-full h-full text-center text-white table-fixed">
               <colgroup>
                 <col className="w-[10%]" />
                 <col className="w-[32%]" />
@@ -343,47 +488,68 @@ export default function LastDance() {
                 <col className="w-[20%]" />
                 <col className="w-[18%]" />
               </colgroup>
+
               <thead>
-                <tr style={{ backgroundColor: TABLE_HEADER_BG }}>
-                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
-                    Lead
-                  </th>
-                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
-                    Empresa
-                  </th>
-                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
-                    Vendedor
-                  </th>
-                  <th className="px-[0.9vw] py-[0.7vh] text-center text-[1.4rem] font-bold">
-                    Pipeline
-                  </th>
-                  <th className="px-[0.9vw] py-[0.7vh] text-right text-[1.4rem] font-bold pr-[1vw]">
-                    Valor
-                  </th>
+                <tr style={{ background: TABLE_HEADER_BG }}>
+                  {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
+                    (label, idx) => (
+                      <th
+                        key={label}
+                        className="text-[1.45rem] py-[0.6vh]"
+                        style={{
+                          color: WHITE_GLOW,
+                          textShadow: PINK_GLOW,
+                          textAlign: idx === 4 ? "center" : "center",
+                        }}
+                      >
+                        {label}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
-              <tbody className="text-[1.25rem] leading-[1.2]">
+
+              <tbody className="text-[1.55rem] leading-[1.15]">
                 {dados.map((item, i) => (
                   <tr
                     key={i}
                     style={{
-                      backgroundColor:
+                      background:
                         i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
                     }}
                   >
-                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-center font-semibold">
+                    <td
+                      className="py-[0.4vh] text-center"
+                      style={{ color: WHITE_GLOW }}
+                    >
                       {item.lead_id}
                     </td>
-                    <td className="truncate px-[0.8vw] py-[0.55vh] align-middle text-center">
+
+                    <td
+                      className="text-center truncate px-[0.4vw]"
+                      style={{ color: WHITE_GLOW }}
+                    >
                       {item.empresa}
                     </td>
-                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-center">
+
+                    <td
+                      className="text-center"
+                      style={{ color: WHITE_GLOW }}
+                    >
                       {item.assigned}
                     </td>
-                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-center">
+
+                    <td
+                      className="text-center"
+                      style={{ color: WHITE_GLOW }}
+                    >
                       {item.pipeline}
                     </td>
-                    <td className="px-[0.8vw] py-[0.55vh] align-middle text-right font-semibold pr-[0.8vw]">
+
+                    <td
+                      className="text-center pr-[1vw]"
+                      style={{ color: WHITE_GLOW, whiteSpace: "nowrap" }}
+                    >
                       {formatarValor(item.valor)}
                     </td>
                   </tr>
@@ -392,18 +558,27 @@ export default function LastDance() {
             </table>
           </div>
 
-          {/* PROJEÇÃO */}
           <div
-            className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-            style={{ background: "rgba(221,4,78,0.7)" }}
+            className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
+            style={{
+              ...CARD_STYLE,
+              background:
+                "radial-gradient(circle at center, rgba(221,4,78,0.35), transparent 70%), rgba(221,4,78,0.82)",
+            }}
           >
-            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-            <div className="relative z-[1] text-[2rem] text-white">
+            <span
+              className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
+              style={{ color: GOLD, textShadow: GOLD_GLOW }}
+            >
               Projeção Geral
-            </div>
-            <div className="relative z-[1] text-[3.8rem] font-black text-[#cad003]">
+            </span>
+
+            <span
+              className="text-[6rem] font-black"
+              style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
+            >
               {formatarValor(somaOpen)}
-            </div>
+            </span>
           </div>
         </div>
       </div>
