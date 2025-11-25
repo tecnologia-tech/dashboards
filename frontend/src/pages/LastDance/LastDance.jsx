@@ -40,10 +40,9 @@ export default function LastDance() {
   );
 
   function formatarValor(valor) {
-    if (!valor) return "R$ 0,00";
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
   }
 

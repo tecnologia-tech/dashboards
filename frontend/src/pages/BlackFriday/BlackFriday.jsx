@@ -105,20 +105,13 @@ export default function BlackFriday() {
   // FORMATADOR
   // -----------------------------------------------------------
   function formatarValor(valor) {
-    if (!valor) return "R$ 0,00";
-    return Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
   }
 
-  const valorFormatado = formatarValor(valorDiario);
-
-  // Garante que separa corretamente MESMO com espaços invisíveis
-  const partes = valorFormatado.replace(/\s+/g, " ").trim().split(" ");
-
-  const moeda = partes[0] || "R$";
-  const numero = partes[1] || "0,00";
+  const numero = formatarValor(valorDiario);
 
   // -----------------------------------------------------------
   // USE EFFECTS (fetch + áudio)
@@ -333,7 +326,7 @@ export default function BlackFriday() {
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
               >
-                Faltam hoje para a meta diária R$
+                Faltam hoje para a meta diária
               </span>
 
               {/* ===== NOVO TEXTO DO VALOR DIÁRIO ===== */}
