@@ -132,16 +132,6 @@ async function getAllLeadIds() {
   console.log(`📦 ${ids.length} leads encontrados.`);
   return ids;
 }
-async function getAllStageSets() {
-  const result = await callRPC("findStageSets", { query: {}, orderBy: "id" });
-  if (!Array.isArray(result)) return [];
-  return result
-    .filter((s) => s && s.id !== undefined && s.id !== null)
-    .map((s) => ({
-      stageset_id: String(s.id),
-      name: s.name ?? "",
-    }));
-}
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -208,12 +198,6 @@ async function ensureTable(client) {
     );
   `);
   await client.query(`
-    CREATE TABLE IF NOT EXISTS pipelines_nutshell (
-      stageset_id TEXT PRIMARY KEY,
-      name TEXT
-    );
-  `);
-  await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
     WHERE a.ctid < b.ctid
@@ -241,21 +225,67 @@ async function upsertRows(client, rows) {
   `;
   await client.query(sql, vals);
 }
-async function upsertStageSets(client, stagesets) {
-  if (!Array.isArray(stagesets) || !stagesets.length) return;
-  const cols = ["stageset_id", "name"];
-  const vals = stagesets.flatMap((s) => cols.map((c) => s[c]));
-  const placeholders = stagesets
-    .map(
-      (_, i) =>
-        `(${cols.map((_, j) => `$${i * cols.length + j + 1}`).join(",")})`
-    )
-    .join(",");
+const PIPELINE_METHODS = ["findStagesets", "findPipelines", "findProcessPipelines"];
 
-  const sql = `INSERT INTO pipelines_nutshell (${cols.join(",")})
+async function fetchPipelinesWithFallback() {
+  const limitPerPage = 100;
+  for (const method of PIPELINE_METHODS) {
+    try {
+      const all = [];
+      for (let page = 1; ; page++) {
+        const result = await callRPC(
+          method,
+          { orderBy: "id", orderDirection: "ASC", limit: limitPerPage, page },
+          1
+        );
+        if (!Array.isArray(result) || result.length === 0) break;
+        all.push(...result);
+        if (result.length < limitPerPage) break;
+      }
+      if (all.length) {
+        return all
+          .filter((p) => p && p.id !== undefined && p.id !== null)
+          .map((p) => ({
+            id: String(p.id),
+            name: p.name ?? "",
+          }));
+      }
+    } catch (err) {
+      console.warn(`⚠️ Falha ao chamar ${method}: ${err.message}`);
+    }
+  }
+  return null;
+}
+
+async function ensurePipelinesTable(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS pipelines (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      synced_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
+async function upsertPipelines(client, pipelines) {
+  if (!Array.isArray(pipelines) || !pipelines.length) return;
+  const vals = [];
+  const placeholders = pipelines
+    .map((p, i) => {
+      vals.push(p.id, p.name);
+      return `($${i * 2 + 1}, $${i * 2 + 2})`;
+    })
+    .join(",");
+  await client.query(
+    `
+    INSERT INTO pipelines (id, name)
     VALUES ${placeholders}
-    ON CONFLICT (stageset_id) DO UPDATE SET name = EXCLUDED.name`;
-  await client.query(sql, vals);
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      synced_at = NOW()
+  `,
+    vals
+  );
 }
 
 export default async function main() {
@@ -263,9 +293,26 @@ export default async function main() {
   await client.connect();
 
   await ensureTable(client);
-  const stagesets = await getAllStageSets();
-  await upsertStageSets(client, stagesets);
-  console.log(`🍺 Pipelines armazenados: ${stagesets.length}`);
+  let pipelinesSynced = false;
+  let pipelinesCount = 0;
+  try {
+    const pipelines = await fetchPipelinesWithFallback();
+    if (pipelines && pipelines.length) {
+      await ensurePipelinesTable(client);
+      await upsertPipelines(client, pipelines);
+      pipelinesSynced = true;
+      pipelinesCount = pipelines.length;
+    } else {
+      console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
+    }
+  } catch (err) {
+    console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
+  }
+  if (pipelinesSynced) {
+    console.log(`✅ Pipelines sincronizados: ${pipelinesCount}`);
+  } else {
+    console.log("⚠️ Pipelines não sincronizados");
+  }
 
   const start = Date.now();
   const ids = await getAllLeadIds();
