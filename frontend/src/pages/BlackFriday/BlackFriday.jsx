@@ -86,72 +86,6 @@ export default function BlackFriday() {
   // -----------------------------------------------------------
   // FORMATADOR
   // -----------------------------------------------------------
-<<<<<<< ours
-function formatarValor(valor) {
-  if (!valor) return "R$ 0,00";
-  return Number(valor).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatarDiaChave(date) {
-  const ano = date.getFullYear();
-  const mes = String(date.getMonth() + 1).padStart(2, "0");
-  const dia = String(date.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
-}
-
-function ehDiaUtil(date) {
-  const diaSemana = date.getDay();
-  return diaSemana !== 0 && diaSemana !== 6;
-}
-
-function listarDiasUteis(inicio, fim) {
-  const dias = [];
-  const cursor = new Date(
-    inicio.getFullYear(),
-    inicio.getMonth(),
-    inicio.getDate()
-  );
-  const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-
-  while (cursor <= limite) {
-    if (ehDiaUtil(cursor)) dias.push(new Date(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return dias;
-}
-
-function calcularMetaPlanejadaHoje(
-  valoresPorDia,
-  diasUteis,
-  hojeChave,
-  metaMensal
-) {
-  let restante = metaMensal;
-  let sobra = 0;
-
-  for (let i = 0; i < diasUteis.length; i++) {
-    const dia = diasUteis[i];
-    const chave = formatarDiaChave(dia);
-    const diasRestantes = diasUteis.length - i;
-    const baseDia = diasRestantes > 0 ? restante / diasRestantes : 0;
-    const metaDia = baseDia + sobra;
-    const realizadoDia = valoresPorDia[chave] || 0;
-
-    if (chave === hojeChave) {
-      return metaDia;
-    }
-
-    const deficit = Math.max(metaDia - realizadoDia, 0);
-    sobra = deficit;
-    restante = Math.max(restante - realizadoDia, 0);
-  }
-
-  return Math.max(restante, 0);
-}
-=======
   function formatarValor(valor) {
     if (!valor) return "R$ 0,00";
     return Number(valor).toLocaleString("pt-BR", {
@@ -159,7 +93,6 @@ function calcularMetaPlanejadaHoje(
       currency: "BRL",
     });
   }
->>>>>>> theirs
 
   const valorFormatado = formatarValor(valorDiario);
 
@@ -196,14 +129,19 @@ function calcularMetaPlanejadaHoje(
           59
         );
 
-        const pipelineIds = ["71", "23", "47", "59", "35", "63"];
+        const pipelines = [
+          "IMPORTAÇÃO CONJUNTA 🧩",
+          "CONSULTORIA LANNISTER 🦁",
+          "REPEDIDO 🏆",
+          "GANHO PRODUTO 🧸",
+          "BONUS PARCEIROS 🚢🧾💱",
+          "FEE MENSAL 🚀",
+        ];
 
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
-            pipelineIds.includes(String(i.pipeline_id)) &&
-            dt >= inicioMes &&
-            dt <= fimMes
+            pipelines.includes(i.pipeline) && dt >= inicioMes && dt <= fimMes
           );
         });
 
@@ -254,28 +192,10 @@ function calcularMetaPlanejadaHoje(
           0
         );
 
-<<<<<<< ours
-        const valoresPorDia = filtradosMes.reduce((acc, item) => {
-          const chave = formatarDiaChave(new Date(item.data));
-          acc[chave] = (acc[chave] || 0) + Number(item.valor || 0);
-          return acc;
-        }, {});
-
-        const diasUteisMes = listarDiasUteis(inicioMes, fimMes);
-        const hojeChave = formatarDiaChave(hojeBR);
-        const metaPlanejadaHoje = calcularMetaPlanejadaHoje(
-          valoresPorDia,
-          diasUteisMes,
-          hojeChave,
-          META_MENSAL
-        );
-        const metaAjustada = Math.max(metaPlanejadaHoje - totalHoje, 0);
-=======
         const valorBase =
           diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
 
         const metaAjustada = Math.max(valorBase - totalHoje, 0);
->>>>>>> theirs
 
         setValorDiario(metaAjustada);
       } catch (err) {

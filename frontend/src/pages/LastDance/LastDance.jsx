@@ -39,40 +39,27 @@ export default function LastDance() {
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
-function formatarValor(valor) {
-  if (!valor) return "R$ 0,00";
-  return Number(valor).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
+  function formatarValor(valor) {
+    if (!valor) return "R$ 0,00";
+    return Number(valor).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
 
-function formatarDiaChave(date) {
-  const ano = date.getFullYear();
-  const mes = String(date.getMonth() + 1).padStart(2, "0");
-  const dia = String(date.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
-}
+  function isMesmaData(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
 
-function isMesmaData(a, b) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function ehDiaUtilConsiderandoFeriados(date, feriados = []) {
-  const dia = date.getDay();
-  const ehFeriado = feriados.some((f) => isMesmaData(f, date));
-  return dia !== 0 && dia !== 6 && !ehFeriado;
-}
-
-function contarDiasUteis(inicio, fim, feriados = []) {
-  const data = new Date(
-    inicio.getFullYear(),
-    inicio.getMonth(),
-    inicio.getDate()
+  function contarDiasUteis(inicio, fim, feriados = []) {
+    const data = new Date(
+      inicio.getFullYear(),
+      inicio.getMonth(),
+      inicio.getDate()
     );
     const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
     let dias = 0;
@@ -84,55 +71,8 @@ function contarDiasUteis(inicio, fim, feriados = []) {
       data.setDate(data.getDate() + 1);
     }
 
-  return dias;
-}
-
-function listarDiasUteisComFeriados(inicio, fim, feriados = []) {
-  const dias = [];
-  const data = new Date(
-    inicio.getFullYear(),
-    inicio.getMonth(),
-    inicio.getDate()
-  );
-  const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-
-  while (data <= limite) {
-    if (ehDiaUtilConsiderandoFeriados(data, feriados)) {
-      dias.push(new Date(data));
-    }
-    data.setDate(data.getDate() + 1);
+    return dias;
   }
-  return dias;
-}
-
-function calcularMetaPlanejadaHoje(
-  valoresPorDia,
-  diasUteis,
-  hojeChave,
-  metaMensal
-) {
-  let restante = metaMensal;
-  let sobra = 0;
-
-  for (let i = 0; i < diasUteis.length; i++) {
-    const dia = diasUteis[i];
-    const chave = formatarDiaChave(dia);
-    const diasRestantes = diasUteis.length - i;
-    const baseDia = diasRestantes > 0 ? restante / diasRestantes : 0;
-    const metaDia = baseDia + sobra;
-    const realizadoDia = valoresPorDia[chave] || 0;
-
-    if (chave === hojeChave) {
-      return metaDia;
-    }
-
-    const deficit = Math.max(metaDia - realizadoDia, 0);
-    sobra = deficit;
-    restante = Math.max(restante - realizadoDia, 0);
-  }
-
-  return Math.max(restante, 0);
-}
 
   // LIBERA ÁUDIO
   useEffect(() => {
@@ -178,15 +118,19 @@ function calcularMetaPlanejadaHoje(
           999
         );
 
-        const pipelineIds = ["71", "23", "47", "59", "35", "63"];
+        const pipelines = [
+          "IMPORTAÇÃO CONJUNTA 🧩",
+          "CONSULTORIA LANNISTER 🦁",
+          "REPEDIDO 🏆",
+          "GANHO PRODUTO 🧸",
+          "GANHO FRETE 🚢",
+          "FEE MENSAL 🚀",
+        ];
 
-        const filtradosMes = rawData.filter((i) => {
+        const filtrados = rawData.filter((i) => pipelines.includes(i.pipeline));
+        const filtradosMes = filtrados.filter((i) => {
           const dt = new Date(i.data);
-          return (
-            pipelineIds.includes(String(i.pipeline_id)) &&
-            dt >= inicioMes &&
-            dt <= fimMes
-          );
+          return !Number.isNaN(dt) && dt >= inicioMes && dt <= fimMes;
         });
 
         const recentes = [...filtradosMes]
@@ -222,25 +166,8 @@ function calcularMetaPlanejadaHoje(
           return mesmoDia ? acc + Number(i.valor || 0) : acc;
         }, 0);
 
-        const valoresPorDia = filtradosMes.reduce((acc, item) => {
-          const chave = formatarDiaChave(new Date(item.data));
-          acc[chave] = (acc[chave] || 0) + Number(item.valor || 0);
-          return acc;
-        }, {});
-
-        const diasUteisMes = listarDiasUteisComFeriados(
-          inicioMes,
-          ultimoDia,
-          feriados
-        );
-        const hojeChave = formatarDiaChave(hojeBR);
-        const metaPlanejadaHoje = calcularMetaPlanejadaHoje(
-          valoresPorDia,
-          diasUteisMes,
-          hojeChave,
-          META_MENSAL
-        );
-        setValorDiario(Math.max(metaPlanejadaHoje - somaHoje, 0));
+        const valorBase = restante / diasRestantesUteis;
+        setValorDiario(Math.max(valorBase - somaHoje, 0));
       } catch {}
     }
 
@@ -395,102 +322,102 @@ function calcularMetaPlanejadaHoje(
             className="relative flex flex-[2] overflow-hidden rounded-[32px] border-[4px] border-[#cad003] px-[1.5vw] py-[1.8vh] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
             style={{ backgroundImage: BLOCO4_BACKGROUND }}
           >
-            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-            <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
-              <thead>
-                <tr>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "12%",
-                    }}
-                  >
-                    Lead
-                  </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "32%",
-                    }}
-                  >
-                    Empresa
-                  </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "18%",
-                    }}
-                  >
-                    Vendedor
-                  </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "18%",
-                    }}
-                  >
-                    Pipeline
-                  </th>
-                  <th
-                    className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold text-right"
-                    style={{
-                      backgroundColor: TABLE_HEADER_BG,
-                      width: "20%",
-                    }}
-                  >
-                    Valor
-                  </th>
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+          <table className="relative z-[1] h-full w-full border-collapse text-center text-white">
+            <thead>
+              <tr>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "12%",
+                  }}
+                >
+                  Lead
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "32%",
+                  }}
+                >
+                  Empresa
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "18%",
+                  }}
+                >
+                  Vendedor
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "18%",
+                  }}
+                >
+                  Pipeline
+                </th>
+                <th
+                  className="px-[1vw] py-[0.8vh] text-[1.5rem] font-bold text-right"
+                  style={{
+                    backgroundColor: TABLE_HEADER_BG,
+                    width: "20%",
+                  }}
+                >
+                  Valor
+                </th>
+              </tr>
+            </thead>
+            <tbody className="text-[1.2rem]">
+              {dados.map((item, i) => (
+                <tr
+                  key={i}
+                  style={{
+                    backgroundColor:
+                      i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
+                  }}
+                >
+                  <td className="px-[1vw] py-[0.4vh] align-middle font-semibold text-center">
+                    {item.lead_id}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    {item.empresa}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    {item.assigned}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-center">
+                    {item.pipeline}
+                  </td>
+                  <td className="px-[1vw] py-[0.4vh] align-middle text-right font-semibold">
+                    {formatarValor(item.valor)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="text-[1.2rem]">
-                {dados.map((item, i) => (
-                  <tr
-                    key={i}
-                    style={{
-                      backgroundColor:
-                        i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
-                    }}
-                  >
-                    <td className="px-[1vw] py-[0.4vh] align-middle font-semibold text-center">
-                      {item.lead_id}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
-                      {item.empresa}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
-                      {item.assigned}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-center">
-                      {item.pipeline}
-                    </td>
-                    <td className="px-[1vw] py-[0.4vh] align-middle text-right font-semibold">
-                      {formatarValor(item.valor)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* PROJEÇÃO */}
-          <div
-            className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-            style={{ background: "rgba(221,4,78,0.7)" }}
-          >
-            <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
-            <div className="relative z-[1] text-[2rem] text-white">
-              Projeção Geral
-            </div>
-            <div className="relative z-[1] text-[3.8rem] font-black text-[#cad003]">
-              {formatarValor(somaOpen)}
-            </div>
+        {/* PROJEÇÃO */}
+        <div
+          className="relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[32px] border-[3px] border-dashed border-[#cad003] px-[1.5vw] py-[1.8vh] text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+          style={{ background: "rgba(221,4,78,0.7)" }}
+        >
+          <div className="pointer-events-none absolute inset-[12px] rounded-[22px] border-[3px] border-dashed border-[rgba(255,255,255,0.25)]" />
+          <div className="relative z-[1] text-[2rem] text-white">
+            Projeção Geral
+          </div>
+          <div className="relative z-[1] text-[3.8rem] font-black text-[#cad003]">
+            {formatarValor(somaOpen)}
           </div>
         </div>
       </div>
-    </>
-  );
+    </div>
+  </>
+);
 }
