@@ -10,7 +10,7 @@ const NEON_YELLOW = "#ffd83b";
 const NEON_RED = "#ff2626";
 const NEON_WHITE_GLOW = "rgba(255,255,255,0.75)";
 
-const META_MENSAL = 1300000;
+const META_MENSAL = 1000000;
 
 // Estilos globais + animações
 const ANIMATION_STYLES = `
@@ -140,7 +140,7 @@ export default function BlackFriday() {
           59
         );
 
-        const pipelineIds = ["71", "23", "47", "59", "35", "63"];
+        const pipelineIds = ["71", "23", "47"];
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
@@ -419,198 +419,224 @@ export default function BlackFriday() {
           </div>
         </div>
 
-        {/* CONTAGEM + PROGRESSO */}
-        <div
-          className="relative flex h-[20vh] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
-          style={CARD_FULL}
-        >
-          <div className="flex items-center gap-[1vw]">
-            <span
-              className="text-[3rem] font-bold"
-              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
-            >
-              Contagem total vendida:
-            </span>
-
-            <span
-              className="text-[5rem] font-black"
-              style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
-            >
-              {formatarValor(totalVendido)}
-            </span>
-          </div>
-
-          {/* BARRA + META */}
-          <div className="relative w-[62%] mt-[0.4vh] flex items-center gap-[12px]">
+        <div className="flex flex-col flex-1 gap-[1.6vh]">
+          {/* CONTAGEM + ESTORNOS */}
+          <div className="flex flex-1 gap-[1.6vw]">
             <div
-              className="relative flex-1 h-[34px] rounded-full overflow-hidden"
-              style={{
-                background: "linear-gradient(90deg, #0f0f0f, #161616)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
-              }}
+              className="relative flex flex-[2] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
+              style={CARD_FULL}
             >
-              {/* PREENCHIMENTO COM ANIMAÇÃO */}
-              <div
-                className="h-full rounded-full relative"
-                style={{
-                  width: `${metaProgress * 100}%`,
-                  background: `linear-gradient(90deg, ${NEON_YELLOW} 0%, #fff7bf 55%, #ffd83b 100%)`,
-                  boxShadow: YELLOW_GLOW,
-                  transition: "width 1s cubic-bezier(0.25, 1, 0.5, 1)",
-                  backgroundSize: "160% 100%",
-                  animation:
-                    metaProgress > 0
-                      ? "progressFlow 3s linear infinite"
-                      : "none",
-                }}
-              >
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 90%)",
-                    transform: "translateX(-60%) skewX(-10deg)",
-                    animation:
-                      metaProgress > 0
-                        ? "shineSweep 3.2s ease-in-out infinite"
-                        : "none",
-                  }}
-                />
+              <div className="flex items-center gap-[1vw]">
+                <span
+                  className="text-[3rem] font-bold"
+                  style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+                >
+                  Contagem total vendida:
+                </span>
+
+                <span
+                  className="text-[5rem] font-black"
+                  style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
+                >
+                  {formatarValor(totalVendido)}
+                </span>
               </div>
 
-              {/* PORCENTAGEM NO CENTRO */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span
-                  className="text-[2rem] font-extrabold uppercase tracking-[0.16em]"
+              {/* BARRA + META */}
+              <div className="relative w-[62%] mt-[0.4vh] flex items-center gap-[12px]">
+                <div
+                  className="relative flex-1 h-[34px] rounded-full overflow-hidden"
                   style={{
-                    color: "rgba(0,0,0,0.82)",
-                    textShadow: "0 0 12px rgba(255,255,255,0.55)",
-                    letterSpacing: "0.16em",
+                    background: "linear-gradient(90deg, #0f0f0f, #161616)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
                   }}
                 >
-                  {metaPercent}%
+                  {/* PREENCHIMENTO COM ANIMAÇÃO */}
+                  <div
+                    className="h-full rounded-full relative"
+                    style={{
+                      width: `${metaProgress * 100}%`,
+                      background: `linear-gradient(90deg, ${NEON_YELLOW} 0%, #fff7bf 55%, #ffd83b 100%)`,
+                      boxShadow: YELLOW_GLOW,
+                      transition: "width 1s cubic-bezier(0.25, 1, 0.5, 1)",
+                      backgroundSize: "160% 100%",
+                      animation:
+                        metaProgress > 0
+                          ? "progressFlow 3s linear infinite"
+                          : "none",
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 90%)",
+                        transform: "translateX(-60%) skewX(-10deg)",
+                        animation:
+                          metaProgress > 0
+                            ? "shineSweep 3.2s ease-in-out infinite"
+                            : "none",
+                      }}
+                    />
+                  </div>
+
+                  {/* PORCENTAGEM NO CENTRO */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span
+                      className="text-[2rem] font-extrabold uppercase tracking-[0.16em]"
+                      style={{
+                        color: "rgba(0,0,0,0.82)",
+                        textShadow: "0 0 12px rgba(255,255,255,0.55)",
+                        letterSpacing: "0.16em",
+                      }}
+                    >
+                      {metaPercent}%
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  className="text-[1.2rem] font-bold whitespace-nowrap"
+                  style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
+                >
+                  {formatarValor(META_MENSAL)}
                 </span>
               </div>
             </div>
 
-            <span
-              className="text-[1.2rem] font-bold whitespace-nowrap"
-              style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
-            >
-              {formatarValor(META_MENSAL)}
-            </span>
-          </div>
-        </div>
-
-        {/* TABELA + PROJEÇÃO */}
-        <div className="flex h-[24vh] gap-[1.6vw]">
-          <div
-            className="flex flex-[2] rounded-[32px] overflow-visible"
-            style={CARD_FULL}
-          >
-            <table className="w-full h-full text-center text-white table-fixed">
-              <colgroup>
-                <col className="w-[10%]" /> {/* Lead */}
-                <col className="w-[32%]" /> {/* Empresa */}
-                <col className="w-[20%]" /> {/* Vendedor */}
-                <col className="w-[20%]" /> {/* Pipeline */}
-                <col className="w-[18%]" /> {/* Valor */}
-              </colgroup>
-
-              <thead>
-                <tr style={{ background: "rgba(0,0,0,0.45)" }}>
-                  {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
-                    (label, idx) => (
-                      <th
-                        key={label}
-                        className="text-[1.45rem] py-[0.6vh]"
-                        style={{
-                          color: NEON_RED,
-                          textShadow: RED_GLOW,
-                          textAlign: idx === 4 ? "center" : "center", // ✅ AGORA CENTRALIZADO
-                        }}
-                      >
-                        {label}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-
-              <tbody className="text-[1.55rem] leading-[1.15]">
-                {dados.map((item, i) => (
-                  <tr
-                    key={i}
-                    style={{
-                      background:
-                        i % 2 === 0
-                          ? "rgba(255,255,255,0.025)"
-                          : "rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    <td
-                      className="py-[0.4vh] text-center"
-                      style={{ color: NEON_WHITE_GLOW }}
-                    >
-                      {item.lead_id}
-                    </td>
-
-                    <td
-                      className="text-center truncate px-[0.4vw]"
-                      style={{ color: NEON_WHITE_GLOW }}
-                    >
-                      {item.empresa}
-                    </td>
-
-                    <td
-                      className="text-center"
-                      style={{ color: NEON_WHITE_GLOW }}
-                    >
-                      {item.assigned}
-                    </td>
-
-                    <td
-                      className="text-center"
-                      style={{ color: NEON_WHITE_GLOW }}
-                    >
-                      {item.pipeline}
-                    </td>
-
-                    <td
-                      className="text-center pr-[1vw]" // ✅ permanece alinhado à direita
-                      style={{ color: NEON_WHITE_GLOW, whiteSpace: "nowrap" }}
-                    >
-                      {formatarValor(item.valor)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* PROJEÇÃO GERAL */}
           <div
             className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
-            style={{
-              ...CARD_STYLE,
-              background:
-                "radial-gradient(circle at center, rgba(255,38,38,0.20), transparent 70%), #000",
-            }}
+            style={CARD_FULL}
           >
             <span
               className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
               style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
             >
-              Projeção Geral
-            </span>
+                Estornos
+              </span>
 
-            <span
-              className="text-[6rem] font-black"
-              style={{ color: NEON_RED, textShadow: RED_GLOW }}
+              <span
+                className="text-[6rem] font-black leading-none"
+                style={{ color: NEON_RED, textShadow: RED_GLOW }}
+              >
+                12.500,00
+              </span>
+
+              <span
+                className="text-[4rem] font-semibold"
+                style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
+              >
+                3,2%
+              </span>
+            </div>
+          </div>
+
+          {/* TABELA + PROJEÇÃO */}
+          <div className="flex flex-1 gap-[1.6vw]">
+            <div
+              className="flex flex-[2] rounded-[32px] overflow-visible"
+              style={CARD_FULL}
             >
-              {formatarValor(somaOpen)}
-            </span>
+              <table className="w-full h-full text-center text-white table-fixed">
+                <colgroup>
+                  <col className="w-[10%]" /> {/* Lead */}
+                  <col className="w-[32%]" /> {/* Empresa */}
+                  <col className="w-[20%]" /> {/* Vendedor */}
+                  <col className="w-[20%]" /> {/* Pipeline */}
+                  <col className="w-[18%]" /> {/* Valor */}
+                </colgroup>
+
+                <thead>
+                  <tr style={{ background: "rgba(0,0,0,0.45)" }}>
+                    {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
+                      (label, idx) => (
+                        <th
+                          key={label}
+                          className="text-[1.45rem] py-[0.6vh]"
+                          style={{
+                            color: NEON_RED,
+                            textShadow: RED_GLOW,
+                            textAlign: idx === 4 ? "center" : "center", // ✅ AGORA CENTRALIZADO
+                          }}
+                        >
+                          {label}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+
+                <tbody className="text-[1.55rem] leading-[1.15]">
+                  {dados.map((item, i) => (
+                    <tr
+                      key={i}
+                      style={{
+                        background:
+                          i % 2 === 0
+                            ? "rgba(255,255,255,0.025)"
+                            : "rgba(255,255,255,0.05)",
+                      }}
+                    >
+                      <td
+                        className="py-[0.4vh] text-center"
+                        style={{ color: NEON_WHITE_GLOW }}
+                      >
+                        {item.lead_id}
+                      </td>
+
+                      <td
+                        className="text-center truncate px-[0.4vw]"
+                        style={{ color: NEON_WHITE_GLOW }}
+                      >
+                        {item.empresa}
+                      </td>
+
+                      <td
+                        className="text-center"
+                        style={{ color: NEON_WHITE_GLOW }}
+                      >
+                        {item.assigned}
+                      </td>
+
+                      <td
+                        className="text-center"
+                        style={{ color: NEON_WHITE_GLOW }}
+                      >
+                        {item.pipeline}
+                      </td>
+
+                      <td
+                        className="text-center pr-[1vw]" // ✅ permanece alinhado à direita
+                        style={{ color: NEON_WHITE_GLOW, whiteSpace: "nowrap" }}
+                      >
+                        {formatarValor(item.valor)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PROJEÇÃO GERAL */}
+          <div
+            className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
+            style={CARD_FULL}
+          >
+            <span
+              className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
+              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+            >
+                Projeção Geral
+              </span>
+
+              <span
+                className="text-[6rem] font-black"
+                style={{ color: NEON_RED, textShadow: RED_GLOW }}
+              >
+                {formatarValor(somaOpen)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
