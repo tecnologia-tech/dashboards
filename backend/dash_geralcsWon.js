@@ -1,4 +1,4 @@
-import { Client } from "pg";
+import { pool } from "./db.js";
 import dotenv from "dotenv";
 import path from "path";
 import https from "https";
@@ -10,30 +10,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "banco.env") });
 
-const {
-  PGHOST,
-  PGPORT,
-  PGDATABASE,
-  PGUSER,
-  PGPASSWORD,
-  PGSSLMODE,
-  NUTSHELL_USERNAME,
-  NUTSHELL_API_TOKEN,
-  NUTSHELL_API_URL,
-} = process.env;
+const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
 
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
-const dbCfg = {
-  host: PGHOST,
-  port: Number(PGPORT || 5432),
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
 
 const httpsAgent = new https.Agent({ keepAlive: true });
 const limit = pLimit(10);
@@ -91,9 +72,8 @@ function mapLeadToRow(lead) {
   const empresa = lead.primaryAccount?.name ?? "";
   const assigned = lead.assignee?.name ?? "";
   const tag = formatTags(lead.tags);
-  const stagesetId = lead.stageset?.id;
-  const stagesetName = lead.stageset?.name;
-  const pipeline = stagesetId && stagesetName ? `${stagesetId} - ${stagesetName}` : null;
+  const pipelineId = lead.stageset?.id ? String(lead.stageset.id) : null;
+  const pipeline = lead.stageset?.name ?? null;
 
   const data = toSQLDateFromISO(
     lead.closedTime ??
@@ -108,6 +88,7 @@ function mapLeadToRow(lead) {
 
   return {
     data,
+    pipeline_id: pipelineId,
     pipeline,
     empresa,
     assigned,
@@ -187,6 +168,7 @@ async function ensureTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
       data TIMESTAMP,
+      pipeline_id TEXT,
       pipeline TEXT,
       empresa TEXT,
       assigned TEXT,
@@ -197,6 +179,7 @@ async function ensureTable(client) {
       lead_id TEXT PRIMARY KEY
     );
   `);
+  await ensurePipelineColumns(client);
   await client.query(`
     DELETE FROM dash_geralcsWon a
     USING dash_geralcsWon b
@@ -225,7 +208,34 @@ async function upsertRows(client, rows) {
   `;
   await client.query(sql, vals);
 }
-const PIPELINE_METHODS = ["findStagesets", "findPipelines", "findProcessPipelines"];
+
+async function ensurePipelineColumns(client) {
+  const columnCheck = await client.query(`
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'dash_geralcswon'
+      AND column_name = 'pipeline_id';
+  `);
+
+  if (!columnCheck.rowCount) {
+    await client.query(
+      `ALTER TABLE dash_geralcsWon ADD COLUMN pipeline_id TEXT;`
+    );
+  }
+
+  await client.query(`
+    UPDATE dash_geralcsWon
+    SET pipeline_id = regexp_replace(pipeline, '^\\s*(\\d+)\\s+-\\s+(.+)$', '\\1'),
+        pipeline = regexp_replace(pipeline, '^\\s*\\d+\\s+-\\s+(.+)$', '\\1')
+    WHERE (pipeline_id IS NULL OR pipeline_id = '')
+      AND pipeline ~ '^\\s*\\d+\\s+-\\s+';
+  `);
+}
+const PIPELINE_METHODS = [
+  "findStagesets",
+  "findPipelines",
+  "findProcessPipelines",
+];
 
 async function fetchPipelinesWithFallback() {
   const limitPerPage = 100;
@@ -289,61 +299,63 @@ async function upsertPipelines(client, pipelines) {
 }
 
 export default async function main() {
-  const client = new Client(dbCfg);
-  await client.connect();
-
-  await ensureTable(client);
-  let pipelinesSynced = false;
-  let pipelinesCount = 0;
+  const client = await pool.connect();
   try {
-    const pipelines = await fetchPipelinesWithFallback();
-    if (pipelines && pipelines.length) {
-      await ensurePipelinesTable(client);
-      await upsertPipelines(client, pipelines);
-      pipelinesSynced = true;
-      pipelinesCount = pipelines.length;
-    } else {
+    await ensureTable(client);
+    console.log("✅ Pipeline armazenado em colunas separadas (id + nome)");
+    let pipelinesSynced = false;
+    let pipelinesCount = 0;
+    try {
+      const pipelines = await fetchPipelinesWithFallback();
+      if (pipelines && pipelines.length) {
+        await ensurePipelinesTable(client);
+        await upsertPipelines(client, pipelines);
+        pipelinesSynced = true;
+        pipelinesCount = pipelines.length;
+      } else {
+        console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
+      }
+    } catch (err) {
       console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
     }
-  } catch (err) {
-    console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
+    if (pipelinesSynced) {
+      console.log(`✅ Pipelines sincronizados: ${pipelinesCount}`);
+    } else {
+      console.log("⚠️ Pipelines não sincronizados");
+    }
+
+    const start = Date.now();
+    const ids = await getAllLeadIds();
+
+    const allRows = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const batch = ids.slice(i, i + 100);
+
+      const tasks = batch.map((id) =>
+        limit(async () => {
+          try {
+            const lead = await callRPC("getLead", { leadId: id });
+            allRows.push(mapLeadToRow(lead));
+          } catch (err) {
+            console.warn("⚠️ Falha ao processar lead", id, err.message);
+          }
+        })
+      );
+      await Promise.all(tasks);
+
+      await upsertRows(client, allRows);
+      allRows.length = 0;
+    }
+
+    const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
+    const total = parseInt(countRes.rows[0].count, 10);
+
+    const duration = ((Date.now() - start) / 1000).toFixed(2);
+    console.log(`✅ Processamento concluído com sucesso!`);
+    console.log(`📊 Total atual na tabela: ${total} registros.`);
+    console.log(`⏱️ Tempo total: ${duration}s`);
+    console.log("🏁 dash_geralcsWon finalizado com sucesso!\n");
+  } finally {
+    client.release();
   }
-  if (pipelinesSynced) {
-    console.log(`✅ Pipelines sincronizados: ${pipelinesCount}`);
-  } else {
-    console.log("⚠️ Pipelines não sincronizados");
-  }
-
-  const start = Date.now();
-  const ids = await getAllLeadIds();
-
-  const allRows = [];
-  for (let i = 0; i < ids.length; i += 100) {
-    const batch = ids.slice(i, i + 100);
-
-    const tasks = batch.map((id) =>
-      limit(async () => {
-        try {
-          const lead = await callRPC("getLead", { leadId: id });
-          allRows.push(mapLeadToRow(lead));
-        } catch (err) {
-          console.warn("⚠️ Falha ao processar lead", id, err.message);
-        }
-      })
-    );
-    await Promise.all(tasks);
-
-    await upsertRows(client, allRows);
-    allRows.length = 0;
-  }
-
-  const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
-  const total = parseInt(countRes.rows[0].count, 10);
-
-  const duration = ((Date.now() - start) / 1000).toFixed(2);
-  console.log(`✅ Processamento concluído com sucesso!`);
-  console.log(`📊 Total atual na tabela: ${total} registros.`);
-  console.log(`⏱️ Tempo total: ${duration}s`);
-  await client.end();
-  console.log("🏁 dash_geralcsWon finalizado com sucesso!\n");
 }

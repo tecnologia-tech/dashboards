@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import pkg from "pg";
-const { Client } = pkg;
+import { pool } from "./db.js";
 import path from "path";
 
 const __filename = new URL(import.meta.url).pathname;
@@ -9,9 +8,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, MONDAY_API_KEY } =
-  process.env;
-
+const { MONDAY_API_URL, MONDAY_API_TOKEN } = process.env;
 const MONDAY_BOARD_ID = "9869748483";
 const TABLE_NAME = "dash_nps";
 
@@ -56,10 +53,10 @@ async function getColumnMap() {
   `;
   const variables = { board_id: MONDAY_BOARD_ID };
 
-  const res = await fetch("https://api.monday.com/v2", {
+  const res = await fetch(MONDAY_API_URL, {
     method: "POST",
     headers: {
-      Authorization: MONDAY_API_KEY,
+      Authorization: MONDAY_API_TOKEN,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ query, variables }),
@@ -96,10 +93,10 @@ async function getMondayData() {
   let cursor = null;
   const limit = 50;
   do {
-    const res = await fetch("https://api.monday.com/v2", {
+    const res = await fetch(MONDAY_API_URL, {
       method: "POST",
       headers: {
-        Authorization: MONDAY_API_KEY,
+        Authorization: MONDAY_API_TOKEN,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -127,18 +124,8 @@ async function getMondayData() {
 }
 
 async function saveToPostgres(items, columnMap) {
-  const client = new Client({
-    host: PGHOST,
-    port: PGPORT ? parseInt(PGPORT, 10) : 5432,
-    database: PGDATABASE,
-    user: PGUSER,
-    password: PGPASSWORD,
-    ssl: false,
-  });
-
+  const client = await pool.connect();
   try {
-    await client.connect();
-
     console.log(`💾 Salvando ${items.length} registros em ${TABLE_NAME}...`);
     const columns = Object.values(columnMap);
     const colDefs = columns.map((t) => `"${t}" TEXT`).join(", ");
@@ -187,7 +174,7 @@ async function saveToPostgres(items, columnMap) {
   } catch (err) {
     console.error("❌ Erro ao salvar:", err.message);
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 

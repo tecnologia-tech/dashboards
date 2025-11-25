@@ -1,4 +1,4 @@
-import { Client } from "pg";
+import { pool } from "./db.js";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,12 +10,6 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const {
-  PGHOST,
-  PGPORT,
-  PGDATABASE,
-  PGUSER,
-  PGPASSWORD,
-  PGSSLMODE,
   NUTSHELL_USERNAME,
   NUTSHELL_API_TOKEN,
   NUTSHELL_API_URL,
@@ -24,15 +18,6 @@ const {
 const AUTH_HEADER =
   "Basic " +
   Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
-
-const dbCfg = {
-  host: PGHOST,
-  port: Number(PGPORT || 5432),
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "true" ? { rejectUnauthorized: false } : false,
-};
 
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
@@ -184,9 +169,8 @@ function getHotStageIdsManualmente() {
 }
 
 async function main() {
-  const client = new Client(dbCfg);
+  const client = await pool.connect();
   try {
-    await client.connect();
     await ensureTable(client);
 
     const hotStageIds = getHotStageIdsManualmente();
@@ -232,9 +216,9 @@ async function main() {
       }
     }
   } catch (err) {
-    console.error("❌ Erro:", err.message);
+    console.error("?? Erro:", err.message);
   } finally {
-    await client.end();
+    client.release();
   }
 }
 
