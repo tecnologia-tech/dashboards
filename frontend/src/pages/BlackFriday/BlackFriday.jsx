@@ -129,19 +129,14 @@ export default function BlackFriday() {
           59
         );
 
-        const pipelines = [
-          "IMPORTAÇÃO CONJUNTA 🧩",
-          "CONSULTORIA LANNISTER 🦁",
-          "REPEDIDO 🏆",
-          "GANHO PRODUTO 🧸",
-          "BONUS PARCEIROS 🚢🧾💱",
-          "FEE MENSAL 🚀",
-        ];
+        const pipelineIds = ["71", "23", "47", "59", "35", "63"];
 
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
-            pipelines.includes(i.pipeline) && dt >= inicioMes && dt <= fimMes
+            pipelineIds.includes(String(i.pipeline_id)) &&
+            dt >= inicioMes &&
+            dt <= fimMes
           );
         });
 
