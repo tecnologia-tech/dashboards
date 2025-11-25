@@ -160,6 +160,9 @@ export default function BlackFriday() {
   // ==============================
   // FETCH PRINCIPAL (VENDAS / META DIÁRIA)
   // ==============================
+  // ==============================
+  // FETCH PRINCIPAL (VENDAS / META DIÁRIA)
+  // ==============================
   useEffect(() => {
     async function fetchData() {
       try {
@@ -173,6 +176,7 @@ export default function BlackFriday() {
 
         const pipelineIds = ["71", "23", "47"];
 
+        // Filtra vendas do mês apenas nos pipelines corretos
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (
@@ -182,27 +186,45 @@ export default function BlackFriday() {
           );
         });
 
-        // ultimas 3
+        // 🔹 Últimas 3 vendas
         const recentes = [...filtradosMes]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
         setDados(recentes);
 
-        // TOTAL VENDIDO (SÓ DOS PIPELINES)
-        const somaMes = filtradosMes.reduce(
+        // 🔹 Total vendido ATÉ HOJE (para barra)
+        const somaAteHoje = filtradosMes.reduce(
           (acc, i) => acc + Number(i.valor || 0),
           0
         );
-        setTotalVendido(somaMes);
 
-        // META BASE
-        const restanteMes = Math.max(META_MENSAL - somaMes, 0);
-        const diasRestantes = contarDiasUteisRestantes(hojeBR);
+        // 🔹 TOTAL VENDIDO ATÉ ONTEM (sem incluir hoje)
+        const vendasAteOntem = filtradosMes.filter((i) => {
+          const dt = new Date(i.data);
+          return dt.toDateString() !== hojeBR.toDateString();
+        });
 
-        const valorBaseHoje =
-          diasRestantes > 0 ? restanteMes / diasRestantes : restanteMes;
+        const totalVendidoAteOntem = vendasAteOntem.reduce(
+          (acc, i) => acc + Number(i.valor || 0),
+          0
+        );
 
-        // VENDIDO HOJE
+        // 🔹 Faltante para meta baseado até ontem
+        const faltanteParaMeta = Math.max(
+          META_MENSAL - totalVendidoAteOntem,
+          0
+        );
+
+        // 🔹 Dias úteis restantes (contando hoje)
+        const diasUteisRestantes = contarDiasUteisRestantes(hojeBR);
+
+        // 🔹 Meta base do dia
+        const metaBaseHoje =
+          diasUteisRestantes > 0
+            ? faltanteParaMeta / diasUteisRestantes
+            : faltanteParaMeta;
+
+        // 🔹 Vendido hoje
         const vendasHoje = filtradosMes.filter((i) => {
           const dt = new Date(i.data);
           return dt.toDateString() === hojeBR.toDateString();
@@ -213,90 +235,35 @@ export default function BlackFriday() {
           0
         );
 
-        let metaAjustadaHoje = Math.max(valorBaseHoje - vendidoHoje, 0);
+        // ✅ META FINAL — modelo do gestor
+        const metaFinalHoje = Math.max(metaBaseHoje - vendidoHoje, 0);
 
-        // ONTEM (DIA ÚTIL)
-        let ontemRef = new Date(hojeBR);
-        ontemRef.setDate(ontemRef.getDate() - 1);
+        // ✅ SETA VALORES NA TELA
+        setValorDiario(metaFinalHoje);
+        setTotalVendido(somaAteHoje);
 
-        while (
-          !isDiaUtil(ontemRef) &&
-          ontemRef.getTime() >= inicioMes.getTime()
-        ) {
-          ontemRef.setDate(ontemRef.getDate() - 1);
-        }
-
-        let vendidoOntem = 0;
-        let metaDiariaOntem = 0;
-        let saldoOntem = 0;
-
-        if (isDiaUtil(ontemRef)) {
-          const vendasOntem = filtradosMes.filter((i) => {
-            const dt = new Date(i.data);
-            return dt.toDateString() === ontemRef.toDateString();
-          });
-
-          vendidoOntem = vendasOntem.reduce(
-            (acc, i) => acc + Number(i.valor || 0),
-            0
-          );
-
-          const totalVendidoAteOntem = filtradosMes
-            .filter((i) => new Date(i.data) <= ontemRef)
-            .reduce((acc, i) => acc + Number(i.valor || 0), 0);
-
-          const restanteAteOntem = Math.max(
-            META_MENSAL - totalVendidoAteOntem,
-            0
-          );
-
-          const diasRestantesOntem = contarDiasUteisRestantes(ontemRef);
-
-          metaDiariaOntem =
-            diasRestantesOntem > 0
-              ? (restanteAteOntem + vendidoOntem) / diasRestantesOntem
-              : 0;
-
-          saldoOntem = metaDiariaOntem - vendidoOntem;
-
-          // ✅ Regra A: saldo positivo soma, saldo negativo diminui
-          metaAjustadaHoje = Math.max(metaAjustadaHoje + saldoOntem, 0);
-        }
-
-        setValorDiario(metaAjustadaHoje);
-
-        // DEBUG
+        // ✅ DEBUG
         console.group("DEBUG META DIÁRIA BLACK FRIDAY");
-        console.log("TOTAL_VENDIDO:", somaMes.toFixed(2));
-        console.log("META_MENSAL:", META_MENSAL.toFixed(2));
-        console.log("DIAS_UTEIS_RESTANTES:", diasRestantes);
-        console.log("META_BASE_HOJE:", valorBaseHoje.toFixed(2));
-        console.log("VENDIDO_HOJE:", vendidoHoje.toFixed(2));
-        console.log("VENDIDO_ONTEM:", vendidoOntem.toFixed(2));
-        console.log("META_ONTEM:", metaDiariaOntem.toFixed(2));
-        console.log("SALDO_ONTEM:", saldoOntem.toFixed(2));
-        console.log("META_AJUSTADA_FINAL:", metaAjustadaHoje.toFixed(2));
+        console.log(
+          "TOTAL VENDIDO ATÉ ONTEM:",
+          totalVendidoAteOntem.toFixed(2)
+        );
+        console.log("META MENSAL:", META_MENSAL.toFixed(2));
+        console.log("FALTANTE PARA META:", faltanteParaMeta.toFixed(2));
+        console.log("DIAS ÚTEIS RESTANTES:", diasUteisRestantes);
+        console.log("META BASE HOJE:", metaBaseHoje.toFixed(2));
+        console.log("VENDIDO HOJE:", vendidoHoje.toFixed(2));
+        console.log(
+          "META FINAL HOJE (esperado 73914.49):",
+          metaFinalHoje.toFixed(2)
+        );
         console.groupEnd();
       } catch (err) {
         console.log("Erro ao buscar dados:", err);
       }
     }
 
-    async function fetchOpen() {
-      try {
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
-        );
-        const data = await r.json();
-        if (!Array.isArray(data)) return;
-        setSomaOpen(data.reduce((acc, i) => acc + Number(i.valor || 0), 0));
-      } catch {
-        // silencioso
-      }
-    }
-
     fetchData();
-    fetchOpen();
   }, []);
 
   // ==============================
