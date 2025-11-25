@@ -77,6 +77,8 @@ export default function LastDance() {
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
+  const [totalEstornos, setTotalEstornos] = useState(0);
+  const [percentualEstornos, setPercentualEstornos] = useState(0);
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
@@ -260,6 +262,80 @@ export default function LastDance() {
     }, 30000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    async function calcularEstornosEPercentual() {
+      try {
+        const rGeral = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
+        );
+        const vendas = await rGeral.json();
+
+        const rEstornos = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_reembolso`
+        );
+        const reembolsos = await rEstornos.json();
+
+        if (!Array.isArray(vendas) || !Array.isArray(reembolsos)) return;
+
+        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
+        const fimMes = new Date(
+          hojeBR.getFullYear(),
+          hojeBR.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+
+        // ✅ TOTAL GERAL EXATO (MESMA QUERY DO POSTGRES)
+        const totalGeral = vendas
+          .filter((i) => {
+            const dt = new Date(i.data);
+            return dt >= inicioMes && dt <= fimMes;
+          })
+          .reduce((acc, i) => acc + Number(i.valor || 0), 0);
+
+        setTotalVendido(totalGeral);
+
+        // ✅ TOTAL ESTORNOS EXATO (MESMA QUERY DO POSTGRES)
+        const totalEstornos = reembolsos
+          .filter((item) => {
+            const dt = new Date(item?.Data_de_Devolucao);
+            return (
+              dt >= inicioMes &&
+              dt <= fimMes &&
+              item?.Devolucao_Status === "Feito ✅"
+            );
+          })
+          .reduce((acc, item) => {
+            const valorSanitizado = String(item?.Estorno_R || "0")
+              .replace(/\s/g, "")
+              .replace("R$", "")
+              .replace(/\./g, "")
+              .replace(",", ".");
+            const valor = parseFloat(valorSanitizado);
+            return acc + (Number.isFinite(valor) ? valor : 0);
+          }, 0);
+
+        setTotalEstornos(totalEstornos);
+
+        // ✅ PERCENTUAL EXATO DO SQL
+        const percentual =
+          totalGeral > 0 ? (totalEstornos / totalGeral) * 100 : 0;
+        setPercentualEstornos(percentual);
+
+        console.log("LASTDANCE DEBUG totalGeral:", totalGeral);
+        console.log("LASTDANCE DEBUG totalEstornos:", totalEstornos);
+        console.log("LASTDANCE DEBUG percentual:", percentual);
+      } catch (err) {
+        console.log("Erro ao calcular estornos LastDance:", err);
+      }
+    }
+
+    calcularEstornosEPercentual();
   }, []);
 
   function playSom() {
@@ -491,21 +567,14 @@ export default function LastDance() {
                 className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Estornos
+                Projeção Geral
               </span>
 
               <span
-                className="text-[6rem] font-black leading-none"
+                className="text-[6rem] font-black"
                 style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
               >
-                12.500,00
-              </span>
-
-              <span
-                className="text-[2rem] font-semibold"
-                style={{ color: GOLD, textShadow: GOLD_GLOW }}
-              >
-                3,2%
+                {formatarValor(somaOpen)}
               </span>
             </div>
           </div>
@@ -599,14 +668,21 @@ export default function LastDance() {
                 className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Projeção Geral
+                Estornos
               </span>
 
               <span
-                className="text-[6rem] font-black"
+                className="text-[6rem] font-black leading-none"
                 style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
               >
-                {formatarValor(somaOpen)}
+                {formatarValor(totalEstornos)}
+              </span>
+
+              <span
+                className="text-[2rem] font-semibold"
+                style={{ color: GOLD, textShadow: GOLD_GLOW }}
+              >
+                {percentualEstornos.toFixed(2)}%
               </span>
             </div>
           </div>

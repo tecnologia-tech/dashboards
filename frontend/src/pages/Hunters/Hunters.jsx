@@ -278,7 +278,7 @@ export default function Hunters() {
     <>
       <style>{ANIMATION_STYLES}</style>
 
-      <div className="flex h-full w-full overflow-hidden bg-black font-['Cinzel'] text-[#f5e7c8]">
+      <div className="flex h-screen w-full overflow-hidden bg-black font-['Cinzel'] text-[#f5e7c8]">
         {/* LATERAL */}
         <div className="relative flex w-[220px] min-w-[220px] items-center justify-center overflow-hidden bg-black">
           <img
@@ -453,7 +453,7 @@ export default function Hunters() {
                       {photo && (
                         <img
                           src={photo}
-                          className="absolute left-1/2 top-[40%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(230,192,104,0.9)] object-cover shadow-[0_0_6px_rgba(230,192,104,0.35)]"
+                          className="absolute left-1/2 top-[43%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(230,192,104,0.9)] object-cover shadow-[0_0_6px_rgba(230,192,104,0.35)]"
                           alt={h.nome}
                         />
                       )}
@@ -465,7 +465,7 @@ export default function Hunters() {
                       style={{
                         textShadow: "0 0 6px rgba(230,192,104,0.35)",
                         animation:
-                          "goldenTextBreath 5.5s ease-in-out infinite alternate, heatShimmer 14s.ease-in-out infinite",
+                          "goldenTextBreath 5.5s ease-in-out infinite alternate, heatShimmer 14s ease-in-out infinite",
                       }}
                     >
                       <span
@@ -612,7 +612,7 @@ function Gauge({ percent }) {
       className="relative mt-[-50px] h-[140px] w-[220px]"
       style={{
         animation:
-          "gaugeBreath 18s.ease-in-out infinite, gaugeTremor 9s ease-in-out infinite, heatRipple 16s ease-in-out infinite",
+          "gaugeBreath 18s ease-in-out infinite, gaugeTremor 9s ease-in-out infinite, heatRipple 16s ease-in-out infinite",
       }}
     >
       <svg viewBox="0 0 200 120" preserveAspectRatio="none">

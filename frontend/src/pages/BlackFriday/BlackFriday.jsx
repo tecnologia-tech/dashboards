@@ -83,16 +83,43 @@ const WHITE_GLOW = `
   0 0 22px rgba(255,255,255,0.35)
 `;
 
+// ==============================
+// HELPERS DE DATA E FORMATAÇÃO
+// ==============================
+function isDiaUtil(d) {
+  const diaSemana = d.getDay();
+  return diaSemana !== 0 && diaSemana !== 6;
+}
+
+function contarDiasUteisRestantes(dataRef) {
+  const ultimoDia = new Date(dataRef.getFullYear(), dataRef.getMonth() + 1, 0);
+
+  let dias = 0;
+  for (let d = new Date(dataRef); d <= ultimoDia; d.setDate(d.getDate() + 1)) {
+    if (isDiaUtil(d)) dias++;
+  }
+  return dias;
+}
+
+function formatarValor(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+// ==============================
+// COMPONENTE PRINCIPAL
+// ==============================
 export default function BlackFriday() {
-  // -----------------------------------------------------------
   // ESTADOS
-  // -----------------------------------------------------------
   const [dados, setDados] = useState([]);
-  const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
-  const [mostrarVideo, setMostrarVideo] = useState(false);
-  const [somaOpen, setSomaOpen] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
+  const [somaOpen, setSomaOpen] = useState(0);
+  const [totalEstornos, setTotalEstornos] = useState(0);
+  const [percentualEstornos, setPercentualEstornos] = useState(0);
+  const [mostrarVideo, setMostrarVideo] = useState(false);
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
@@ -101,187 +128,12 @@ export default function BlackFriday() {
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
 
-  // -----------------------------------------------------------
-  // FORMATADOR
-  // -----------------------------------------------------------
-  function formatarValor(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-
   const numero = formatarValor(valorDiario);
 
-  // -----------------------------------------------------------
-  // USE EFFECTS (fetch + áudio)
-  // -----------------------------------------------------------
-
+  // AUDIO
   useEffect(() => {
     audioRef.current = new Audio("/audios/comemora.mp3");
   }, []);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
-        );
-        const rawData = await r.json();
-        if (!Array.isArray(rawData)) return;
-
-        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
-        const fimMes = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth() + 1,
-          0,
-          23,
-          59,
-          59
-        );
-
-        const pipelineIds = ["71", "23", "47"];
-        const filtradosMes = rawData.filter((i) => {
-          const dt = new Date(i.data);
-          return (
-            pipelineIds.includes(String(i.pipeline_id)) &&
-            dt >= inicioMes &&
-            dt <= fimMes
-          );
-        });
-
-        const recentes = [...filtradosMes]
-          .sort((a, b) => new Date(b.data) - new Date(a.data))
-          .slice(0, 3);
-
-        setDados(recentes);
-
-        const somaMes = filtradosMes.reduce(
-          (acc, i) => acc + Number(i.valor || 0),
-          0
-        );
-        setTotalVendido(somaMes);
-
-        const restante = Math.max(META_MENSAL - somaMes, 0);
-        setFaltamParaMetaMensal(restante);
-
-        function isDiaUtil(d) {
-          const diaSemana = d.getDay();
-          return diaSemana !== 0 && diaSemana !== 6;
-        }
-
-        function contarDiasUteisRestantes(dataRef) {
-          const ultimoDia = new Date(
-            dataRef.getFullYear(),
-            dataRef.getMonth() + 1,
-            0
-          );
-
-          let dias = 0;
-          for (
-            let d = new Date(dataRef);
-            d <= ultimoDia;
-            d.setDate(d.getDate() + 1)
-          ) {
-            if (isDiaUtil(d)) dias++;
-          }
-          return dias;
-        }
-
-        const diasRestantesUteis = contarDiasUteisRestantes(hojeBR);
-
-        const vendasHoje = filtradosMes.filter((i) => {
-          const dt = new Date(i.data);
-          return dt.toDateString() === hojeBR.toDateString();
-        });
-
-        const totalHoje = vendasHoje.reduce(
-          (acc, i) => acc + Number(i.valor || 0),
-          0
-        );
-
-        const valorBase =
-          diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
-
-        const metaAjustada = Math.max(valorBase - totalHoje, 0);
-
-        let valorDiarioAjustado = metaAjustada;
-
-        let ontemRef = new Date(hojeBR);
-        ontemRef.setDate(ontemRef.getDate() - 1);
-
-        while (
-          !isDiaUtil(ontemRef) &&
-          ontemRef.getTime() >= inicioMes.getTime()
-        ) {
-          ontemRef.setDate(ontemRef.getDate() - 1);
-        }
-
-        if (isDiaUtil(ontemRef) && ontemRef.getTime() >= inicioMes.getTime()) {
-          const fimOntem = new Date(
-            ontemRef.getFullYear(),
-            ontemRef.getMonth(),
-            ontemRef.getDate(),
-            23,
-            59,
-            59,
-            999
-          );
-
-          const vendasOntem = filtradosMes.filter((i) => {
-            const dt = new Date(i.data);
-            return dt.toDateString() === ontemRef.toDateString();
-          });
-
-          const vendidoOntem = vendasOntem.reduce(
-            (acc, i) => acc + Number(i.valor || 0),
-            0
-          );
-
-          const totalVendidoAteOntem = filtradosMes
-            .filter((i) => new Date(i.data) <= fimOntem)
-            .reduce((acc, i) => acc + Number(i.valor || 0), 0);
-
-          const faltanteAteOntem = Math.max(
-            META_MENSAL - totalVendidoAteOntem,
-            0
-          );
-
-          const diasUteisRestantesOntem = contarDiasUteisRestantes(ontemRef);
-
-          const metaDiariaOntem =
-            diasUteisRestantesOntem > 0
-              ? (faltanteAteOntem + vendidoOntem) / diasUteisRestantesOntem
-              : 0;
-
-          const saldoOntem = metaDiariaOntem - vendidoOntem;
-
-          valorDiarioAjustado = Math.max(metaAjustada + saldoOntem, 0);
-        }
-
-        setValorDiario(valorDiarioAjustado);
-      } catch (err) {
-        console.log("Erro ao buscar dados:", err);
-      }
-    }
-
-    async function fetchOpen() {
-      try {
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
-        );
-        const data = await r.json();
-        setSomaOpen(data.reduce((acc, i) => acc + Number(i.valor || 0), 0));
-      } catch {}
-    }
-
-    fetchData();
-    fetchOpen();
-  }, []);
-
-  // -----------------------------------------------------------
-  // SOM
-  // -----------------------------------------------------------
 
   function playSom() {
     if (!audioRef.current) return;
@@ -305,14 +157,229 @@ export default function BlackFriday() {
     }, 12000);
   }
 
-  // PROGRESSO REAL DA META MENSAL
+  // ==============================
+  // FETCH PRINCIPAL (VENDAS / META DIÁRIA)
+  // ==============================
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
+        );
+        const rawData = await r.json();
+        if (!Array.isArray(rawData)) return;
+
+        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
+
+        const pipelineIds = ["71", "23", "47"];
+
+        const filtradosMes = rawData.filter((i) => {
+          const dt = new Date(i.data);
+          return (
+            pipelineIds.includes(String(i.pipeline_id)) &&
+            dt >= inicioMes &&
+            dt <= hojeBR
+          );
+        });
+
+        // ultimas 3
+        const recentes = [...filtradosMes]
+          .sort((a, b) => new Date(b.data) - new Date(a.data))
+          .slice(0, 3);
+        setDados(recentes);
+
+        // TOTAL VENDIDO (SÓ DOS PIPELINES)
+        const somaMes = filtradosMes.reduce(
+          (acc, i) => acc + Number(i.valor || 0),
+          0
+        );
+        setTotalVendido(somaMes);
+
+        // META BASE
+        const restanteMes = Math.max(META_MENSAL - somaMes, 0);
+        const diasRestantes = contarDiasUteisRestantes(hojeBR);
+
+        const valorBaseHoje =
+          diasRestantes > 0 ? restanteMes / diasRestantes : restanteMes;
+
+        // VENDIDO HOJE
+        const vendasHoje = filtradosMes.filter((i) => {
+          const dt = new Date(i.data);
+          return dt.toDateString() === hojeBR.toDateString();
+        });
+
+        const vendidoHoje = vendasHoje.reduce(
+          (acc, i) => acc + Number(i.valor || 0),
+          0
+        );
+
+        let metaAjustadaHoje = Math.max(valorBaseHoje - vendidoHoje, 0);
+
+        // ONTEM (DIA ÚTIL)
+        let ontemRef = new Date(hojeBR);
+        ontemRef.setDate(ontemRef.getDate() - 1);
+
+        while (
+          !isDiaUtil(ontemRef) &&
+          ontemRef.getTime() >= inicioMes.getTime()
+        ) {
+          ontemRef.setDate(ontemRef.getDate() - 1);
+        }
+
+        let vendidoOntem = 0;
+        let metaDiariaOntem = 0;
+        let saldoOntem = 0;
+
+        if (isDiaUtil(ontemRef)) {
+          const vendasOntem = filtradosMes.filter((i) => {
+            const dt = new Date(i.data);
+            return dt.toDateString() === ontemRef.toDateString();
+          });
+
+          vendidoOntem = vendasOntem.reduce(
+            (acc, i) => acc + Number(i.valor || 0),
+            0
+          );
+
+          const totalVendidoAteOntem = filtradosMes
+            .filter((i) => new Date(i.data) <= ontemRef)
+            .reduce((acc, i) => acc + Number(i.valor || 0), 0);
+
+          const restanteAteOntem = Math.max(
+            META_MENSAL - totalVendidoAteOntem,
+            0
+          );
+
+          const diasRestantesOntem = contarDiasUteisRestantes(ontemRef);
+
+          metaDiariaOntem =
+            diasRestantesOntem > 0
+              ? (restanteAteOntem + vendidoOntem) / diasRestantesOntem
+              : 0;
+
+          saldoOntem = metaDiariaOntem - vendidoOntem;
+
+          // ✅ Regra A: saldo positivo soma, saldo negativo diminui
+          metaAjustadaHoje = Math.max(metaAjustadaHoje + saldoOntem, 0);
+        }
+
+        setValorDiario(metaAjustadaHoje);
+
+        // DEBUG
+        console.group("DEBUG META DIÁRIA BLACK FRIDAY");
+        console.log("TOTAL_VENDIDO:", somaMes.toFixed(2));
+        console.log("META_MENSAL:", META_MENSAL.toFixed(2));
+        console.log("DIAS_UTEIS_RESTANTES:", diasRestantes);
+        console.log("META_BASE_HOJE:", valorBaseHoje.toFixed(2));
+        console.log("VENDIDO_HOJE:", vendidoHoje.toFixed(2));
+        console.log("VENDIDO_ONTEM:", vendidoOntem.toFixed(2));
+        console.log("META_ONTEM:", metaDiariaOntem.toFixed(2));
+        console.log("SALDO_ONTEM:", saldoOntem.toFixed(2));
+        console.log("META_AJUSTADA_FINAL:", metaAjustadaHoje.toFixed(2));
+        console.groupEnd();
+      } catch (err) {
+        console.log("Erro ao buscar dados:", err);
+      }
+    }
+
+    async function fetchOpen() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
+        );
+        const data = await r.json();
+        if (!Array.isArray(data)) return;
+        setSomaOpen(data.reduce((acc, i) => acc + Number(i.valor || 0), 0));
+      } catch {
+        // silencioso
+      }
+    }
+
+    fetchData();
+    fetchOpen();
+  }, []);
+
+  // ==============================
+  // ESTORNOS
+  // ==============================
+  useEffect(() => {
+    async function calcularEstornosEPercentual() {
+      try {
+        const rGeral = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
+        );
+        const vendas = await rGeral.json();
+
+        const rEstornos = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_reembolso`
+        );
+        const reembolsos = await rEstornos.json();
+
+        if (!Array.isArray(vendas) || !Array.isArray(reembolsos)) return;
+
+        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
+        const fimMes = new Date(
+          hojeBR.getFullYear(),
+          hojeBR.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+
+        const totalGeral = vendas
+          .filter((i) => {
+            const dt = new Date(i.data);
+            return dt >= inicioMes && dt <= fimMes;
+          })
+          .reduce((acc, i) => acc + Number(i.valor || 0), 0);
+
+        const totalEstornos = reembolsos
+          .filter((item) => {
+            const dt = new Date(item?.Data_de_Devolucao);
+            return (
+              dt >= inicioMes &&
+              dt <= fimMes &&
+              item?.Devolucao_Status === "Feito ✅"
+            );
+          })
+          .reduce((acc, item) => {
+            const valorSanitizado = String(item?.Estorno_R || "0")
+              .replace(/\s/g, "")
+              .replace("R$", "")
+              .replace(/\./g, "")
+              .replace(",", ".");
+            const valor = parseFloat(valorSanitizado);
+            return acc + (Number.isFinite(valor) ? valor : 0);
+          }, 0);
+
+        setTotalEstornos(totalEstornos);
+
+        const percentual =
+          totalGeral > 0 ? (totalEstornos / totalGeral) * 100 : 0;
+        setPercentualEstornos(percentual);
+
+        console.log("DEBUG totalGeral:", totalGeral);
+        console.log("DEBUG totalEstornos:", totalEstornos);
+        console.log("DEBUG percentualEstornos:", percentual);
+      } catch (err) {
+        console.log("Erro ao calcular estornos:", err);
+      }
+    }
+
+    calcularEstornosEPercentual();
+  }, []);
+
+  // ==============================
+  // BARRA DE PROGRESSO MENSAL
+  // ==============================
   const metaProgress = Math.min(1, totalVendido / META_MENSAL);
-  const metaPercent = Math.round(metaProgress * 100);
+  const metaPercent = (metaProgress * 100).toFixed(2).replace(".", ",");
 
-  // -----------------------------------------------------------
-  // RETORNO DO COMPONENTE
-  // -----------------------------------------------------------
-
+  // ==============================
+  // RENDER
+  // ==============================
   return (
     <>
       <style>{ANIMATION_STYLES}</style>
@@ -384,28 +451,19 @@ export default function BlackFriday() {
                 Faltam hoje para a meta diária
               </span>
 
-              {/* ===== NOVO TEXTO DO VALOR DIÁRIO ===== */}
               <div className="flex items-end gap-[1rem] leading-none">
-                {/* NÚMEROS AINDA MAIS BONITOS – NEONLIGHT PREMIUM */}
                 <span
                   style={{
                     fontFamily: "'NeonLight Regular', sans-serif",
                     fontSize: "13rem",
                     fontWeight: 400,
-
-                    // 🔥 preenchimento mais forte (para ficar bonito e legível)
                     color: "rgba(255,255,255,0.92)",
-
-                    // 🔥 contorno neon leve
                     WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
-
-                    // 🔥 glow mais elegante e suave
                     textShadow: `
-        0 0 8px rgba(255,255,255,0.9),
-        0 0 20px rgba(255,255,255,0.6),
-        0 0 36px rgba(255,255,255,0.45)
-      `,
-
+                      0 0 8px rgba(255,255,255,0.9),
+                      0 0 20px rgba(255,255,255,0.6),
+                      0 0 36px rgba(255,255,255,0.45)
+                    `,
                     letterSpacing: "-0.01em",
                     lineHeight: "1",
                   }}
@@ -413,14 +471,13 @@ export default function BlackFriday() {
                   {numero}
                 </span>
               </div>
-
-              {/* ===== FIM ===== */}
             </div>
           </div>
         </div>
 
+        {/* BLOCOS INFERIORES */}
         <div className="flex flex-col flex-1 gap-[1.6vh]">
-          {/* CONTAGEM + ESTORNOS */}
+          {/* CONTAGEM + PROJEÇÃO */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="relative flex flex-[2] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
@@ -436,13 +493,16 @@ export default function BlackFriday() {
 
                 <span
                   className="text-[5rem] font-black"
-                  style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
+                  style={{
+                    color: NEON_WHITE_GLOW,
+                    textShadow: WHITE_GLOW,
+                    fontFamily: "'NeonLight Regular', sans-serif",
+                  }}
                 >
                   {formatarValor(totalVendido)}
                 </span>
               </div>
 
-              {/* BARRA + META */}
               <div className="relative w-[62%] mt-[0.4vh] flex items-center gap-[12px]">
                 <div
                   className="relative flex-1 h-[34px] rounded-full overflow-hidden"
@@ -452,7 +512,6 @@ export default function BlackFriday() {
                     boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
                   }}
                 >
-                  {/* PREENCHIMENTO COM ANIMAÇÃO */}
                   <div
                     className="h-full rounded-full relative"
                     style={{
@@ -481,7 +540,6 @@ export default function BlackFriday() {
                     />
                   </div>
 
-                  {/* PORCENTAGEM NO CENTRO */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <span
                       className="text-[2rem] font-extrabold uppercase tracking-[0.16em]"
@@ -498,41 +556,43 @@ export default function BlackFriday() {
 
                 <span
                   className="text-[1.2rem] font-bold whitespace-nowrap"
-                  style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
+                  style={{
+                    color: NEON_WHITE_GLOW,
+                    textShadow: WHITE_GLOW,
+                    fontFamily: "'NeonLight Regular', sans-serif",
+                  }}
                 >
                   {formatarValor(META_MENSAL)}
                 </span>
               </div>
             </div>
 
-          <div
-            className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
-            style={CARD_FULL}
-          >
-            <span
-              className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
-              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+            {/* PROJEÇÃO GERAL */}
+            <div
+              className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
+              style={CARD_FULL}
             >
-                Estornos
+              <span
+                className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
+                style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+              >
+                Projeção Geral
               </span>
 
               <span
-                className="text-[6rem] font-black leading-none"
-                style={{ color: NEON_RED, textShadow: RED_GLOW }}
+                className="text-[6rem] font-black"
+                style={{
+                  color: WHITE_GLOW,
+                  textShadow: WHITE_GLOW,
+                  fontFamily: "'NeonLight Regular', sans-serif",
+                }}
               >
-                12.500,00
-              </span>
-
-              <span
-                className="text-[4rem] font-semibold"
-                style={{ color: NEON_WHITE_GLOW, textShadow: WHITE_GLOW }}
-              >
-                3,2%
+                {formatarValor(somaOpen)}
               </span>
             </div>
           </div>
 
-          {/* TABELA + PROJEÇÃO */}
+          {/* TABELA + ESTORNOS */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="flex flex-[2] rounded-[32px] overflow-visible"
@@ -540,24 +600,24 @@ export default function BlackFriday() {
             >
               <table className="w-full h-full text-center text-white table-fixed">
                 <colgroup>
-                  <col className="w-[10%]" /> {/* Lead */}
-                  <col className="w-[32%]" /> {/* Empresa */}
-                  <col className="w-[20%]" /> {/* Vendedor */}
-                  <col className="w-[20%]" /> {/* Pipeline */}
-                  <col className="w-[18%]" /> {/* Valor */}
+                  <col className="w-[10%]" />
+                  <col className="w-[32%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[18%]" />
                 </colgroup>
 
                 <thead>
                   <tr style={{ background: "rgba(0,0,0,0.45)" }}>
                     {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
-                      (label, idx) => (
+                      (label) => (
                         <th
                           key={label}
                           className="text-[1.45rem] py-[0.6vh]"
                           style={{
                             color: NEON_RED,
                             textShadow: RED_GLOW,
-                            textAlign: idx === 4 ? "center" : "center", // ✅ AGORA CENTRALIZADO
+                            textAlign: "center",
                           }}
                         >
                           {label}
@@ -607,7 +667,7 @@ export default function BlackFriday() {
                       </td>
 
                       <td
-                        className="text-center pr-[1vw]" // ✅ permanece alinhado à direita
+                        className="text-center pr-[1vw]"
                         style={{ color: NEON_WHITE_GLOW, whiteSpace: "nowrap" }}
                       >
                         {formatarValor(item.valor)}
@@ -618,23 +678,38 @@ export default function BlackFriday() {
               </table>
             </div>
 
-            {/* PROJEÇÃO GERAL */}
-          <div
-            className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
-            style={CARD_FULL}
-          >
-            <span
-              className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
-              style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
+            {/* ESTORNOS */}
+            <div
+              className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
+              style={CARD_FULL}
             >
-                Projeção Geral
+              <span
+                className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
+                style={{ color: NEON_RED, textShadow: RED_GLOW }}
+              >
+                Estornos
               </span>
 
               <span
-                className="text-[6rem] font-black"
-                style={{ color: NEON_RED, textShadow: RED_GLOW }}
+                className="text-[6rem] font-black leading-none"
+                style={{
+                  color: NEON_RED,
+                  textShadow: RED_GLOW,
+                  fontFamily: "'NeonLight Regular', sans-serif",
+                }}
               >
-                {formatarValor(somaOpen)}
+                {formatarValor(totalEstornos)}
+              </span>
+
+              <span
+                className="text-[4rem] font-semibold"
+                style={{
+                  color: NEON_WHITE_GLOW,
+                  textShadow: WHITE_GLOW,
+                  fontFamily: "'NeonLight Regular', sans-serif",
+                }}
+              >
+                {percentualEstornos.toFixed(2)}%
               </span>
             </div>
           </div>

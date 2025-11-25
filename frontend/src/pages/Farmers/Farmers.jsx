@@ -259,7 +259,7 @@ export default function Farmers() {
     <>
       <style>{ANIMATION_STYLES}</style>
 
-      <div className="flex h-full w-full overflow-hidden bg-black font-['Cinzel'] text-[#e4f5ff]">
+      <div className="flex h-screen w-full overflow-hidden bg-black font-['Cinzel'] text-[#e4f5ff]">
         {/* LATERAL */}
         <div className="relative flex w-[220px] min-w-[220px] items-center justify-center overflow-hidden bg-black">
           <img
