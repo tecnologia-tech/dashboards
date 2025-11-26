@@ -517,7 +517,7 @@ export default function BlackFriday() {
                   <span
                     style={{
                       fontFamily: "'NeonLight Regular', sans-serif",
-                      fontSize: "18rem",
+                      fontSize: "15rem",
                       fontWeight: 400,
                       color: "rgba(255,255,255,0.92)",
                       WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
