@@ -613,7 +613,7 @@ export default function BlackFriday() {
               style={CARD_FULL}
             >
               <span
-                className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
+                className="text-[2rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
               >
                 Projeção Geral
@@ -724,10 +724,10 @@ export default function BlackFriday() {
               style={CARD_FULL}
             >
               <span
-                className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
+                className="text-[2rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: NEON_RED, textShadow: RED_GLOW }}
               >
-                Estornos & Reembolsos
+                Reembolsos
               </span>
 
               <span
