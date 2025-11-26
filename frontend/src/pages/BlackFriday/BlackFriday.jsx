@@ -788,6 +788,12 @@ export default function BlackFriday() {
                   color: NEON_RED,
                   textShadow: RED_GLOW,
                   fontFamily: "'NeonLight Regular', sans-serif",
+
+                  fontWeight: 400,
+
+                  letterSpacing: "-0.01em",
+                  lineHeight: "1",
+                  transition: "opacity 0.25s ease-in-out",
                 }}
               >
                 {formatarValor(totalEstornos)}
