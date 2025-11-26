@@ -727,7 +727,7 @@ export default function BlackFriday() {
                 className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: NEON_RED, textShadow: RED_GLOW }}
               >
-                Estornos
+                Estornos & Reembolsos
               </span>
 
               <span
