@@ -9,7 +9,7 @@ import logoblackfriday from "../../assets/Black/black.png";
 // 🔥 Paleta oficial baseada na logo black.png
 const NEON_YELLOW = "#ffd83b";
 const NEON_RED = "#ff2626";
-const NEON_WHITE_GLOW = "rgba(255,255,255,0.75)";
+const NEON_WHITE_GLOW = "rgba(255,255,255,0.92)";
 
 const META_MENSAL = 1000000;
 // Estilos globais + animações
@@ -78,9 +78,9 @@ const CARD_FULL = {
 const YELLOW_GLOW = `0 0 12px ${NEON_YELLOW}, 0 0 32px rgba(255,216,59,0.55)`;
 const RED_GLOW = `0 0 14px ${NEON_RED}, 0 0 36px rgba(255,38,38,0.70)`;
 const WHITE_GLOW = `
-  0 0 6px ${NEON_WHITE_GLOW},
-  0 0 14px rgba(255,255,255,0.75),
-  0 0 22px rgba(255,255,255,0.35)
+  0 0 8px ${NEON_WHITE_GLOW},
+  0 0 20px rgba(255,255,255,0.6),
+  0 0 36px (255,255,255,0.45)
 `;
 
 // ==============================
@@ -438,15 +438,39 @@ export default function BlackFriday() {
         {/* BLOCO HERO */}
         {/* BLOCO HERO */}
         <div
-          className="relative flex h-[38vh] items-center justify-center rounded-[32px]"
+          className="relative flex h-[38vh] items-center justify-center rounded-[32px] gap-[2vw]"
           style={CARD_FULL}
         >
           <div className="flex items-center gap-[2vw]">
-            {/* REMOVIDO O CÍRCULO DA SETA */}
+            {/* SETA – só aparece se a meta ainda NÃO foi batida */}
+            {valorDiario > 0 && (
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: "12vh",
+                  height: "12vh",
+                  borderRadius: "50%",
+                  border: `3px solid ${NEON_YELLOW}`,
+                  boxShadow: YELLOW_GLOW,
+                  animation: "pulseArrow 1.8s ease-in-out infinite",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "10vh",
+                    color: NEON_YELLOW,
+                    textShadow: YELLOW_GLOW,
+                    transform: "translateY(-4px)",
+                  }}
+                >
+                  ↓
+                </span>
+              </div>
+            )}
 
-            <div className="flex flex-col gap-[1.4vh]">
+            <div className="flex flex-col gap-[1vh]">
               <span
-                className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
+                className="text-[3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: NEON_YELLOW, textShadow: YELLOW_GLOW }}
               >
                 {metaBatida
@@ -469,10 +493,10 @@ export default function BlackFriday() {
                       width: "32vw",
                       objectFit: "cover",
                       boxShadow: `
-        0 0 18px rgba(255,255,255,0.85),
-        0 0 32px rgba(255,216,59,0.75),
-        0 0 48px rgba(255,216,59,0.55)
-      `,
+                0 0 18px rgba(255,255,255,0.85),
+                0 0 32px rgba(255,216,59,0.75),
+                0 0 48px rgba(255,216,59,0.55)
+              `,
                       border: "2px solid rgba(255,216,59,0.45)",
                       transition: "all 0.3s ease-in-out",
                     }}
@@ -485,7 +509,7 @@ export default function BlackFriday() {
                             v.volume = 1.0;
                             v.play().catch(() => {});
                           } catch {}
-                        }, 300); // pequeno delay força audio habilitar
+                        }, 300);
                       }
                     }}
                   />
@@ -493,15 +517,15 @@ export default function BlackFriday() {
                   <span
                     style={{
                       fontFamily: "'NeonLight Regular', sans-serif",
-                      fontSize: "13rem",
+                      fontSize: "18rem",
                       fontWeight: 400,
                       color: "rgba(255,255,255,0.92)",
                       WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
                       textShadow: `
-        0 0 8px rgba(255,255,255,0.9),
-        0 0 20px rgba(255,255,255,0.6),
-        0 0 36px rgba(255,255,255,0.45)
-      `,
+                0 0 8px rgba(255,255,255,0.9),
+                0 0 20px rgba(255,255,255,0.6),
+                0 0 36px rgba(255,255,255,0.45)
+              `,
                       letterSpacing: "-0.01em",
                       lineHeight: "1",
                       transition: "opacity 0.25s ease-in-out",
@@ -532,11 +556,20 @@ export default function BlackFriday() {
                 </span>
 
                 <span
-                  className="text-[5rem] font-black"
+                  className="text-[6.5rem] font-black"
                   style={{
-                    color: NEON_WHITE_GLOW,
-                    textShadow: WHITE_GLOW,
                     fontFamily: "'NeonLight Regular', sans-serif",
+                    fontWeight: 400,
+                    color: "rgba(255,255,255,0.92)",
+                    WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
+                    textShadow: `
+                0 0 8px rgba(255,255,255,0.9),
+                0 0 20px rgba(255,255,255,0.6),
+                0 0 36px rgba(255,255,255,0.45)
+              `,
+                    letterSpacing: "-0.01em",
+                    lineHeight: "1",
+                    transition: "opacity 0.25s ease-in-out",
                   }}
                 >
                   {formatarValor(totalVendido)}
@@ -597,9 +630,18 @@ export default function BlackFriday() {
                 <span
                   className="text-[1.2rem] font-bold whitespace-nowrap"
                   style={{
-                    color: NEON_WHITE_GLOW,
-                    textShadow: WHITE_GLOW,
                     fontFamily: "'NeonLight Regular', sans-serif",
+                    fontWeight: 200,
+                    color: "rgba(255,255,255,0.92)",
+                    WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
+                    textShadow: `
+                0 0 8px rgba(255,255,255,0.9),
+                0 0 20px rgba(255,255,255,0.6),
+                0 0 36px rgba(255,255,255,0.45)
+              `,
+                    letterSpacing: "-0.01em",
+                    lineHeight: "1",
+                    transition: "opacity 0.25s ease-in-out",
                   }}
                 >
                   {formatarValor(META_MENSAL)}
@@ -622,9 +664,19 @@ export default function BlackFriday() {
               <span
                 className="text-[6rem] font-black"
                 style={{
-                  color: WHITE_GLOW,
-                  textShadow: WHITE_GLOW,
                   fontFamily: "'NeonLight Regular', sans-serif",
+
+                  fontWeight: 400,
+                  color: "rgba(255,255,255,0.92)",
+                  WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
+                  textShadow: `
+                0 0 8px rgba(255,255,255,0.9),
+                0 0 20px rgba(255,255,255,0.6),
+                0 0 36px rgba(255,255,255,0.45)
+              `,
+                  letterSpacing: "-0.01em",
+                  lineHeight: "1",
+                  transition: "opacity 0.25s ease-in-out",
                 }}
               >
                 {formatarValor(somaOpen)}
@@ -744,9 +796,19 @@ export default function BlackFriday() {
               <span
                 className="text-[4rem] font-semibold"
                 style={{
-                  color: NEON_WHITE_GLOW,
-                  textShadow: WHITE_GLOW,
                   fontFamily: "'NeonLight Regular', sans-serif",
+
+                  fontWeight: 400,
+                  color: "rgba(255,255,255,0.92)",
+                  WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
+                  textShadow: `
+                0 0 8px rgba(255,255,255,0.9),
+                0 0 20px rgba(255,255,255,0.6),
+                0 0 36px rgba(255,255,255,0.45)
+              `,
+                  letterSpacing: "-0.01em",
+                  lineHeight: "1",
+                  transition: "opacity 0.25s ease-in-out",
                 }}
               >
                 {percentualEstornos.toFixed(2)}%
