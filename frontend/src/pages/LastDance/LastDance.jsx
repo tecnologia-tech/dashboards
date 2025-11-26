@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import logolastdance from "../../assets/LastDance/lastdance.png";
 
 const META_MENSAL = 1000000;
@@ -119,7 +119,7 @@ export default function LastDance() {
           59
         );
 
-        const pipelineIds = ["71", "23", "47"];
+        const pipelineIds = ["71", "23", "47", "63"];
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
           return (

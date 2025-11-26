@@ -183,7 +183,7 @@ export default function BlackFriday() {
 
         const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
 
-        const pipelineIds = ["71", "23", "47"];
+        const pipelineIds = ["71", "23", "47","63"];
 
         // Filtra vendas do mês apenas nos pipelines corretos (Black Friday)
         const filtradosMes = rawData.filter((i) => {
