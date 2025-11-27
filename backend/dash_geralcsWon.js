@@ -1,10 +1,10 @@
-import { pool } from "./db.js";
 import dotenv from "dotenv";
-import path from "path";
 import https from "https";
-import pLimit from "p-limit";
 import fetch from "node-fetch";
+import pLimit from "p-limit";
+import path from "path";
 import { fileURLToPath } from "url";
+import { pool } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,7 +74,8 @@ function mapLeadToRow(lead) {
   const tag = formatTags(lead.tags);
   const pipelineId = lead.stageset?.id ? String(lead.stageset.id) : null;
   const pipeline = lead.stageset?.name ?? null;
-
+  const milestoneId = lead.milestone?.id ?? null;
+  const milestoneName = lead.milestone?.name ?? null;
   const data = toSQLDateFromISO(
     lead.closedTime ??
       lead.dueTime ??
@@ -98,6 +99,8 @@ function mapLeadToRow(lead) {
     id_primary_company,
     id_primary_person,
     lead_id: id,
+    milestone_id: milestoneId,
+    milestone_name: milestoneName,
   };
 }
 async function getAllLeadIds() {
@@ -186,6 +189,12 @@ async function ensureTable(client) {
     WHERE a.ctid < b.ctid
     AND a.numero = b.numero;
   `);
+  await client.query(`
+  ALTER TABLE dash_geralcsWon ADD COLUMN IF NOT EXISTS milestone_id TEXT;
+`);
+  await client.query(`
+  ALTER TABLE dash_geralcsWon ADD COLUMN IF NOT EXISTS milestone_name TEXT;
+`);
 }
 async function upsertRows(client, rows) {
   if (!rows.length) return;
