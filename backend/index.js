@@ -10,15 +10,18 @@ const { Pool } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ENV
 dotenv.config({ path: path.join(__dirname, ".env") });
 
+// POSTGRES ENV VARS
 const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE } =
   process.env;
 
+// EXPRESS APP
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS
 app.use(
   cors({
     origin: [
@@ -33,7 +36,7 @@ app.use(
 
 app.use(express.json());
 
-// POSTGRES CONNECTION
+// DATABASE POOL
 const pool = new Pool({
   host: PGHOST,
   port: parseInt(PGPORT || "5432"),
@@ -62,7 +65,7 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// DYNAMIC MODULE RUNNER
+// DYNAMIC MODULE EXECUTOR
 async function runModule(file) {
   const modulePath = pathToFileURL(path.join(__dirname, file)).href;
   const start = Date.now();
@@ -72,6 +75,7 @@ async function runModule(file) {
 
   try {
     const mod = await import(modulePath + `?v=${Date.now()}`);
+
     if (typeof mod.default === "function") {
       await mod.default();
     } else {
@@ -80,6 +84,7 @@ async function runModule(file) {
 
     const end = Date.now();
     const endHora = hora();
+
     console.log(
       `✅ [${endHora}] ${file} concluído em ${formatTime(end - start)}\n`
     );
@@ -114,7 +119,7 @@ async function runSequentialLoop() {
       "dash_nps.js",
       "dash_onboarding.js",
       "dash_reembolso.js",
-      "estornos_nutshell.js", // <-- NOVO MÓDULO AQUI
+      "estornos_nutshell.js", // NOVO MÓDULO
     ],
   ];
 
@@ -136,6 +141,7 @@ async function runSequentialLoop() {
     }
 
     const cicloEnd = Date.now();
+
     console.log(
       `🏁 [${hora()}] Ciclo #${ciclo} concluído em ${formatTime(
         cicloEnd - cicloStart
@@ -146,17 +152,16 @@ async function runSequentialLoop() {
   }
 }
 
-// TABLES AUTO DISCOVERY + MANUAL ADD
+// TABLES AUTO DISCOVERY + MANUAL
 const TABLES = [
   ...fs
     .readdirSync(__dirname)
     .filter((f) => f.startsWith("dash_") && f.endsWith(".js"))
     .map((f) => f.replace(".js", "")),
-
-  "estornos_nutshell", // <-- ADICIONADO AQUI
+  "estornos_nutshell",
 ];
 
-// FETCH DB DATA
+// DB FETCH
 async function fetchTableData(tableName) {
   const client = await pool.connect();
   try {
@@ -171,23 +176,29 @@ async function fetchTableData(tableName) {
   }
 }
 
-// ROUTES
+// ROUTE: DASHBOARD FULL
 app.get("/api/dashboard", async (req, res) => {
   const data = {};
   for (const t of TABLES) data[t] = await fetchTableData(t);
   res.json(data);
 });
 
+// ROUTE: AUTO FOR EACH TABLE
 TABLES.forEach((t) =>
   app.get(`/api/${t}`, async (req, res) => res.json(await fetchTableData(t)))
 );
+
+// ROUTE: estornos_nutshell (redundante, mas útil)
+app.get("/api/estornos_nutshell", async (req, res) => {
+  res.json(await fetchTableData("estornos_nutshell"));
+});
 
 // START SERVER
 app.listen(PORT, () => {
   console.log(`🌐 [${hora()}] Servidor rodando em http://localhost:${PORT}`);
 });
 
-// AUTO START LOOP
+// START LOOP
 (async function main() {
   console.log(`🚀 [${hora()}] Iniciando ciclo paralelo otimizado...`);
   await runSequentialLoop();
