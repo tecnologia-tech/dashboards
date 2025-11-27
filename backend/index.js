@@ -98,7 +98,8 @@ async function runSequentialLoop() {
   let ciclo = 1;
 
   const batches = [
-    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["estornos_nutshell.js"],
+    [("dash_geralcsOpen.js", "dash_geralcsWon.js")],
     ["dash_apoio.js", "dash_compras.js", "dash_cs.js", "dash_csat.js"],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
     [
@@ -115,12 +116,7 @@ async function runSequentialLoop() {
       "dash_logmakers.js",
     ],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-    [
-      "dash_nps.js",
-      "dash_onboarding.js",
-      "dash_reembolso.js",
-      "estornos_nutshell.js", // NOVO MÓDULO
-    ],
+    ["dash_nps.js", "dash_onboarding.js", "dash_reembolso.js"],
   ];
 
   while (true) {
