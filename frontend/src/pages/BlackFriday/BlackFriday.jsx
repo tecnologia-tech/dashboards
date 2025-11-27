@@ -3,7 +3,7 @@
 // =============================================================
 import metaVideo from "../../assets/Black/comemora.mp4";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import logoblackfriday from "../../assets/Black/black.png";
 
 // 🔥 Paleta oficial baseada na logo black.png
@@ -108,14 +108,33 @@ function formatarValor(valor) {
   });
 }
 
+// ✅ Função corrigida para lidar com:
+// - number vindo direto do backend (ex: 1234.56)
+// - "1.234,56", "1234,56", "1234.56", "R$ 1.234,56"
 function parseCurrencyToNumber(valor) {
-  const cleaned = String(valor || "")
-    .replace(/\s/g, "")
-    .replace("R$", "")
-    .replace(/\./g, "")
-    .replace(",", ".");
+  if (valor === null || valor === undefined) return 0;
 
-  const n = parseFloat(cleaned);
+  // Se já é número, só garante que é finito
+  if (typeof valor === "number") {
+    return Number.isFinite(valor) ? valor : 0;
+  }
+
+  let str = String(valor).trim();
+  if (!str) return 0;
+
+  // Mantém apenas dígitos, vírgula, ponto e sinal
+  str = str.replace(/[^\d,.-]/g, "");
+
+  // Caso típico BR: tem ponto e vírgula → "." milhar, "," decimal
+  if (str.includes(".") && str.includes(",")) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else if (str.includes(",") && !str.includes(".")) {
+    // Só vírgula → considera vírgula como decimal
+    str = str.replace(",", ".");
+  }
+  // Se tiver só ponto, deixa como está (padrão internacional)
+
+  const n = parseFloat(str);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -128,7 +147,7 @@ export default function BlackFriday() {
   const [valorDiario, setValorDiario] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
   const [somaOpen, setSomaOpen] = useState(0);
-  const [totalEstornos, setTotalEstornos] = useState(0);
+  const [totalEstornos, setTotalEstornos] = useState(0); // aqui vai o total de REEMBOLSOS
   const [percentualEstornos, setPercentualEstornos] = useState(0);
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [metaBatida, setMetaBatida] = useState(false);
@@ -183,7 +202,7 @@ export default function BlackFriday() {
 
         const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
 
-        const pipelineIds = ["71", "23", "47","63"];
+        const pipelineIds = ["71", "23", "47", "63"];
 
         // Filtra vendas do mês apenas nos pipelines corretos (Black Friday)
         const filtradosMes = rawData.filter((i) => {
@@ -336,49 +355,34 @@ export default function BlackFriday() {
           return dt >= inicioMes && dt <= fimMes;
         });
 
-        // SOMA ESTORNOS: só Devolucao_Status = "Feito ✅"
-        const totalEstornosCalc = devolucoesMes
-          .filter((item) => item?.Devolucao_Status === "Feito ✅")
-          .reduce(
-            (acc, item) => acc + parseCurrencyToNumber(item?.Estorno_R),
-            0
-          );
+        // ✅ REEMBOLSOS (RÉPLICA DA QUERY SQL)
+        // SELECT SUM(NULLIF("Reembolso_R", '')::numeric)
+        // FROM dash_reembolso
+        // WHERE Data_de_Devolucao BETWEEN ... AND Devolucao_Status = 'Feito ✅';
 
-        // SOMA REEMBOLSOS:
-        //   - só Devolucao_Status = "Feito ✅"
-        //   - Status != 'Acordo Judicial' e != 'Acordo Extrajudicial'
-        const totalReembolsosCalc = devolucoesMes
-          .filter(
-            (item) =>
-              item?.Devolucao_Status === "Feito ✅" &&
-              !["Acordo Judicial", "Acordo Extrajudicial"].includes(
-                item?.Status || ""
-              )
-          )
-          .reduce(
-            (acc, item) => acc + parseCurrencyToNumber(item?.Reembolso_R),
-            0
-          );
+        const reembolsosValidos = devolucoesMes.filter(
+          (item) => item?.Devolucao_Status === "Feito ✅"
+        );
 
-        const totalDevolucoes = totalEstornosCalc + totalReembolsosCalc;
+        const totalReembolsosCalc = reembolsosValidos.reduce(
+          (acc, item) => acc + parseCurrencyToNumber(item?.Reembolso_R),
+          0
+        );
+
         const percentual =
-          totalGeral > 0 ? (totalDevolucoes / totalGeral) * 100 : 0;
+          totalGeral > 0 ? (totalReembolsosCalc / totalGeral) * 100 : 0;
 
-        setTotalEstornos(totalDevolucoes);
+        // 👉 Estado usado no card "Reembolsos"
+        setTotalEstornos(totalReembolsosCalc);
         setPercentualEstornos(percentual);
 
         console.group("DEBUG DEVOLUÇÕES (FRONT)");
         console.log("totalGeral (SUM valor dash_geralcswon):", totalGeral);
         console.log(
-          "totalEstornosCalc (SUM Estorno_R - Feito ✅):",
-          totalEstornosCalc
-        );
-        console.log(
-          "totalReembolsosCalc (SUM Reembolso_R - Feito ✅ sem Acordo):",
+          "totalReembolsosCalc (SUM Reembolso_R - Feito ✅):",
           totalReembolsosCalc
         );
-        console.log("totalDevolucoes:", totalDevolucoes);
-        console.log("percentualEstornos:", percentual);
+        console.log("percentualEstornos (Reembolso/TotalGeral):", percentual);
         console.groupEnd();
       } catch (err) {
         console.log("Erro ao calcular devoluções:", err);
@@ -435,7 +439,6 @@ export default function BlackFriday() {
           <img src={logoblackfriday} className="h-full w-full object-contain" />
         </div>
 
-        {/* BLOCO HERO */}
         {/* BLOCO HERO */}
         <div
           className="relative flex h-[38vh] items-center justify-center rounded-[32px] gap-[2vw]"
@@ -770,7 +773,7 @@ export default function BlackFriday() {
               </table>
             </div>
 
-            {/* ESTORNOS */}
+            {/* ESTORNOS / REEMBOLSOS */}
             <div
               className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
               style={CARD_FULL}
@@ -788,9 +791,7 @@ export default function BlackFriday() {
                   color: NEON_RED,
                   textShadow: RED_GLOW,
                   fontFamily: "'NeonLight Regular', sans-serif",
-
                   fontWeight: 400,
-
                   letterSpacing: "-0.01em",
                   lineHeight: "1",
                   transition: "opacity 0.25s ease-in-out",
@@ -803,7 +804,6 @@ export default function BlackFriday() {
                 className="text-[4rem] font-semibold"
                 style={{
                   fontFamily: "'NeonLight Regular', sans-serif",
-
                   fontWeight: 400,
                   color: "rgba(255,255,255,0.92)",
                   WebkitTextStroke: "1.1px rgba(255,255,255,0.9)",
