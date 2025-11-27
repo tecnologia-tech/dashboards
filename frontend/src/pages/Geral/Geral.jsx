@@ -1,6 +1,6 @@
-import React from "react";
-import { PieChart, Pie, Cell } from "recharts";
+import { useEffect, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
+import { Cell, Pie, PieChart } from "recharts";
 
 const FONT_IMPORT = `
   @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
@@ -59,6 +59,379 @@ const RUNE_BACKGROUND =
   "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.10), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.08), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.10), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.05) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
 
 export default function Geral() {
+  // ============================================================
+  // 🔥 ESTADOS DO RING LTDA
+  // ============================================================
+  const [valueLTDA, setValueLTDA] = useState(0);
+  const [estornosLTDA, setEstornosLTDA] = useState(0);
+  const metaLTDA = 1400000;
+
+  function parseDataBR(d) {
+    return new Date(d.replace(" ", "T"));
+  }
+
+  function formatarValor(n) {
+    if (!n) return "0";
+    if (n >= 1_000_000)
+      return (n / 1_000_000).toFixed(2).replace(".", ",") + " mi";
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",") + " mil";
+    return n.toString().replace(".", ",");
+  }
+  // CORRIGIR PARSE DE DATA DO BACKEND
+  function parseDataBR(d) {
+    // transforma "2025-11-18 09:55:21" em "2025-11-18T09:55:21"
+    return new Date(d.replace(" ", "T"));
+  }
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const resGeral = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+        );
+        const geral = await resGeral.json();
+
+        const resEst = await fetch(
+          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+        );
+        const est = await resEst.json();
+
+        // PEGAR TODAS AS DATAS DO LTDA
+        const datasLTDA = geral
+          .filter((i) => ["15", "75"].includes(String(i.pipeline_id)))
+          .map((i) => parseDataBR(i.data));
+
+        if (datasLTDA.length === 0) {
+          setValueLTDA(0);
+          setEstornosLTDA(0);
+          return;
+        }
+
+        // ÚLTIMO MÊS COM DADOS
+        const ultima = new Date(Math.max(...datasLTDA.map((d) => d.getTime())));
+        const ano = ultima.getFullYear();
+        const mes = ultima.getMonth();
+
+        const inicio = new Date(ano, mes, 1, 0, 0, 0);
+        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+
+        // VALOR LTDA
+        const totalLTDA = geral
+          .filter(
+            (i) =>
+              ["15", "75"].includes(String(i.pipeline_id)) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setValueLTDA(totalLTDA);
+
+        // ESTORNOS
+        const permitidos = [
+          "DISNEYLEADS 🟡⚫️",
+          "IMPORTAÇÃO CONJUNTA 12PXP 🟠🧩",
+        ];
+
+        const totalEst = est
+          .filter(
+            (i) =>
+              permitidos.includes(i.pipeline) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setEstornosLTDA(totalEst);
+      } catch (err) {
+        console.error("Erro LTDA:", err);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  // ============================
+  // CS — último mês com dados
+  // ============================
+
+  const [valueCS, setValueCS] = useState(0);
+  const [estornosCS, setEstornosCS] = useState(0);
+  const metaCS = 1000000; // 800 mil
+  const [valueBonus, setValueBonus] = useState(0);
+  const [valueRepedidos, setValueRepedidos] = useState(0);
+  const [estornosRepedidos, setEstornosRepedidos] = useState(0);
+  const metaRepedidos = 200000; // 200 mil
+  const metaBonus = 300000;
+  const [value12P, setValue12P] = useState(0);
+  const [estornos12P, setEstornos12P] = useState(0);
+  const meta12P = 2700000; // 2,7 mi
+  useEffect(() => {
+    async function loadCS() {
+      try {
+        const resGeral = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+        );
+        const geral = await resGeral.json();
+
+        const resEst = await fetch(
+          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+        );
+        const estornos = await resEst.json();
+
+        // LISTA DE RESPONSÁVEIS DO CS
+        const CS_RESP = [
+          "Monique Moreira",
+          "Fernando Finatto",
+          "Thiago Cardoso",
+          "Alan Esteves",
+        ];
+
+        // ===================================
+        // PEGAR TODAS AS DATAS DO CS
+        // ===================================
+        const datasCS = geral
+          .filter((i) => CS_RESP.includes(i.assigned))
+          .map((i) => parseDataBR(i.data));
+
+        if (datasCS.length === 0) {
+          setValueCS(0);
+          setEstornosCS(0);
+          return;
+        }
+
+        // ===================================
+        // DEFINIR O ÚLTIMO MÊS COM DADOS
+        // ===================================
+        const ultima = new Date(Math.max(...datasCS.map((d) => d.getTime())));
+        const ano = ultima.getFullYear();
+        const mes = ultima.getMonth();
+
+        const inicio = new Date(ano, mes, 1, 0, 0, 0);
+        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+
+        // ===================================
+        // CS VALUE
+        // ===================================
+        const totalCS = geral
+          .filter(
+            (i) =>
+              CS_RESP.includes(i.assigned) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setValueCS(totalCS);
+
+        // ===================================
+        // CS ESTORNOS (pelo assigned)
+        // ===================================
+        const totalEstCS = estornos
+          .filter(
+            (i) =>
+              CS_RESP.includes(i.assigned) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setEstornosCS(totalEstCS);
+      } catch (err) {
+        console.error("Erro CS:", err);
+      }
+    }
+
+    loadCS();
+  }, []);
+
+  // ============================
+  // BÔNUS — último mês com dados
+  // ============================
+
+  useEffect(() => {
+    async function loadBonus() {
+      try {
+        const resGeral = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+        );
+        const geral = await resGeral.json();
+
+        // pipelines do bônus
+        const BONUS_PIPELINES = ["63", "35", "59"];
+
+        // PEGAR TODAS AS DATAS DO BONUS
+        const datasBonus = geral
+          .filter((i) => BONUS_PIPELINES.includes(String(i.pipeline_id)))
+          .map((i) => parseDataBR(i.data));
+
+        if (datasBonus.length === 0) {
+          setValueBonus(0);
+          return;
+        }
+
+        // ÚLTIMO MÊS COM DADOS
+        const ultima = new Date(
+          Math.max(...datasBonus.map((d) => d.getTime()))
+        );
+        const ano = ultima.getFullYear();
+        const mes = ultima.getMonth();
+
+        const inicio = new Date(ano, mes, 1, 0, 0, 0);
+        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+
+        // SOMA DO BÔNUS
+        const totalBonus = geral
+          .filter(
+            (i) =>
+              BONUS_PIPELINES.includes(String(i.pipeline_id)) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setValueBonus(totalBonus);
+      } catch (err) {
+        console.error("Erro Bonus:", err);
+      }
+    }
+
+    loadBonus();
+  }, []);
+
+  // ============================
+  // REPEDITOS — último mês com dados
+  // ============================
+
+  useEffect(() => {
+    async function loadRepedidos() {
+      try {
+        const resGeral = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+        );
+        const geral = await resGeral.json();
+
+        const resEst = await fetch(
+          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+        );
+        const estornos = await resEst.json();
+
+        // RESPONSÁVEIS DO REPEDITOS
+        const REP_RESP = ["Victor Biselli", "Raul Cruz", "Cleyton Cruz"];
+
+        // PEGAR TODAS AS DATAS DO REPEDITOS
+        const datasRep = geral
+          .filter((i) => REP_RESP.includes(i.assigned))
+          .map((i) => parseDataBR(i.data));
+
+        if (datasRep.length === 0) {
+          setValueRepedidos(0);
+          setEstornosRepedidos(0);
+          return;
+        }
+
+        // ÚLTIMO MÊS COM DADOS
+        const ultima = new Date(Math.max(...datasRep.map((d) => d.getTime())));
+        const ano = ultima.getFullYear();
+        const mes = ultima.getMonth();
+
+        const inicio = new Date(ano, mes, 1, 0, 0, 0);
+        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+
+        // VALOR REPEDITOS
+        const totalRep = geral
+          .filter(
+            (i) =>
+              REP_RESP.includes(i.assigned) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setValueRepedidos(totalRep);
+
+        // ESTORNOS REPEDITOS
+        const totalEstRep = estornos
+          .filter(
+            (i) =>
+              REP_RESP.includes(i.assigned) &&
+              parseDataBR(i.data) >= inicio &&
+              parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setEstornosRepedidos(totalEstRep);
+      } catch (err) {
+        console.error("Erro Repedidos:", err);
+      }
+    }
+
+    loadRepedidos();
+  }, []);
+  // ============================
+  // 12P — último mês com dados
+  // ============================
+
+  useEffect(() => {
+    async function load12P() {
+      try {
+        const resGeral = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+        );
+        const geral = await resGeral.json();
+
+        const resEst = await fetch(
+          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+        );
+        const estornos = await resEst.json();
+
+        // Pegar TODAS as datas para descobrir o último mês geral
+        const datas12P = geral.map((i) => parseDataBR(i.data));
+
+        if (datas12P.length === 0) {
+          setValue12P(0);
+          setEstornos12P(0);
+          return;
+        }
+
+        // Último mês com dados
+        const ultima = new Date(Math.max(...datas12P.map((d) => d.getTime())));
+        const ano = ultima.getFullYear();
+        const mes = ultima.getMonth();
+
+        const inicio = new Date(ano, mes, 1, 0, 0, 0);
+        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+
+        // Soma geral 12P
+        const total12P = geral
+          .filter(
+            (i) => parseDataBR(i.data) >= inicio && parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setValue12P(total12P);
+
+        // Soma estornos geral
+        const totalEst12P = estornos
+          .filter(
+            (i) => parseDataBR(i.data) >= inicio && parseDataBR(i.data) <= fim
+          )
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
+
+        setEstornos12P(totalEst12P);
+      } catch (err) {
+        console.error("Erro 12P:", err);
+      }
+    }
+
+    load12P();
+  }, []);
+
+  const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
+
+  // ============================================================
+  // 🔥 TELA
+  // ============================================================
   return (
     <div
       className="w-full h-screen grid grid-rows-[35%_30%_31%_4%] bg-black text-white overflow-hidden font-['Cinzel']"
@@ -96,50 +469,55 @@ export default function Geral() {
 
         .numero-branco,
         .numero-branco * {
-            font-family: 'Roboto', sans-serif !important;
-  color: #ffffff !important;
-  text-shadow: none !important;
+          font-family: 'Roboto', sans-serif !important;
+          color: #ffffff !important;
+          text-shadow: none !important;
         }
       `}</style>
 
       {/* ================= RINGS ================= */}
       <div className="flex justify-around items-center overflow-hidden gap-[1px]">
+        {/* 🔥 LTDA DINÂMICO */}
         <Ring
           title="LTDA"
-          value="857,1 mil"
-          estornos="0"
+          value={formatarValor(valueLTDA)}
+          estornos={formatarValor(estornosLTDA)}
           meta="R$ 1,4 mi"
-          percent={61.2}
+          percent={((valueLTDA / metaLTDA) * 100).toFixed(1)}
+        />
+
+        {/* os outros ficam igual */}
+        <Ring
+          title="Hunters"
+          value={formatarValor(valueCS)}
+          estornos={formatarValor(estornosCS)}
+          meta="R$ 1 mi"
+          percent={((valueCS / metaCS) * 100).toFixed(1)}
         />
         <Ring
-          title="CS"
-          value="284,0 mil"
-          estornos="103mil"
-          meta="R$ 800 mil"
-          percent={33.4}
+          title="Farmers"
+          value={formatarValor(valueRepedidos)}
+          estornos={formatarValor(estornosRepedidos)}
+          meta="R$ 200 mil"
+          percent={((valueRepedidos / metaRepedidos) * 100).toFixed(1)}
         />
         <Ring
           title="Bônus"
-          value="43,5 mil"
+          value={formatarValor(valueBonus)}
           estornos=" "
           meta="R$ 300 mil"
-          percent={29}
-        />
-        <Ring
-          title="Repetidos"
-          value="108,9 mil"
-          estornos="103mil"
-          meta="R$ 200 mil"
-          percent={54.5}
+          percent={((valueBonus / metaBonus) * 100).toFixed(1)}
         />
         <Ring
           title="12P"
-          value="1,294 mi"
-          estornos="103mil"
+          value={formatarValor(value12P)}
+          estornos={formatarValor(estornos12P)}
           meta="R$ 2,7 mi"
-          percent={47.9}
+          percent={((value12P / meta12P) * 100).toFixed(1)}
         />
       </div>
+
+      {/* ================= RESTANTE DA TELA (igual) */}
 
       {/* ================= CARDS DO MEIO ================= */}
       <div className="grid grid-cols-3 gap-[1px] pb-2 px-[2px] auto-rows-fr">
