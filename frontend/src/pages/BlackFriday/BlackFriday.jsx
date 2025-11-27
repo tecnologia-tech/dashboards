@@ -11,7 +11,7 @@ const NEON_YELLOW = "#ffd83b";
 const NEON_RED = "#ff2626";
 const NEON_WHITE_GLOW = "rgba(255,255,255,0.92)";
 
-const META_MENSAL = 1000000;
+const META_MENSAL = 1300000;
 // Estilos globais + animações
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
@@ -202,7 +202,7 @@ export default function BlackFriday() {
 
         const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
 
-        const pipelineIds = ["71", "23", "47", "63"];
+        const pipelineIds = ["71", "23", "47", "59", "63", "35"];
 
         // Filtra vendas do mês apenas nos pipelines corretos (Black Friday)
         const filtradosMes = rawData.filter((i) => {
