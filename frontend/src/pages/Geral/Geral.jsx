@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
 import { Cell, Pie, PieChart } from "recharts";
+import jayanneImg from "../../assets/Geral/Jayanne.png";
+import jeniferImg from "../../assets/Geral/Jenifer.png";
+import raissaImg from "../../assets/Geral/Raissa.png";
 
 const FONT_IMPORT = `
   @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
@@ -58,6 +61,43 @@ const CARD_BACKGROUND =
 const RUNE_BACKGROUND =
   "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.10), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.08), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.10), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.05) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
 
+// ====================== FUNÇÕES AUXILIARES ======================
+async function contarOnboard(nome) {
+  const res = await fetch(
+    "https://dashboards-exur.onrender.com/api/dash_onboarding"
+  );
+  const dados = await res.json();
+
+  const filtrados = dados.filter(
+    (i) => i.Onboard === nome && i.grupo === "✅ Clientes Ativos"
+  );
+
+  return filtrados.length;
+}
+
+async function totalOnboarding() {
+  const res = await fetch(
+    "https://dashboards-exur.onrender.com/api/dash_onboarding"
+  );
+  const dados = await res.json();
+
+  return dados.filter((i) => i.grupo === "✅ Clientes Ativos").length;
+}
+
+function parseDataBR(d) {
+  // transforma "2025-11-18 09:55:21" em "2025-11-18T09:55:21"
+  return new Date(d.replace(" ", "T"));
+}
+
+function formatarValor(n) {
+  if (!n) return "0";
+  if (n >= 1_000_000)
+    return (n / 1_000_000).toFixed(2).replace(".", ",") + " mi";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",") + " mil";
+  return n.toString().replace(".", ",");
+}
+
+// ====================== COMPONENTE PRINCIPAL ======================
 export default function Geral() {
   // ============================================================
   // 🔥 ESTADOS DO RING LTDA
@@ -65,26 +105,37 @@ export default function Geral() {
   const [valueLTDA, setValueLTDA] = useState(0);
   const [estornosLTDA, setEstornosLTDA] = useState(0);
   const metaLTDA = 1400000;
+  const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
+  // ============================ CS — último mês com dados ============================
+  const [valueCS, setValueCS] = useState(0);
+  const [estornosCS, setEstornosCS] = useState(0);
+  const metaCS = 1000000;
 
-  function parseDataBR(d) {
-    return new Date(d.replace(" ", "T"));
-  }
+  // ============================ REPEDITOS ============================
+  const [valueRepedidos, setValueRepedidos] = useState(0);
+  const [estornosRepedidos, setEstornosRepedidos] = useState(0);
+  const metaRepedidos = 200000;
 
-  function formatarValor(n) {
-    if (!n) return "0";
-    if (n >= 1_000_000)
-      return (n / 1_000_000).toFixed(2).replace(".", ",") + " mi";
-    if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",") + " mil";
-    return n.toString().replace(".", ",");
-  }
-  // CORRIGIR PARSE DE DATA DO BACKEND
-  function parseDataBR(d) {
-    // transforma "2025-11-18 09:55:21" em "2025-11-18T09:55:21"
-    return new Date(d.replace(" ", "T"));
-  }
+  // ============================ BÔNUS ============================
+  const [valueBonus, setValueBonus] = useState(0);
+  const metaBonus = 300000;
 
+  // ============================ 12P ============================
+  const [value12P, setValue12P] = useState(0);
+  const [estornos12P, setEstornos12P] = useState(0);
+  const meta12P = 2700000;
+
+  // ============================ PEDIDOS (CHINA / LOG / DESEMBARAÇO) ============================
+  const [pedidosChina, setPedidosChina] = useState(0);
+  const [pedidosLogistica, setPedidosLogistica] = useState(0);
+  const [pedidosDesembaraco, setPedidosDesembaraco] = useState(0);
+  const [totalPedidos, setTotalPedidos] = useState(0);
+
+  // ============================ EFEITOS ============================
+
+  // LTDA — último mês com dados
   useEffect(() => {
-    async function loadData() {
+    async function loadDataLTDA() {
       try {
         const resGeral = await fetch(
           "https://dashboards-exur.onrender.com/api/dash_geralcswon"
@@ -148,24 +199,10 @@ export default function Geral() {
       }
     }
 
-    loadData();
+    loadDataLTDA();
   }, []);
 
-  // ============================
   // CS — último mês com dados
-  // ============================
-
-  const [valueCS, setValueCS] = useState(0);
-  const [estornosCS, setEstornosCS] = useState(0);
-  const metaCS = 1000000; // 800 mil
-  const [valueBonus, setValueBonus] = useState(0);
-  const [valueRepedidos, setValueRepedidos] = useState(0);
-  const [estornosRepedidos, setEstornosRepedidos] = useState(0);
-  const metaRepedidos = 200000; // 200 mil
-  const metaBonus = 300000;
-  const [value12P, setValue12P] = useState(0);
-  const [estornos12P, setEstornos12P] = useState(0);
-  const meta12P = 2700000; // 2,7 mi
   useEffect(() => {
     async function loadCS() {
       try {
@@ -179,7 +216,6 @@ export default function Geral() {
         );
         const estornos = await resEst.json();
 
-        // LISTA DE RESPONSÁVEIS DO CS
         const CS_RESP = [
           "Monique Moreira",
           "Fernando Finatto",
@@ -187,9 +223,6 @@ export default function Geral() {
           "Alan Esteves",
         ];
 
-        // ===================================
-        // PEGAR TODAS AS DATAS DO CS
-        // ===================================
         const datasCS = geral
           .filter((i) => CS_RESP.includes(i.assigned))
           .map((i) => parseDataBR(i.data));
@@ -200,9 +233,6 @@ export default function Geral() {
           return;
         }
 
-        // ===================================
-        // DEFINIR O ÚLTIMO MÊS COM DADOS
-        // ===================================
         const ultima = new Date(Math.max(...datasCS.map((d) => d.getTime())));
         const ano = ultima.getFullYear();
         const mes = ultima.getMonth();
@@ -210,9 +240,6 @@ export default function Geral() {
         const inicio = new Date(ano, mes, 1, 0, 0, 0);
         const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
 
-        // ===================================
-        // CS VALUE
-        // ===================================
         const totalCS = geral
           .filter(
             (i) =>
@@ -224,9 +251,6 @@ export default function Geral() {
 
         setValueCS(totalCS);
 
-        // ===================================
-        // CS ESTORNOS (pelo assigned)
-        // ===================================
         const totalEstCS = estornos
           .filter(
             (i) =>
@@ -245,10 +269,7 @@ export default function Geral() {
     loadCS();
   }, []);
 
-  // ============================
-  // BÔNUS — último mês com dados
-  // ============================
-
+  // Bônus — último mês com dados
   useEffect(() => {
     async function loadBonus() {
       try {
@@ -257,10 +278,8 @@ export default function Geral() {
         );
         const geral = await resGeral.json();
 
-        // pipelines do bônus
         const BONUS_PIPELINES = ["63", "35", "59"];
 
-        // PEGAR TODAS AS DATAS DO BONUS
         const datasBonus = geral
           .filter((i) => BONUS_PIPELINES.includes(String(i.pipeline_id)))
           .map((i) => parseDataBR(i.data));
@@ -270,7 +289,6 @@ export default function Geral() {
           return;
         }
 
-        // ÚLTIMO MÊS COM DADOS
         const ultima = new Date(
           Math.max(...datasBonus.map((d) => d.getTime()))
         );
@@ -280,7 +298,6 @@ export default function Geral() {
         const inicio = new Date(ano, mes, 1, 0, 0, 0);
         const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
 
-        // SOMA DO BÔNUS
         const totalBonus = geral
           .filter(
             (i) =>
@@ -299,10 +316,7 @@ export default function Geral() {
     loadBonus();
   }, []);
 
-  // ============================
-  // REPEDITOS — último mês com dados
-  // ============================
-
+  // Repedidos — último mês com dados
   useEffect(() => {
     async function loadRepedidos() {
       try {
@@ -316,10 +330,8 @@ export default function Geral() {
         );
         const estornos = await resEst.json();
 
-        // RESPONSÁVEIS DO REPEDITOS
         const REP_RESP = ["Victor Biselli", "Raul Cruz", "Cleyton Cruz"];
 
-        // PEGAR TODAS AS DATAS DO REPEDITOS
         const datasRep = geral
           .filter((i) => REP_RESP.includes(i.assigned))
           .map((i) => parseDataBR(i.data));
@@ -330,7 +342,6 @@ export default function Geral() {
           return;
         }
 
-        // ÚLTIMO MÊS COM DADOS
         const ultima = new Date(Math.max(...datasRep.map((d) => d.getTime())));
         const ano = ultima.getFullYear();
         const mes = ultima.getMonth();
@@ -338,7 +349,6 @@ export default function Geral() {
         const inicio = new Date(ano, mes, 1, 0, 0, 0);
         const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
 
-        // VALOR REPEDITOS
         const totalRep = geral
           .filter(
             (i) =>
@@ -350,7 +360,6 @@ export default function Geral() {
 
         setValueRepedidos(totalRep);
 
-        // ESTORNOS REPEDITOS
         const totalEstRep = estornos
           .filter(
             (i) =>
@@ -368,10 +377,8 @@ export default function Geral() {
 
     loadRepedidos();
   }, []);
-  // ============================
-  // 12P — último mês com dados
-  // ============================
 
+  // 12P — último mês com dados
   useEffect(() => {
     async function load12P() {
       try {
@@ -385,7 +392,6 @@ export default function Geral() {
         );
         const estornos = await resEst.json();
 
-        // Pegar TODAS as datas para descobrir o último mês geral
         const datas12P = geral.map((i) => parseDataBR(i.data));
 
         if (datas12P.length === 0) {
@@ -394,7 +400,6 @@ export default function Geral() {
           return;
         }
 
-        // Último mês com dados
         const ultima = new Date(Math.max(...datas12P.map((d) => d.getTime())));
         const ano = ultima.getFullYear();
         const mes = ultima.getMonth();
@@ -402,7 +407,6 @@ export default function Geral() {
         const inicio = new Date(ano, mes, 1, 0, 0, 0);
         const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
 
-        // Soma geral 12P
         const total12P = geral
           .filter(
             (i) => parseDataBR(i.data) >= inicio && parseDataBR(i.data) <= fim
@@ -411,7 +415,6 @@ export default function Geral() {
 
         setValue12P(total12P);
 
-        // Soma estornos geral
         const totalEst12P = estornos
           .filter(
             (i) => parseDataBR(i.data) >= inicio && parseDataBR(i.data) <= fim
@@ -427,7 +430,83 @@ export default function Geral() {
     load12P();
   }, []);
 
-  const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
+  // PEDIDOS NA CHINA / LOG / DESEMBARAÇO — dash_ixdelivery
+  useEffect(() => {
+    async function loadPedidosChina() {
+      try {
+        const res = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_ixdelivery"
+        );
+        const data = await res.json();
+
+        const totalChina = data.filter((i) =>
+          (i.grupo || "").includes("China")
+        ).length;
+
+        const totalLog = data.filter((i) =>
+          (i.grupo || "").includes("Logística")
+        ).length;
+
+        const totalDes = data.filter((i) =>
+          (i.grupo || "").includes("Desembaraço")
+        ).length;
+
+        setPedidosChina(totalChina);
+        setPedidosLogistica(totalLog);
+        setPedidosDesembaraco(totalDes);
+      } catch (err) {
+        console.error("Erro Pedidos China/Log/Desembaraço:", err);
+      }
+    }
+
+    loadPedidosChina();
+  }, []);
+  useEffect(() => {
+    async function loadImportacao() {
+      try {
+        // 1) dash_ixdelivery → Pedidos na China
+        const deliveryRes = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_ixdelivery"
+        );
+        const deliveryData = await deliveryRes.json();
+
+        const chinaCount = deliveryData.filter(
+          (i) => i.grupo === "⭐ Pedidos em andamento"
+        ).length;
+
+        // 2) dash_ixlogcomex → Logística & Desembaraço
+        const logRes = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_ixlogcomex"
+        );
+        const logData = await logRes.json();
+
+        const logisticaCount = logData.filter(
+          (i) =>
+            i.grupo === "⭐Em Andamento" &&
+            ["Aguardando Embarque", "Navegando"].includes(i.Stage_Logistica)
+        ).length;
+
+        const desembCount = logData.filter(
+          (i) =>
+            i.grupo === "⭐Em Andamento" &&
+            !["Aguardando Embarque", "Navegando"].includes(i.Stage_Logistica)
+        ).length;
+
+        // TOTAL = soma dos 3
+        const total = chinaCount + logisticaCount + desembCount;
+
+        // Aplicar estados
+        setPedidosChina(chinaCount);
+        setPedidosLogistica(logisticaCount);
+        setPedidosDesembaraco(desembCount);
+        setTotalPedidos(total);
+      } catch (error) {
+        console.error("Erro ao carregar dados de importação:", error);
+      }
+    }
+
+    loadImportacao();
+  }, []);
 
   // ============================================================
   // 🔥 TELA
@@ -477,16 +556,14 @@ export default function Geral() {
 
       {/* ================= RINGS ================= */}
       <div className="flex justify-around items-center overflow-hidden gap-[1px]">
-        {/* 🔥 LTDA DINÂMICO */}
         <Ring
           title="LTDA"
           value={formatarValor(valueLTDA)}
           estornos={formatarValor(estornosLTDA)}
           meta="R$ 1,4 mi"
-          percent={((valueLTDA / metaLTDA) * 100).toFixed(1)}
+          percent={percentLTDA}
         />
 
-        {/* os outros ficam igual */}
         <Ring
           title="Hunters"
           value={formatarValor(valueCS)}
@@ -517,13 +594,16 @@ export default function Geral() {
         />
       </div>
 
-      {/* ================= RESTANTE DA TELA (igual) */}
-
       {/* ================= CARDS DO MEIO ================= */}
       <div className="grid grid-cols-3 gap-[1px] pb-2 px-[2px] auto-rows-fr">
         <OnboardingCard />
         <ComprasCard />
-        <ImportacaoCard />
+        <ImportacaoCard
+          pedidosChina={pedidosChina}
+          pedidosLogistica={pedidosLogistica}
+          pedidosDesembaraco={pedidosDesembaraco}
+          totalPedidos={totalPedidos}
+        />
       </div>
 
       {/* ================= CSAT + REPUTAÇÃO ================= */}
@@ -540,10 +620,9 @@ export default function Geral() {
   );
 }
 
-//
-// ================================================================
-// RINGS — sem borda, fundo listrado global
-// ================================================================
+// =====================================================================
+// RINGS
+// =====================================================================
 function Ring({ title, value, estornos, meta, percent }) {
   const size = 300;
   const stroke = 24;
@@ -613,7 +692,6 @@ function Ring({ title, value, estornos, meta, percent }) {
 
         {/* centro */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          {/* título */}
           <div
             className="text-5xl font-extrabold tracking-wide whitespace-nowrap"
             style={{
@@ -626,22 +704,20 @@ function Ring({ title, value, estornos, meta, percent }) {
             {title}
           </div>
 
-          {/* valor */}
           <div
             className="text-6xl font-extrabold whitespace-nowrap numero-branco"
             style={{
               WebkitTextStroke: "0.5px #000",
               textShadow: `
-      0 0 18px rgba(0,0,0,0.85),
-      0 0 32px rgba(0,0,0,0.6),
-      0 0 12px rgba(255,255,255,0.15)
-    `,
+                0 0 18px rgba(0,0,0,0.85),
+                0 0 32px rgba(0,0,0,0.6),
+                0 0 12px rgba(255,255,255,0.15)
+              `,
             }}
           >
             {value}
           </div>
 
-          {/* META — AGORA AQUI */}
           <div
             className="text-3xl font-bold mt-1"
             style={{
@@ -656,24 +732,22 @@ function Ring({ title, value, estornos, meta, percent }) {
           </div>
         </div>
 
-        {/* porcentagem */}
         <div
           className="absolute left-1/2 -translate-x-1/2 text-6xl font-extrabold numero-branco"
           style={{
             bottom: -6,
             WebkitTextStroke: "1px #000",
             textShadow: `
-      0 0 18px rgba(0,0,0,0.85),
-      0 0 32px rgba(0,0,0,0.6),
-      0 0 12px rgba(255,255,255,0.15)
-    `,
+              0 0 18px rgba(0,0,0,0.85),
+              0 0 32px rgba(0,0,0,0.6),
+              0 0 12px rgba(255,255,255,0.15)
+            `,
           }}
         >
           {percent}%
         </div>
       </div>
 
-      {/* ESTORNOS — agora na parte de baixo */}
       <div
         className="text-2xl font-bold mt-1"
         style={{
@@ -690,11 +764,29 @@ function Ring({ title, value, estornos, meta, percent }) {
   );
 }
 
-//
 // =====================================================================
 // ONBOARDING
 // =====================================================================
 function OnboardingCard() {
+  const [jayanne, setJayanne] = useState(0);
+  const [jenifer, setJenifer] = useState(0);
+  const [raissa, setRaissa] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    async function load() {
+      const j = await contarOnboard("Jayanne Queiroz");
+      const je = await contarOnboard("Jenifer Martins");
+      const r = await contarOnboard("Raissa Veloso");
+
+      setJayanne(j);
+      setJenifer(je);
+      setRaissa(r);
+      setTotal(j + je + r);
+    }
+    load();
+  }, []);
+
   return (
     <div
       className="flex flex-col rounded-xl px-3 py-0"
@@ -710,7 +802,7 @@ function OnboardingCard() {
       <div className="flex-1 pt-2 flex items-center justify-around overflow-hidden">
         <div className="flex flex-col justify-center items-center">
           <div className="text-[96px] font-extrabold leading-none numero-branco">
-            98
+            {total}
           </div>
           <div className="text-3xl" style={{ color: "#e6c068" }}>
             Clientes
@@ -718,26 +810,42 @@ function OnboardingCard() {
         </div>
 
         <div className="flex flex-col justify-center gap-4">
-          <Person name="Jayanne" count="38" />
-          <Person name="Jenifer" count="22" />
-          <Person name="Rayssa" count="37" />
+          <Person name="Jayanne" avatar={jayanneImg} count={jayanne} />
+          <Person name="Jenifer" avatar={jeniferImg} count={jenifer} />
+          <Person name="Raissa" avatar={raissaImg} count={raissa} />
         </div>
       </div>
     </div>
   );
 }
 
-function Person({ name, count }) {
+function Person({ name, count, avatar }) {
   return (
     <div className="flex items-center gap-4">
       <div
-        className="w-14 h-14 rounded-full"
+        className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 relative"
         style={{
           background:
             "radial-gradient(circle at 30% 20%, #f2d788, #4a3a2a 60%, #120f0b 100%)",
-          boxShadow: "0 0 10px rgba(230,192,104,0.35)",
+          boxShadow: "0 0 14px rgba(230,192,104,0.55)",
+          border: "2px solid rgba(242,215,136,0.7)",
         }}
-      />
+      >
+        <img
+          src={avatar}
+          alt={name}
+          className="absolute inset-0 w-full h-full object-cover z-20"
+        />
+
+        <div
+          className="absolute inset-0 rounded-full z-30"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%)",
+          }}
+        />
+      </div>
+
       <div className="flex flex-col leading-tight">
         <div
           className="text-3xl font-bold"
@@ -748,6 +856,7 @@ function Person({ name, count }) {
         >
           {name}
         </div>
+
         <div className="text-2xl">
           <span className="numero-branco">{count}</span> Clientes
         </div>
@@ -756,7 +865,6 @@ function Person({ name, count }) {
   );
 }
 
-//
 // =====================================================================
 // COMPRAS
 // =====================================================================
@@ -827,7 +935,6 @@ function ComprasCard() {
           </div>
         </div>
 
-        {/* divisor suave */}
         <div
           className="my-1"
           style={{ borderTop: "1px solid rgba(230,192,104,0.4)" }}
@@ -864,11 +971,15 @@ function ComprasCard() {
   );
 }
 
-//
 // =====================================================================
 // IMPORTAÇÃO
 // =====================================================================
-function ImportacaoCard() {
+function ImportacaoCard({
+  pedidosChina,
+  pedidosLogistica,
+  pedidosDesembaraco,
+  totalPedidos,
+}) {
   return (
     <div
       className="flex flex-col rounded-xl px-4 py-0 h-full overflow-hidden"
@@ -888,7 +999,7 @@ function ImportacaoCard() {
               Total Pedidos
             </div>
             <div className="text-[64px] font-extrabold leading-none mt-1 numero-branco">
-              274
+              {totalPedidos}
             </div>
           </div>
 
@@ -905,15 +1016,18 @@ function ImportacaoCard() {
         <div className="text-2xl leading-snug text-center space-y-1 mb-12">
           <p style={{ color: "#d0c3a4" }}>
             Pedidos na China:{" "}
-            <span className="font-bold numero-branco">188</span>
+            <span className="font-bold numero-branco">{pedidosChina}</span>
           </p>
+
           <p style={{ color: "#d0c3a4" }}>
             Pedidos em Logística:{" "}
-            <span className="font-bold numero-branco">74</span>
+            <span className="font-bold numero-branco">{pedidosLogistica}</span>
           </p>
           <p style={{ color: "#d0c3a4" }}>
             Pedidos no Desembaraço:{" "}
-            <span className="font-bold numero-branco">12</span>
+            <span className="font-bold numero-branco">
+              {pedidosDesembaraco}
+            </span>
           </p>
         </div>
       </div>
@@ -921,7 +1035,6 @@ function ImportacaoCard() {
   );
 }
 
-//
 // =====================================================================
 // CSAT
 // =====================================================================
@@ -985,7 +1098,6 @@ function CSATCard() {
   );
 }
 
-//
 // =====================================================================
 // REPUTAÇÃO 12P
 // =====================================================================
@@ -1075,7 +1187,6 @@ function ReputacaoCard() {
   );
 }
 
-//
 // =====================================================================
 // FOOTER – DNB
 // =====================================================================

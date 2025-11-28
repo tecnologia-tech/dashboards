@@ -10,7 +10,7 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { MONDAY_API_URL, MONDAY_API_TOKEN } = process.env;
 const MONDAY_BOARD_ID = "18206014428";
-const TABLE_NAME = "dash_compras";
+const TABLE_NAME = "dash_comprasdoc";
 
 const MONDAY_QUERY = `
   query ($board_id: ID!, $limit: Int!, $cursor: String) {
@@ -180,7 +180,7 @@ async function saveToPostgres(items, columnMap) {
 
 export default async function dashCompras() {
   const start = Date.now();
-  console.log("▶️ Executando dash_compras.js...");
+  console.log("▶️ Executando dash_comprasdoc.js...");
   try {
     const columnMap = await getColumnMap();
     const items = await getMondayData();
@@ -190,11 +190,11 @@ export default async function dashCompras() {
     }
     await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_compras concluído em ${((Date.now() - start) / 1000).toFixed(
+      `🏁 dash_comprasdoc concluído em ${((Date.now() - start) / 1000).toFixed(
         1
       )}s`
     );
   } catch (err) {
-    console.error("🚨 Erro geral em dash_compras:", err.message);
+    console.error("🚨 Erro geral em dash_comprasdoc:", err.message);
   }
 }
