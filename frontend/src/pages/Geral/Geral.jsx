@@ -720,7 +720,7 @@ export default function Geral() {
           title="LTDA"
           value={formatarValor(valueLTDA)}
           estornos={formatarValor(estornosLTDA)}
-          meta="R$ 1,4 mi"
+          meta="R$ 1,5 mi"
           percent={percentLTDA}
         />
 
