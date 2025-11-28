@@ -37,97 +37,122 @@ function TelaComRefresh({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div style={{ color: "white" }}>Carregando…</div>}>
-        <Routes>
-          {/* Seleção de TVs */}
-          <Route path="/" element={<TVSelection />} />
+      <Routes>
+        {/* Seleção de TVs */}
+        <Route path="/" element={<TVSelection />} />
 
-          {/* Atalhos para começar */}
-          <Route path="/tv1" element={<Navigate to="/geral" replace />} />
-          <Route path="/tv2" element={<Navigate to="/blackfriday" replace />} />
-          <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
+        {/* Atalhos */}
+        <Route path="/tv1" element={<Navigate to="/geral" replace />} />
+        <Route path="/tv2" element={<Navigate to="/blackfriday" replace />} />
+        <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
-          {/* =====================================================
-              TV1 — Geral fixa, refresh 10s para teste
-          ===================================================== */}
-          <Route
-            path="/geral"
-            element={
-              <>
-                <AutoRotate
-                  rotas={[{ path: "/geral" }]}
-                  tempoRefresh={5 * 60 * 1000}
-                />
-                <TelaComRefresh>
+        {/* =====================================================
+            TV1 — Geral fixa com refresh
+        ===================================================== */}
+        <Route
+          path="/geral"
+          element={
+            <>
+              <AutoRotate
+                rotas={[{ path: "/geral" }]}
+                tempoRefresh={5 * 60 * 1000}
+              />
+
+              <TelaComRefresh>
+                <Suspense
+                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
+                >
                   <Geral />
-                </TelaComRefresh>
-              </>
-            }
-          />
+                </Suspense>
+              </TelaComRefresh>
+            </>
+          }
+        />
 
-          {/* =====================================================
-              TV2 — BlackFriday fixa, refresh 10s para teste
-          ===================================================== */}
-          <Route
-            path="/blackfriday"
-            element={
-              <>
-                <AutoRotate
-                  rotas={[{ path: "/blackfriday" }]}
-                  tempoRotacao={2 * 60 * 1000}
-                  tempoRefresh={1 * 60 * 1000}
-                />
-                <TelaComRefresh>
+        {/* =====================================================
+            TV2 — BlackFriday fixa
+        ===================================================== */}
+        <Route
+          path="/blackfriday"
+          element={
+            <>
+              <AutoRotate
+                rotas={[{ path: "/blackfriday" }]}
+                tempoRotacao={2 * 60 * 1000}
+                tempoRefresh={1 * 60 * 1000}
+              />
+
+              <TelaComRefresh>
+                <Suspense
+                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
+                >
                   <BlackFriday />
-                </TelaComRefresh>
-              </>
-            }
-          />
+                </Suspense>
+              </TelaComRefresh>
+            </>
+          }
+        />
 
-          {/* =====================================================
-              TV3 — Farmers ↔ Hunters infinita
-              Rotação a cada 10s (teste)
-              Refresh interno a cada 10s
-          ===================================================== */}
-          <Route
-            path="/farmers"
-            element={
-              <>
-                <AutoRotate
-                  rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                  tempoRotacao={15 * 1000} 
-                  tempoRefresh={1 * 60 * 1000}
-                />
-                <TelaComRefresh>
+        {/* =====================================================
+            TV3 — Farmers ↔ Hunters (15s)
+        ===================================================== */}
+        <Route
+          path="/farmers"
+          element={
+            <>
+              <AutoRotate
+                rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
+                tempoRotacao={15 * 1000}
+                tempoRefresh={1 * 60 * 1000}
+              />
+
+              <TelaComRefresh>
+                <Suspense
+                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
+                >
                   <Farmers />
-                </TelaComRefresh>
-              </>
-            }
-          />
+                </Suspense>
+              </TelaComRefresh>
+            </>
+          }
+        />
 
-          <Route
-            path="/hunters"
-            element={
-              <>
-                <AutoRotate
-                  rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                  tempoRotacao={2 * 60 * 1000}
-                  tempoRefresh={1 * 60 * 1000}
-                />
-                <TelaComRefresh>
+        <Route
+          path="/hunters"
+          element={
+            <>
+              <AutoRotate
+                rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
+                tempoRotacao={15 * 1000}
+                tempoRefresh={1 * 60 * 1000}
+              />
+
+              <TelaComRefresh>
+                <Suspense
+                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
+                >
                   <Hunters />
-                </TelaComRefresh>
-              </>
-            }
-          />
+                </Suspense>
+              </TelaComRefresh>
+            </>
+          }
+        />
 
-          {/* Página isolada */}
-          <Route path="/lastdance" element={<LastDance />} />
+        {/* Página isolada */}
+        <Route
+          path="/lastdance"
+          element={
+            <Suspense
+              fallback={<div style={{ color: "white" }}>Carregando…</div>}
+            >
+              <LastDance />
+            </Suspense>
+          }
+        />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }
