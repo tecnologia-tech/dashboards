@@ -5,39 +5,42 @@ import FullscreenButton from "./FullscreenButton";
 export default function AutoRotate({
   rotas,
   tempoRotacao = null,
-  tempoReload,
+  tempoRefresh,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ============================
-      🔄 ROTAÇÃO ENTRE TELAS
-     ============================ */
+  // ============================
+  // 🔄 LOOP INFINITO DE ROTAÇÃO
+  // ============================
   useEffect(() => {
-    if (!tempoRotacao || rotas.length <= 1) return; // sem rotação
-
-    const indexAtual = rotas.findIndex((r) => r.path === location.pathname);
-    const proximoIndex = (indexAtual + 1) % rotas.length;
+    if (!tempoRotacao || rotas.length <= 1) return;
 
     const timer = setTimeout(() => {
+      const indexAtual = rotas.findIndex((r) => r.path === location.pathname);
+
+      // Se não encontrou, vai pro primeiro
+      const proximoIndex =
+        indexAtual === -1 ? 0 : (indexAtual + 1) % rotas.length;
+
       navigate(rotas[proximoIndex].path);
     }, tempoRotacao);
 
     return () => clearTimeout(timer);
   }, [location.pathname, rotas, navigate, tempoRotacao]);
 
-  /* ============================
-      🔁 RELOAD AUTOMÁTICO (F5)
-     ============================ */
+  // ============================
+  // 🔁 REFRESH INTERNO
+  // ============================
   useEffect(() => {
-    if (!tempoReload) return;
+    if (!tempoRefresh) return;
 
     const interval = setInterval(() => {
-      window.location.reload();
-    }, tempoReload);
+      document.dispatchEvent(new Event("refreshTela"));
+    }, tempoRefresh);
 
     return () => clearInterval(interval);
-  }, [tempoReload]);
+  }, [tempoRefresh]);
 
   return <FullscreenButton />;
 }
