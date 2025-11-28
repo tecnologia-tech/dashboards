@@ -95,7 +95,7 @@ export default function App() {
               <>
                 <AutoRotate
                   rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                  tempoRotacao={2 * 60 * 1000}
+                  tempoRotacao={15 * 1000} 
                   tempoRefresh={1 * 60 * 1000}
                 />
                 <TelaComRefresh>
