@@ -4,6 +4,7 @@ import { Cell, Label, Pie, PieChart } from "recharts";
 import jayanneImg from "../../assets/Geral/Jayanne.png";
 import jeniferImg from "../../assets/Geral/Jenifer.png";
 import raissaImg from "../../assets/Geral/Raissa.png";
+
 const FONT_IMPORT = `
   @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
   @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
@@ -49,6 +50,7 @@ const ANIMATION_STYLES = `
   animation: goldParticleRise 4.5s linear infinite;
 }
 `;
+
 const CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2slujbc-3UGhQxk1GJD5v0Yp_CKgZJNE4_71R-gpHC2YsrHgwqIpG6oIgVjdKTQysBHxjeAUD_i2s/pub?gid=339080800&single=true&output=csv";
 
@@ -61,6 +63,7 @@ const CARD_BACKGROUND =
 
 const RUNE_BACKGROUND =
   "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.10), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.08), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.10), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.05) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
+
 const agora = new Date();
 const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
 const fimMes = new Date(
@@ -112,33 +115,33 @@ function formatarValor(n) {
 export default function Geral() {
   const [f9, setF9] = useState(null);
   const [g9, setG9] = useState(null);
-  // ============================================================
+
   // 🔥 ESTADOS DO RING LTDA
-  // ============================================================
   const [valueLTDA, setValueLTDA] = useState(0);
   const [estornosLTDA, setEstornosLTDA] = useState(0);
   const metaLTDA = 1400000;
   const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
-  // ============================ CS — último mês com dados ============================
+
+  // CS — último mês com dados
   const [valueCS, setValueCS] = useState(0);
   const [estornosCS, setEstornosCS] = useState(0);
   const metaCS = 1000000;
 
-  // ============================ REPEDITOS ============================
+  // REPEDITOS
   const [valueRepedidos, setValueRepedidos] = useState(0);
   const [estornosRepedidos, setEstornosRepedidos] = useState(0);
   const metaRepedidos = 200000;
 
-  // ============================ BÔNUS ============================
+  // BÔNUS
   const [valueBonus, setValueBonus] = useState(0);
   const metaBonus = 300000;
 
-  // ============================ 12P ============================
+  // 12P
   const [value12P, setValue12P] = useState(0);
   const [estornos12P, setEstornos12P] = useState(0);
   const meta12P = 2700000;
 
-  // ============================ PEDIDOS (CHINA / LOG / DESEMBARAÇO) ============================
+  // PEDIDOS (CHINA / LOG / DESEMBARAÇO)
   const [pedidosChina, setPedidosChina] = useState(0);
   const [pedidosLogistica, setPedidosLogistica] = useState(0);
   const [pedidosDesembaraco, setPedidosDesembaraco] = useState(0);
@@ -149,6 +152,7 @@ export default function Geral() {
   const [estorno12p, setEstorno12p] = useState(0);
   const [reembolso12p, setReembolso12p] = useState(0);
   const [reclameAqui, setReclameAqui] = useState(0);
+
   const [handoverDocAtivos, setHandoverDocAtivos] = useState(0);
   const [handoverDocFinalizados, setHandoverDocFinalizados] = useState(0);
 
@@ -156,7 +160,6 @@ export default function Geral() {
   const [handoverPricingFinalizados, setHandoverPricingFinalizados] =
     useState(0);
 
-  useState(0);
   // ============================ EFEITOS ============================
   useEffect(() => {
     async function loadSheet() {
@@ -164,14 +167,14 @@ export default function Geral() {
         const res = await fetch(CSV_URL);
         const text = await res.text();
 
-        const rows = text.split("\n");
+        const rows = text.split("\\n");
         const linha9 = rows[8] || ""; // linha onde está F9 / G9
 
         // Pega todos os valores no formato 9.999,99
-        const matches = linha9.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g) || [];
+        const matches = linha9.match(/\\d{1,3}(?:\\.\\d{3})*,\\d{2}/g) || [];
 
-        const valorDolar = matches[0] || ""; // $ 6.131,71
-        const valorReal = matches[1] || ""; // 33.049,92
+        const valorDolar = matches[0] || "";
+        const valorReal = matches[1] || "";
 
         setF9(valorDolar);
         setG9(valorReal);
@@ -182,6 +185,7 @@ export default function Geral() {
 
     loadSheet();
   }, []);
+
   useEffect(() => {
     async function loadCompras() {
       const res = await fetch(
@@ -218,7 +222,6 @@ export default function Geral() {
         );
         const data = await res.json();
 
-        // Datas do mês atual
         const agora = new Date();
         const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
         const fimMes = new Date(
@@ -230,7 +233,6 @@ export default function Geral() {
           59
         );
 
-        // filtrar
         const total = data.filter((i) => {
           if (i.grupo !== "⭐Em Andamento") return false;
           if (!i.ETA) return false;
@@ -248,6 +250,7 @@ export default function Geral() {
 
     loadAtracam();
   }, []);
+
   useEffect(() => {
     async function loadReembolso() {
       try {
@@ -290,6 +293,7 @@ export default function Geral() {
 
     loadReembolso();
   }, [value12P]);
+
   // LTDA — último mês com dados
   useEffect(() => {
     async function loadDataLTDA() {
@@ -618,6 +622,7 @@ export default function Geral() {
 
     loadPedidosChina();
   }, []);
+
   useEffect(() => {
     async function loadImportacao() {
       try {
@@ -665,9 +670,7 @@ export default function Geral() {
     loadImportacao();
   }, []);
 
-  // ============================================================
   // 🔥 TELA
-  // ============================================================
   return (
     <div
       className="w-full h-screen grid grid-rows-[35%_30%_31%_4%] bg-black text-white overflow-hidden font-['Cinzel']"
@@ -685,25 +688,7 @@ export default function Geral() {
         "--black-main": "#050505",
       }}
     >
-      <style>{`
-  ${FONT_IMPORT}
-  ${ANIMATION_STYLES}
-
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
-  
-  * {
-    font-family: 'Poppins', sans-serif;
-  }
-
-  .titulo-card {
-    font-family: 'Poppins', sans-serif !important;
-  }
-
-  .numero-branco,
-  .numero-branco * {
-    font-family: 'Poppins', sans-serif !important;
-  }
-`}</style>
+      <style>{FONT_IMPORT + "\\n" + ANIMATION_STYLES}</style>
 
       <style>{`
         .titulo-card {
@@ -742,7 +727,6 @@ export default function Geral() {
         <Ring
           title="Hunters"
           value={formatarValor(valueCS)}
-          R
           estornos={formatarValor(estornosCS)}
           meta="R$ 1 mi"
           percent={((valueCS / metaCS) * 100).toFixed(1)}
@@ -1285,7 +1269,6 @@ function CSATCard() {
     loadCSAT();
   }, []);
 
-  // agora data é RECONSTRUÍDA DEPOIS QUE csatData atualizar
   const data = [
     { label: "Muito boa", value: csatData.muitoBoa, color: "#5FA6E8" },
     { label: "Excelente", value: csatData.excelente, color: "#8BCF7A" },
@@ -1294,7 +1277,6 @@ function CSATCard() {
     { label: "Ruim", value: csatData.ruim, color: "#E85B5B" },
   ];
 
-  // META = o MAIOR valor
   const max = Math.max(...data.map((d) => d.value), 1);
 
   return (
@@ -1446,7 +1428,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
                 <Cell key={i} fill={COLORS[i]} />
               ))}
 
-              {/* 🔵 FATURAMENTO (VERDE) */}
+              {/* FATURAMENTO */}
               <Label
                 value={`R$ ${formatarValor(fat12p)}`}
                 position="outside"
@@ -1456,7 +1438,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
                 offset={20}
               />
 
-              {/* 🟡 ESTORNO (AMARELO) */}
+              {/* ESTORNO */}
               <Label
                 value={`R$ ${formatarValor(estorno12p)}`}
                 position="outside"
@@ -1466,7 +1448,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
                 offset={40}
               />
 
-              {/* 🔴 REEMBOLSO (VERMELHO) */}
+              {/* REEMBOLSO */}
               <Label
                 value={`R$ ${formatarValor(reembolso12p)}`}
                 position="outside"

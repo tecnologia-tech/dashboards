@@ -1,108 +1,91 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import FullscreenButton from "./components/FullscreenButton";
+import AutoRotate from "./components/AutoRotate";
 import TVSelection from "./components/TVSelection";
-import { rotasTV1, rotasTV2, rotasTV3 } from "./tvRoutes";
 
-/* =====================================================
-   LAZY LOAD DAS PÁGINAS
-===================================================== */
+/* Páginas */
 const Hunters = lazy(() => import("./pages/Hunters/Hunters"));
 const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 const Geral = lazy(() => import("./pages/Geral/Geral"));
 
-/* =====================================================
-   COMPONENTE DE ROTAÇÃO (SIMPLIFICADO)
-===================================================== */
-function AutoRotate({ rotas }) {
-  return (
-    <>
-      <FullscreenButton />
-      {/* As rotas abaixo já estão no navegador */}
-    </>
-  );
-}
-
-/* =====================================================
-   APP PRINCIPAL
-===================================================== */
 export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<div style={{ color: "white" }}>Carregando…</div>}>
         <Routes>
-          {/* Tela inicial com os botões */}
+          {/* Tela inicial */}
           <Route path="/" element={<TVSelection />} />
 
-          {/* TVs */}
-          <Route
-            path="/tv1"
-            element={<Navigate to={rotasTV1[0].path} replace />}
-          />
-          <Route
-            path="/tv2"
-            element={<Navigate to={rotasTV2[0].path} replace />}
-          />
-          <Route
-            path="/tv3"
-            element={<Navigate to={rotasTV3[0].path} replace />}
-          />
+          {/* Atalhos das TVs */}
+          <Route path="/tv1" element={<Navigate to="/geral" replace />} />
+          <Route path="/tv2" element={<Navigate to="/blackfriday" replace />} />
+          <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
-          {/* GRUPOS DE ROTAS */}
-          {rotasTV1.map((r) => (
-            <Route
-              key={r.path}
-              path={r.path}
-              element={
-                <>
-                  <AutoRotate rotas={rotasTV1} />
-                  <Geral />
-                </>
-              }
-            />
-          ))}
-
-          {rotasTV2.map((r) => (
-            <Route
-              key={r.path}
-              path={r.path}
-              element={
-                <>
-                  <AutoRotate rotas={rotasTV2} />
-                  <BlackFriday />
-                </>
-              }
-            />
-          ))}
-
-          {rotasTV3.map((r) => (
-            <Route
-              key={r.path}
-              path={r.path}
-              element={
-                <>
-                  <AutoRotate rotas={rotasTV3} />
-                  {r.path === "/hunters" ? <Hunters /> : <Farmers />}
-                </>
-              }
-            />
-          ))}
-
-          {/* Página LastDance fora das TVs */}
+          {/* ============================
+               TV1 — Geral fixa
+               F5 a cada 2 minutos
+             ============================ */}
           <Route
-            path="/lastdance"
+            path="/geral"
             element={
               <>
-                <FullscreenButton />
-                <LastDance />
+                <AutoRotate
+                  rotas={[{ path: "/geral" }]} // fixa
+                  tempoReload={2 * 60 * 1000} // 2 min
+                />
+                <Geral />
               </>
             }
           />
 
-          {/* Qualquer erro → volta à Home */}
+          {/* ============================
+               TV2 — BlackFriday fixa
+               F5 a cada 1 minuto
+             ============================ */}
+          <Route
+            path="/blackfriday"
+            element={
+              <>
+                <AutoRotate
+                  rotas={[{ path: "/blackfriday" }]} // fixa
+                  tempoReload={1 * 60 * 1000} // 1 min
+                />
+                <BlackFriday />
+              </>
+            }
+          />
+
+          {/* ============================
+               TV3 — alterna Farmers/Hunters
+               Troca a cada 2 min
+               F5 a cada 1 min
+             ============================ */}
+          {[
+            { path: "/farmers", element: <Farmers /> },
+            { path: "/hunters", element: <Hunters /> },
+          ].map((r) => (
+            <Route
+              key={r.path}
+              path={r.path}
+              element={
+                <>
+                  <AutoRotate
+                    rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
+                    tempoRotacao={2 * 60 * 1000} // 2 min
+                    tempoReload={1 * 60 * 1000} // 1 min
+                  />
+                  {r.element}
+                </>
+              }
+            />
+          ))}
+
+          <Route path="/lastdance" element={<LastDance />} />
+
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
