@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import { pool } from "./db.js";
 import path from "path";
+import { pool } from "./db.js";
 
 const __filename = new URL(import.meta.url).pathname;
 const __dirname = path.dirname(__filename);
@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { MONDAY_API_URL, MONDAY_API_TOKEN } = process.env;
-const MONDAY_BOARD_ID = "18206014428";
+const MONDAY_BOARD_ID = "8174101073";
 const TABLE_NAME = "dash_compraspricing";
 
 const MONDAY_QUERY = `
@@ -190,9 +190,10 @@ export default async function dashCompras() {
     }
     await saveToPostgres(items, columnMap);
     console.log(
-      `🏁 dash_compraspricing concluído em ${((Date.now() - start) / 1000).toFixed(
-        1
-      )}s`
+      `🏁 dash_compraspricing concluído em ${(
+        (Date.now() - start) /
+        1000
+      ).toFixed(1)}s`
     );
   } catch (err) {
     console.error("🚨 Erro geral em dash_compraspricing:", err.message);

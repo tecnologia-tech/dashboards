@@ -98,8 +98,6 @@ async function runSequentialLoop() {
   let ciclo = 1;
 
   const batches = [
-    ["estornos_nutshell.js"],
-    [("dash_geralcsOpen.js", "dash_geralcsWon.js")],
     [
       "dash_apoio.js",
       "dash_comprasdoc.js",
@@ -107,6 +105,8 @@ async function runSequentialLoop() {
       "dash_csat.js",
       "dash_compraspricing",
     ],
+    ["estornos_nutshell.js"],
+    [("dash_geralcsOpen.js", "dash_geralcsWon.js")],
     ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
     [
       "dash_cx.js",
