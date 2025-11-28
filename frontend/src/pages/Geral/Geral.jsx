@@ -263,28 +263,28 @@ export default function Geral() {
         const dados = await res.json();
 
         const filtroMes = dados.filter((i) => {
-          const d = new Date(i.Data_de_Devolucao.replace(" ", "T"));
+          const d = new Date(i.Data_Reclamacao.replace(" ", "T"));
           return d >= inicioMes && d <= fimMes;
         });
 
-        // Faturamento = value12P que você já calcula
+        // Faturamento = value12P
         setFat12p(value12P);
 
-        // Estorno no mês
+        // Estorno
         const totalEstorno = filtroMes.reduce(
           (acc, cur) => acc + (Number(cur.Estorno_R) || 0),
           0
         );
         setEstorno12p(totalEstorno);
 
-        // Reembolso no mês
+        // Reembolso
         const totalReembolso = filtroMes.reduce(
           (acc, cur) => acc + (Number(cur.Reembolso_R) || 0),
           0
         );
         setReembolso12p(totalReembolso);
 
-        // Reclame Aqui = "Sim"
+        // Reclame Aqui (Sim)
         const totalRA = filtroMes.filter(
           (i) => i.Reclame_Aqui === "Sim"
         ).length;
