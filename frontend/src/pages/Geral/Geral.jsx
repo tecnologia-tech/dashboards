@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
-import { Cell, Pie, PieChart } from "recharts";
+import { Cell, Label, Pie, PieChart } from "recharts";
 import jayanneImg from "../../assets/Geral/Jayanne.png";
 import jeniferImg from "../../assets/Geral/Jenifer.png";
 import raissaImg from "../../assets/Geral/Raissa.png";
-
 const FONT_IMPORT = `
   @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
   @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
@@ -50,6 +49,8 @@ const ANIMATION_STYLES = `
   animation: goldParticleRise 4.5s linear infinite;
 }
 `;
+const CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2slujbc-3UGhQxk1GJD5v0Yp_CKgZJNE4_71R-gpHC2YsrHgwqIpG6oIgVjdKTQysBHxjeAUD_i2s/pub?gid=339080800&single=true&output=csv";
 
 // fundo listrado da tela inteira
 const STRIPED_BACKGROUND =
@@ -60,6 +61,16 @@ const CARD_BACKGROUND =
 
 const RUNE_BACKGROUND =
   "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.10), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.08), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.10), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.05) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
+const agora = new Date();
+const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+const fimMes = new Date(
+  agora.getFullYear(),
+  agora.getMonth() + 1,
+  0,
+  23,
+  59,
+  59
+);
 
 // ====================== FUNÇÕES AUXILIARES ======================
 async function contarOnboard(nome) {
@@ -99,6 +110,8 @@ function formatarValor(n) {
 
 // ====================== COMPONENTE PRINCIPAL ======================
 export default function Geral() {
+  const [f9, setF9] = useState(null);
+  const [g9, setG9] = useState(null);
   // ============================================================
   // 🔥 ESTADOS DO RING LTDA
   // ============================================================
@@ -130,9 +143,153 @@ export default function Geral() {
   const [pedidosLogistica, setPedidosLogistica] = useState(0);
   const [pedidosDesembaraco, setPedidosDesembaraco] = useState(0);
   const [totalPedidos, setTotalPedidos] = useState(0);
+  const [atracamMes, setAtracamMes] = useState(0);
 
+  const [fat12p, setFat12p] = useState(0);
+  const [estorno12p, setEstorno12p] = useState(0);
+  const [reembolso12p, setReembolso12p] = useState(0);
+  const [reclameAqui, setReclameAqui] = useState(0);
+  const [handoverDocAtivos, setHandoverDocAtivos] = useState(0);
+  const [handoverDocFinalizados, setHandoverDocFinalizados] = useState(0);
+
+  const [handoverPricingAtivos, setHandoverPricingAtivos] = useState(0);
+  const [handoverPricingFinalizados, setHandoverPricingFinalizados] =
+    useState(0);
+
+  useState(0);
   // ============================ EFEITOS ============================
+  useEffect(() => {
+    async function loadSheet() {
+      try {
+        const res = await fetch(CSV_URL);
+        const text = await res.text();
 
+        const rows = text.split("\n");
+        const linha9 = rows[8] || ""; // linha onde está F9 / G9
+
+        // Pega todos os valores no formato 9.999,99
+        const matches = linha9.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g) || [];
+
+        const valorDolar = matches[0] || ""; // $ 6.131,71
+        const valorReal = matches[1] || ""; // 33.049,92
+
+        setF9(valorDolar);
+        setG9(valorReal);
+      } catch (err) {
+        console.error("Erro ao carregar CSV:", err);
+      }
+    }
+
+    loadSheet();
+  }, []);
+  useEffect(() => {
+    async function loadCompras() {
+      const res = await fetch(
+        "https://dashboards-exur.onrender.com/api/dash_comprasdoc"
+      );
+      const rows = await res.json();
+
+      setHandoverDocAtivos(
+        rows.filter(
+          (i) =>
+            ["HANDOVER", "CORREÇÃO HANDOVER"].includes(i.Task) &&
+            i.grupo === "ATIVOS" &&
+            i.STATUS !== "PAUSADO"
+        ).length
+      );
+
+      setHandoverDocFinalizados(
+        rows.filter(
+          (i) =>
+            ["HANDOVER", "CORREÇÃO HANDOVER"].includes(i.Task) &&
+            i.grupo === "Finalizados"
+        ).length
+      );
+    }
+
+    loadCompras();
+  }, []);
+
+  useEffect(() => {
+    async function loadAtracam() {
+      try {
+        const res = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_ixlogcomex"
+        );
+        const data = await res.json();
+
+        // Datas do mês atual
+        const agora = new Date();
+        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+        const fimMes = new Date(
+          agora.getFullYear(),
+          agora.getMonth() + 1,
+          0,
+          23,
+          59,
+          59
+        );
+
+        // filtrar
+        const total = data.filter((i) => {
+          if (i.grupo !== "⭐Em Andamento") return false;
+          if (!i.ETA) return false;
+
+          const eta = new Date(i.ETA.replace(" ", "T"));
+
+          return eta >= inicioMes && eta <= fimMes;
+        }).length;
+
+        setAtracamMes(total);
+      } catch (err) {
+        console.error("Erro ao calcular Atracam esse mês:", err);
+      }
+    }
+
+    loadAtracam();
+  }, []);
+  useEffect(() => {
+    async function loadReembolso() {
+      try {
+        const res = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_reembolso"
+        );
+        const dados = await res.json();
+
+        const filtroMes = dados.filter((i) => {
+          const d = new Date(i.Data_de_Devolucao.replace(" ", "T"));
+          return d >= inicioMes && d <= fimMes;
+        });
+
+        // Faturamento = value12P que você já calcula
+        setFat12p(value12P);
+
+        // Estorno no mês
+        const totalEstorno = filtroMes.reduce(
+          (acc, cur) => acc + (Number(cur.Estorno_R) || 0),
+          0
+        );
+        setEstorno12p(totalEstorno);
+
+        // Reembolso no mês
+        const totalReembolso = filtroMes.reduce(
+          (acc, cur) => acc + (Number(cur.Reembolso_R) || 0),
+          0
+        );
+        setReembolso12p(totalReembolso);
+
+        // Reclame Aqui = "Sim"
+        const totalRA = filtroMes.filter(
+          (i) => i.Reclame_Aqui === "Sim"
+        ).length;
+        setReclameAqui(totalRA);
+      } catch (err) {
+        console.error("Erro ao carregar reembolso:", err);
+      }
+    }
+
+    loadReembolso();
+  }, [value12P]);
   // LTDA — último mês com dados
   useEffect(() => {
     async function loadDataLTDA() {
@@ -528,7 +685,25 @@ export default function Geral() {
         "--black-main": "#050505",
       }}
     >
-      <style>{FONT_IMPORT + "\n" + ANIMATION_STYLES}</style>
+      <style>{`
+  ${FONT_IMPORT}
+  ${ANIMATION_STYLES}
+
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+  
+  * {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .titulo-card {
+    font-family: 'Poppins', sans-serif !important;
+  }
+
+  .numero-branco,
+  .numero-branco * {
+    font-family: 'Poppins', sans-serif !important;
+  }
+`}</style>
 
       <style>{`
         .titulo-card {
@@ -567,6 +742,7 @@ export default function Geral() {
         <Ring
           title="Hunters"
           value={formatarValor(valueCS)}
+          R
           estornos={formatarValor(estornosCS)}
           meta="R$ 1 mi"
           percent={((valueCS / metaCS) * 100).toFixed(1)}
@@ -597,19 +773,33 @@ export default function Geral() {
       {/* ================= CARDS DO MEIO ================= */}
       <div className="grid grid-cols-3 gap-[1px] pb-2 px-[2px] auto-rows-fr">
         <OnboardingCard />
-        <ComprasCard />
+        <ComprasCard
+          f9={f9}
+          g9={g9}
+          handoverDocAtivos={handoverDocAtivos}
+          handoverDocFinalizados={handoverDocFinalizados}
+          handoverPricingAtivos={handoverPricingAtivos}
+          handoverPricingFinalizados={handoverPricingFinalizados}
+        />
+
         <ImportacaoCard
           pedidosChina={pedidosChina}
           pedidosLogistica={pedidosLogistica}
           pedidosDesembaraco={pedidosDesembaraco}
           totalPedidos={totalPedidos}
+          atracamMes={atracamMes}
         />
       </div>
 
       {/* ================= CSAT + REPUTAÇÃO ================= */}
       <div className="grid grid-cols-2 gap-[1px] overflow-hidden px-[2px]">
         <CSATCard />
-        <ReputacaoCard />
+        <ReputacaoCard
+          fat12p={fat12p}
+          estorno12p={estorno12p}
+          reembolso12p={reembolso12p}
+          reclameAqui={reclameAqui}
+        />
       </div>
 
       {/* ================= FOOTER ================= */}
@@ -868,7 +1058,15 @@ function Person({ name, count, avatar }) {
 // =====================================================================
 // COMPRAS
 // =====================================================================
-function ComprasCard() {
+function ComprasCard({
+  f9,
+  g9,
+  handoverDocAtivos,
+  handoverDocFinalizados,
+  handoverPricingAtivos,
+  handoverPricingFinalizados,
+}) {
+  const percentualDoc = ((handoverDocFinalizados / 310) * 100).toFixed(1);
   return (
     <div
       className="flex flex-col rounded-xl px-4 py-0"
@@ -888,8 +1086,9 @@ function ComprasCard() {
               Simulações
             </div>
             <div className="text-[58px] font-extrabold leading-none mt-1 numero-branco">
-              15
+              {handoverDocAtivos}
             </div>
+
             <div className="text-xl" style={{ color: "#d0c3a4" }}>
               Em andamento
             </div>
@@ -900,12 +1099,12 @@ function ComprasCard() {
               Entregues
             </div>
             <div className="text-[58px] font-extrabold leading-none mt-1 numero-branco">
-              177
+              {handoverDocFinalizados}
             </div>
             <div className="text-xl font-bold">
-              <span style={{ color: "#ff7a7a" }}>64.4%</span>{" "}
+              <span style={{ color: "#ff7a7a" }}>{percentualDoc}%</span>
               <span className="text-lg" style={{ color: "#f5f0e4" }}>
-                de 275
+                de 310
               </span>
             </div>
           </div>
@@ -921,14 +1120,15 @@ function ComprasCard() {
               Em andamento
             </span>
             <span className="text-[50px] font-extrabold leading-none numero-branco">
-              7
+              {handoverPricingAtivos}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-[50px] font-extrabold leading-none numero-branco">
-              42
+              {handoverPricingFinalizados}
             </span>
+
             <span className="text-xl" style={{ color: "#d0c3a4" }}>
               Entregues
             </span>
@@ -940,7 +1140,7 @@ function ComprasCard() {
           style={{ borderTop: "1px solid rgba(230,192,104,0.4)" }}
         />
 
-        <div className="flex items-center justify-center gap-3 mt-auto pb-2">
+        <div className="flex items-center gap-3 justify-center mt-auto pb-2 whitespace-nowrap">
           <ReactCountryFlag
             countryCode="CN"
             svg
@@ -956,15 +1156,12 @@ function ComprasCard() {
           <span className="text-2xl font-bold text-[var(--gold-light)]">
             ACCOUNT (MÊS):
           </span>
-          <span className="text-2xl font-semibold numero-branco">
-            $7.151,90
-          </span>
-          <span className="text-xl" style={{ color: "#d0c3a4" }}>
-            /
-          </span>
-          <span className="text-2xl font-semibold numero-branco">
-            R$ 38.618,82
-          </span>
+
+          <span className="text-2xl font-semibold numero-branco">$ {f9}</span>
+
+          <span className="text-2xl font-semibold numero-branco">/</span>
+
+          <span className="text-2xl font-semibold numero-branco">R$ {g9}</span>
         </div>
       </div>
     </div>
@@ -979,6 +1176,7 @@ function ImportacaoCard({
   pedidosLogistica,
   pedidosDesembaraco,
   totalPedidos,
+  atracamMes,
 }) {
   return (
     <div
@@ -1008,7 +1206,7 @@ function ImportacaoCard({
               Atracam esse mês
             </div>
             <div className="text-[60px] font-extrabold leading-none mt-1 numero-branco">
-              26
+              {atracamMes}
             </div>
           </div>
         </div>
@@ -1039,15 +1237,65 @@ function ImportacaoCard({
 // CSAT
 // =====================================================================
 function CSATCard() {
+  const [csatData, setCsatData] = useState({
+    muitoBoa: 0,
+    excelente: 0,
+    boa: 0,
+    regular: 0,
+    ruim: 0,
+  });
+
+  useEffect(() => {
+    async function loadCSAT() {
+      try {
+        const res = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_csat"
+        );
+        const dados = await res.json();
+
+        setCsatData({
+          muitoBoa: dados.filter(
+            (i) =>
+              i.Como_voce_avalia_sua_experiencia_com_o_CS_ate_aqui ===
+              "Muito boa"
+          ).length,
+          excelente: dados.filter(
+            (i) =>
+              i.Como_voce_avalia_sua_experiencia_com_o_CS_ate_aqui ===
+              "Excelente"
+          ).length,
+          boa: dados.filter(
+            (i) =>
+              i.Como_voce_avalia_sua_experiencia_com_o_CS_ate_aqui === "Boa"
+          ).length,
+          regular: dados.filter(
+            (i) =>
+              i.Como_voce_avalia_sua_experiencia_com_o_CS_ate_aqui === "Regular"
+          ).length,
+          ruim: dados.filter(
+            (i) =>
+              i.Como_voce_avalia_sua_experiencia_com_o_CS_ate_aqui === "Ruim"
+          ).length,
+        });
+      } catch (err) {
+        console.error("Erro CSAT:", err);
+      }
+    }
+
+    loadCSAT();
+  }, []);
+
+  // agora data é RECONSTRUÍDA DEPOIS QUE csatData atualizar
   const data = [
-    { label: "Muito boa", value: 24, color: "#5FA6E8" },
-    { label: "Excelente", value: 9, color: "#8BCF7A" },
-    { label: "Boa", value: 8, color: "#E6A347" },
-    { label: "Regular", value: 1, color: "#E6A347" },
-    { label: "Ruim", value: 1, color: "#E85B5B" },
+    { label: "Muito boa", value: csatData.muitoBoa, color: "#5FA6E8" },
+    { label: "Excelente", value: csatData.excelente, color: "#8BCF7A" },
+    { label: "Boa", value: csatData.boa, color: "#E6A347" },
+    { label: "Regular", value: csatData.regular, color: "#E6A347" },
+    { label: "Ruim", value: csatData.ruim, color: "#E85B5B" },
   ];
 
-  const max = Math.max(...data.map((d) => d.value));
+  // META = o MAIOR valor
+  const max = Math.max(...data.map((d) => d.value), 1);
 
   return (
     <div
@@ -1062,37 +1310,42 @@ function CSATCard() {
       <h2 className="titulo-card">CSAT</h2>
 
       <div className="pt-0 flex flex-col justify-center flex-1 gap-1">
-        {data.map((i) => (
-          <div key={i.label} className="flex items-center gap-4">
-            <div className="w-[170px] text-2xl" style={{ color: "#f5e7c8" }}>
-              {i.label}
-            </div>
+        {data.map((i) => {
+          const percent = (i.value / max) * 100;
 
-            <div
-              className="flex-1 h-9 rounded-lg overflow-hidden border shadow-[inset_0_0_8px_rgba(0,0,0,0.65)]"
-              style={{
-                borderColor: "#111",
-                background: "linear-gradient(90deg, #181818, #101010, #181818)",
-              }}
-            >
+          return (
+            <div key={i.label} className="flex items-center gap-4">
+              <div className="w-[170px] text-2xl" style={{ color: "#f5e7c8" }}>
+                {i.label}
+              </div>
+
               <div
-                className="h-full"
+                className="flex-1 h-9 rounded-lg overflow-hidden border shadow-[inset_0_0_8px_rgba(0,0,0,0.65)]"
                 style={{
-                  width: `${(i.value / max) * 100}%`,
-                  backgroundColor: i.color,
-                  boxShadow: "0 0 10px rgba(0,0,0,0.6)",
+                  borderColor: "#111",
+                  background:
+                    "linear-gradient(90deg, #181818, #101010, #181818)",
                 }}
-              />
-            </div>
+              >
+                <div
+                  className="h-full"
+                  style={{
+                    width: `${percent}%`,
+                    backgroundColor: i.color,
+                    boxShadow: "0 0 10px rgba(0,0,0,0.6)",
+                  }}
+                />
+              </div>
 
-            <div
-              className="text-3xl font-bold w-[60px] text-right numero-branco"
-              style={{ textShadow: "0 0 6px rgba(0,0,0,0.6)" }}
-            >
-              {i.value}
+              <div
+                className="text-3xl font-bold w-[60px] text-right numero-branco"
+                style={{ textShadow: "0 0 6px rgba(0,0,0,0.6)" }}
+              >
+                {i.value}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1101,14 +1354,20 @@ function CSATCard() {
 // =====================================================================
 // REPUTAÇÃO 12P
 // =====================================================================
-function ReputacaoCard() {
+function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
   const data = [
-    { name: "Faturamento", value: 1278288 },
-    { name: "Estorno", value: 113596 },
-    { name: "Reembolso", value: 59389 },
+    { name: "Faturamento", value: fat12p, color: "#8BCF7A" },
+    { name: "Estorno", value: estorno12p, color: "#E85B5B" },
+    { name: "Reembolso", value: reembolso12p, color: "#E6A347" },
   ];
 
   const COLORS = ["#8BCF7A", "#E85B5B", "#E6A347"];
+  const percentualReembolso =
+    fat12p > 0
+      ? ((reembolso12p / fat12p) * 100).toFixed(2).replace(".", ",")
+      : "0,00";
+  const percentualNumero = Number(percentualReembolso.replace(",", "."));
+  const corPercentual = percentualNumero <= 4 ? "#8BCF7A" : "#E85B5B";
 
   return (
     <div
@@ -1125,42 +1384,49 @@ function ReputacaoCard() {
       <div className="flex-1 pt-0 grid grid-cols-[2fr_1fr_1fr] gap-1 items-center">
         <div className="flex flex-col text-2xl leading-tight space-y-2 pl-2">
           <div>
-            <span className="font-bold" style={{ color: "var(--gold-light)" }}>
+            <span className="font-bold" style={{ color: "#8BCF7A" }}>
               FATURAMENTO:
             </span>
-            <span className="text-gray-200"> R$ 1.290.315,47</span>
+            <span className="text-gray-200"> R$ {formatarValor(fat12p)}</span>
           </div>
           <div>
             <span className="font-bold" style={{ color: "var(--gold-mid)" }}>
               ESTORNO:
             </span>
-            <span className="text-gray-200"> R$ 113.596</span>
+            <span className="text-gray-200">
+              {" "}
+              R$ {formatarValor(estorno12p)}
+            </span>
           </div>
           <div>
             <span className="font-bold" style={{ color: "#E85B5B" }}>
               REEMBOLSO:
             </span>
-            <span className="text-gray-200"> R$ 59.389</span>
+            <span className="text-gray-200">
+              {" "}
+              R$ {formatarValor(reembolso12p)}
+            </span>
           </div>
           <div className="pt-2">
             <span className="font-bold" style={{ color: "var(--gold-light)" }}>
               RECLAME AQUI:
             </span>
-            <span className="text-3xl font-extrabold numero-branco"> 0</span>
+            <span className="text-3xl font-extrabold numero-branco">
+              {reclameAqui}
+            </span>
           </div>
         </div>
 
-        <div className="flex justify-center items-center">
-          <div
-            className="text-8xl font-extrabold numero-branco"
-            style={{
-              WebkitTextStroke: "1px black",
-              textShadow: "0 0 12px rgba(230,192,104,0.4)",
-              animation: "goldenTextBreath 6s ease-in-out infinite",
-            }}
-          >
-            4,60%
-          </div>
+        <div
+          className="text-8xl font-extrabold"
+          style={{
+            color: corPercentual,
+            WebkitTextStroke: "1px black",
+            textShadow: `0 0 12px ${corPercentual}55`,
+            animation: "goldenTextBreath 6s ease-in-out infinite",
+          }}
+        >
+          {percentualReembolso}%
         </div>
 
         <div className="flex justify-center items-center">
@@ -1179,6 +1445,36 @@ function ReputacaoCard() {
               {data.map((_, i) => (
                 <Cell key={i} fill={COLORS[i]} />
               ))}
+
+              {/* 🔵 FATURAMENTO (VERDE) */}
+              <Label
+                value={`R$ ${formatarValor(fat12p)}`}
+                position="outside"
+                fill="#8BCF7A"
+                fontSize={18}
+                fontWeight="bold"
+                offset={20}
+              />
+
+              {/* 🟡 ESTORNO (AMARELO) */}
+              <Label
+                value={`R$ ${formatarValor(estorno12p)}`}
+                position="outside"
+                fill="#E6A347"
+                fontSize={18}
+                fontWeight="bold"
+                offset={40}
+              />
+
+              {/* 🔴 REEMBOLSO (VERMELHO) */}
+              <Label
+                value={`R$ ${formatarValor(reembolso12p)}`}
+                position="outside"
+                fill="#E85B5B"
+                fontSize={18}
+                fontWeight="bold"
+                offset={60}
+              />
             </Pie>
           </PieChart>
         </div>
