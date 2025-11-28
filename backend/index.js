@@ -103,7 +103,7 @@ async function runSequentialLoop() {
       "dash_comprasdoc.js",
       "dash_cs.js",
       "dash_csat.js",
-      "dash_compraspricing",
+      "dash_compraspricing.js",
     ],
     ["estornos_nutshell.js"],
     [("dash_geralcsOpen.js", "dash_geralcsWon.js")],
