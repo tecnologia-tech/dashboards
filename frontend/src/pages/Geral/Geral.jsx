@@ -119,7 +119,7 @@ export default function Geral() {
   // 🔥 ESTADOS DO RING LTDA
   const [valueLTDA, setValueLTDA] = useState(0);
   const [estornosLTDA, setEstornosLTDA] = useState(0);
-  const metaLTDA = 1400000;
+  const metaLTDA = 1500000;
   const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
 
   // CS — último mês com dados
