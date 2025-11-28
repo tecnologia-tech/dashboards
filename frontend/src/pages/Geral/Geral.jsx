@@ -142,7 +142,7 @@ export default function Geral() {
   // 12P
   const [value12P, setValue12P] = useState(0);
   const [estornos12P, setEstornos12P] = useState(0);
-  const meta12P = 2700000;
+  const meta12P = 2800000;
 
   // PEDIDOS (CHINA / LOG / DESEMBARAÇO)
   const [pedidosChina, setPedidosChina] = useState(0);
