@@ -105,9 +105,12 @@ function parseDataBR(d) {
 
 function formatarValor(n) {
   if (!n) return "0";
+
   if (n >= 1_000_000)
-    return (n / 1_000_000).toFixed(2).replace(".", ",") + " mi";
+    return (n / 1_000_000).toFixed(3).replace(".", ",") + " mi";
+
   if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",") + " mil";
+
   return n.toString().replace(".", ",");
 }
 
@@ -125,7 +128,7 @@ export default function Geral() {
   // CS — último mês com dados
   const [valueCS, setValueCS] = useState(0);
   const [estornosCS, setEstornosCS] = useState(0);
-  const metaCS = 1000000;
+  const metaCS = 800000;
 
   // REPEDITOS
   const [valueRepedidos, setValueRepedidos] = useState(0);
@@ -728,7 +731,7 @@ export default function Geral() {
           title="Hunters"
           value={formatarValor(valueCS)}
           estornos={formatarValor(estornosCS)}
-          meta="R$ 1 mi"
+          meta="R$ 800 mil"
           percent={((valueCS / metaCS) * 100).toFixed(1)}
         />
         <Ring
