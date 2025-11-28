@@ -56,7 +56,8 @@ export default function App() {
               <>
                 <AutoRotate
                   rotas={[{ path: "/geral" }]}
-                  tempoRefresh={10 * 1000} // 10s teste
+                  tempoRotacao={2 * 60 * 1000}
+                  tempoRefresh={1 * 60 * 1000}
                 />
                 <TelaComRefresh>
                   <Geral />
@@ -74,7 +75,8 @@ export default function App() {
               <>
                 <AutoRotate
                   rotas={[{ path: "/blackfriday" }]}
-                  tempoRefresh={10 * 1000} // 10s teste
+                  tempoRotacao={2 * 60 * 1000}
+                  tempoRefresh={1 * 60 * 1000}
                 />
                 <TelaComRefresh>
                   <BlackFriday />
@@ -94,8 +96,8 @@ export default function App() {
               <>
                 <AutoRotate
                   rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                  tempoRotacao={10 * 1000}
-                  tempoRefresh={10 * 1000}
+                  tempoRotacao={2 * 60 * 1000}
+                  tempoRefresh={1 * 60 * 1000}
                 />
                 <TelaComRefresh>
                   <Farmers />
@@ -110,8 +112,8 @@ export default function App() {
               <>
                 <AutoRotate
                   rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                  tempoRotacao={10 * 1000}
-                  tempoRefresh={10 * 1000}
+                  tempoRotacao={2 * 60 * 1000}
+                  tempoRefresh={1 * 60 * 1000}
                 />
                 <TelaComRefresh>
                   <Hunters />
