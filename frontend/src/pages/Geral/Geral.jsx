@@ -807,6 +807,7 @@ function Ring({ title, value, estornos, meta, percent }) {
   const circ = 2 * Math.PI * radius;
   const dash = (percent / 100) * circ;
   const isMetaBatida = Number(percent) >= 100;
+  const deveFicarVerde = (title === "LTDA" || title === "12P") && isMetaBatida;
   return (
     <div className="flex flex-col items-center overflow-visible">
       <div
@@ -857,14 +858,14 @@ function Ring({ title, value, estornos, meta, percent }) {
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={isMetaBatida ? "#4CF26D" : "url(#goldLux)"}
+            stroke={deveFicarVerde ? "#4CF26D" : "url(#goldLux)"}
             strokeWidth={stroke}
             fill="none"
             strokeLinecap="round"
             strokeDasharray={`${dash} ${circ}`}
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
             style={{
-              filter: isMetaBatida
+              filter: deveFicarVerde
                 ? "drop-shadow(0 0 16px rgba(76,242,109,0.75))"
                 : "drop-shadow(0 0 14px rgba(230,192,104,0.55))",
             }}
@@ -917,15 +918,15 @@ function Ring({ title, value, estornos, meta, percent }) {
           className="absolute left-1/2 -translate-x-1/2 text-6xl font-extrabold numero-branco"
           style={{
             bottom: -6,
-            color: isMetaBatida ? "#4CF26D" : "#fff",
+            color: deveFicarVerde ? "#4CF26D" : "#fff",
             WebkitTextStroke: "1px #000",
-            textShadow: isMetaBatida
+            textShadow: deveFicarVerde
               ? "0 0 16px rgba(76,242,109,0.75)"
               : `
-          0 0 18px rgba(0,0,0,0.85),
-          0 0 32px rgba(0,0,0,0.6),
-          0 0 12px rgba(255,255,255,0.15)
-        `,
+      0 0 18px rgba(0,0,0,0.85),
+      0 0 32px rgba(0,0,0,0.6),
+      0 0 12px rgba(255,255,255,0.15)
+    `,
           }}
         >
           {percent}%
