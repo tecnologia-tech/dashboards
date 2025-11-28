@@ -312,20 +312,23 @@ export default function BlackFriday() {
   // ==============================
   // ESTORNOS + REEMBOLSOS (FRONT)
   // ==============================
+  // ==============================
+  // REGRAS NOVAS DE ESTORNO + REEMBOLSO (IGUAL AO GERAL.JSX)
+  // ==============================
   useEffect(() => {
     async function calcularDevolucoes() {
       try {
+        // 1) Buscar faturamento do mês (igual Geral.jsx → value12P)
         const rGeral = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
         );
         const vendas = await rGeral.json();
 
+        // 2) Buscar devoluções
         const rReembolso = await fetch(
           `${import.meta.env.VITE_API_URL}/api/dash_reembolso`
         );
-        const reembolsos = await rReembolso.json();
-
-        if (!Array.isArray(vendas) || !Array.isArray(reembolsos)) return;
+        const devolucoes = await rReembolso.json();
 
         const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
         const fimMes = new Date(
@@ -338,54 +341,59 @@ export default function BlackFriday() {
           999
         );
 
-        // TOTAL GERAL DO MÊS (dash_geralcswon)
-        const totalGeral = vendas
-          .filter((i) => {
-            const dt = new Date(i.data);
+        // =============================
+        //  A) CALCULAR FATURAMENTO MENSAL (value12P)
+        // =============================
+        const faturamento = vendas
+          .filter((v) => {
+            const dt = new Date(v.data);
             return dt >= inicioMes && dt <= fimMes;
           })
-          .reduce((acc, i) => acc + Number(i.valor || 0), 0);
+          .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
 
-        // Filtra apenas registros de devolução do mês atual
-        const devolucoesMes = reembolsos.filter((item) => {
-          const raw = item?.Data_de_Devolucao;
-          if (!raw) return false;
-          const dt = new Date(raw);
-          if (Number.isNaN(dt.getTime())) return false;
+        // =============================
+        //  B) FILTRAR DEVOLUÇÕES DO MÊS
+        // =============================
+        const devolucoesMes = devolucoes.filter((d) => {
+          if (!d.Data_de_Devolucao) return false;
+          const dt = new Date(d.Data_de_Devolucao.replace(" ", "T"));
           return dt >= inicioMes && dt <= fimMes;
         });
 
-        // ✅ REEMBOLSOS (RÉPLICA DA QUERY SQL)
-        // SELECT SUM(NULLIF("Reembolso_R", '')::numeric)
-        // FROM dash_reembolso
-        // WHERE Data_de_Devolucao BETWEEN ... AND Devolucao_Status = 'Feito ✅';
-
-        const reembolsosValidos = devolucoesMes.filter(
-          (item) => item?.Devolucao_Status === "Feito ✅"
-        );
-
-        const totalReembolsosCalc = reembolsosValidos.reduce(
-          (acc, item) => acc + parseCurrencyToNumber(item?.Reembolso_R),
+        // =============================
+        //  C) CALCULAR ESTORNO (R$)
+        // =============================
+        const totalEstorno = devolucoesMes.reduce(
+          (acc, cur) => acc + (Number(cur.Estorno_R) || 0),
           0
         );
 
-        const percentual =
-          totalGeral > 0 ? (totalReembolsosCalc / totalGeral) * 100 : 0;
+        // =============================
+        //  D) CALCULAR REEMBOLSO (R$)
+        // =============================
+        const totalReembolso = devolucoesMes.reduce(
+          (acc, cur) => acc + (Number(cur.Reembolso_R) || 0),
+          0
+        );
 
-        // 👉 Estado usado no card "Reembolsos"
-        setTotalEstornos(totalReembolsosCalc);
+        // =============================
+        //  E) PERCENTUAL = REEMBOLSO / FATURAMENTO
+        // =============================
+        const percentual =
+          faturamento > 0 ? (totalReembolso / faturamento) * 100 : 0;
+
+        // Aplicar no componente
+        setTotalEstornos(totalReembolso);
         setPercentualEstornos(percentual);
 
-        console.group("DEBUG DEVOLUÇÕES (FRONT)");
-        console.log("totalGeral (SUM valor dash_geralcswon):", totalGeral);
-        console.log(
-          "totalReembolsosCalc (SUM Reembolso_R - Feito ✅):",
-          totalReembolsosCalc
-        );
-        console.log("percentualEstornos (Reembolso/TotalGeral):", percentual);
+        console.group("REGRAS NOVAS - DEVOLUÇÕES");
+        console.log("Faturamento:", faturamento);
+        console.log("Estorno_R:", totalEstorno);
+        console.log("Reembolso_R:", totalReembolso);
+        console.log("Percentual:", percentual);
         console.groupEnd();
       } catch (err) {
-        console.log("Erro ao calcular devoluções:", err);
+        console.error("Erro ao aplicar regras novas:", err);
       }
     }
 
