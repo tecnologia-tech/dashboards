@@ -10,6 +10,7 @@ const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 const Geral = lazy(() => import("./pages/Geral/Geral"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
+const Avisos = lazy(() => import("./pages/Avisos/Avisos"));
 
 /* ============================================
    WRAPPER PARA FORÇAR REMONTAGEM (REFRESH)
@@ -43,7 +44,7 @@ export default function App() {
 
         {/* Atalhos */}
         <Route path="/tv1" element={<Navigate to="/geral" replace />} />
-        <Route path="/tv2" element={<Navigate to="/blackfriday" replace />} />
+        <Route path="/tv2" element={<Navigate to="/Avisos" replace />} />
         <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
         {/* =====================================================
@@ -73,11 +74,11 @@ export default function App() {
             TV2 — BlackFriday fixa
         ===================================================== */}
         <Route
-          path="/blackfriday"
+          path="/Avisos"
           element={
             <>
               <AutoRotate
-                rotas={[{ path: "/blackfriday" }]}
+                rotas={[{ path: "/Avisos" }]}
                 tempoRotacao={2 * 60 * 1000}
                 tempoRefresh={1 * 60 * 1000}
               />
@@ -86,7 +87,7 @@ export default function App() {
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}
                 >
-                  <BlackFriday />
+                  <Avisos />
                 </Suspense>
               </TelaComRefresh>
             </>
