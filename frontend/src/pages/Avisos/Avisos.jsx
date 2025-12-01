@@ -1,7 +1,7 @@
 // =============================================================
 //  AVISOS – FULLSCREEN SOMENTE IMAGEM
 // =============================================================
-import bgImage from "../../assets/avisos/bg-video-youtube.jpg"; // ajuste o caminho
+import bgImage from "../../assets/Avisos/bg-video-youtube.jpg"; // ajuste o caminho
 
 export default function Avisos() {
   return (
