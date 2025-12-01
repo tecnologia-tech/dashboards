@@ -77,12 +77,10 @@ export default function LastDance() {
   const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
-  const [totalEstornos, setTotalEstornos] = useState(0);
-  const [percentualEstornos, setPercentualEstornos] = useState(0);
+  const [totalEstornos] = useState(0);
+  const [percentualEstornos] = useState(0);
 
   const audioRef = useRef(null);
-  const timerRef = useRef(null);
-
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
@@ -97,10 +95,6 @@ export default function LastDance() {
   const numero = formatarValor(valorDiario);
 
   useEffect(() => {
-    audioRef.current = new Audio("/audios/comemora.mp3");
-  }, []);
-
-  useEffect(() => {
     async function fetchData() {
       try {
         const r = await fetch(
@@ -109,23 +103,25 @@ export default function LastDance() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
-        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
-        const fimMes = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth() + 1,
-          0,
-          23,
-          59,
-          59
-        );
+        const pipelineIds = ["71", "23", "47", "59", "63", "35"];
 
-        const pipelineIds = ["71", "23", "47", "63"];
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
+
+          // NORMALIZAÇÃO DE DATA
+          const dataVenda = new Date(
+            dt.getFullYear(),
+            dt.getMonth(),
+            dt.getDate()
+          );
+
+          const inicio = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
+          const fim = new Date(hojeBR.getFullYear(), hojeBR.getMonth() + 1, 0);
+
           return (
             pipelineIds.includes(String(i.pipeline_id)) &&
-            dt >= inicioMes &&
-            dt <= fimMes
+            dataVenda >= inicio &&
+            dataVenda <= fim
           );
         });
 
@@ -135,110 +131,24 @@ export default function LastDance() {
 
         setDados(recentes);
 
+        // SOMA DO MÊS → CORRETO
         const somaMes = filtradosMes.reduce(
           (acc, i) => acc + Number(i.valor || 0),
           0
         );
+
         setTotalVendido(somaMes);
 
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        function isDiaUtil(d) {
-          const diaSemana = d.getDay();
-          return diaSemana !== 0 && diaSemana !== 6;
-        }
+        // DIAS ÚTEIS FIXOS (15)
+        const diasRestantesUteis = 15;
 
-        function contarDiasUteisRestantes(dataRef) {
-          const ultimoDia = new Date(
-            dataRef.getFullYear(),
-            dataRef.getMonth() + 1,
-            0
-          );
-
-          let dias = 0;
-          for (
-            let d = new Date(dataRef);
-            d <= ultimoDia;
-            d.setDate(d.getDate() + 1)
-          ) {
-            if (isDiaUtil(d)) dias++;
-          }
-          return dias;
-        }
-
-        const diasRestantesUteis = contarDiasUteisRestantes(hojeBR);
-
-        const vendasHoje = filtradosMes.filter((i) => {
-          const dt = new Date(i.data);
-          return dt.toDateString() === hojeBR.toDateString();
-        });
-
-        const totalHoje = vendasHoje.reduce(
-          (acc, i) => acc + Number(i.valor || 0),
-          0
-        );
-
-        const valorBase =
+        const valorDiarioCalc =
           diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
 
-        const metaAjustada = Math.max(valorBase - totalHoje, 0);
-
-        let valorDiarioAjustado = metaAjustada;
-
-        let ontemRef = new Date(hojeBR);
-        ontemRef.setDate(ontemRef.getDate() - 1);
-
-        while (
-          !isDiaUtil(ontemRef) &&
-          ontemRef.getTime() >= inicioMes.getTime()
-        ) {
-          ontemRef.setDate(ontemRef.getDate() - 1);
-        }
-
-        if (isDiaUtil(ontemRef) && ontemRef.getTime() >= inicioMes.getTime()) {
-          const fimOntem = new Date(
-            ontemRef.getFullYear(),
-            ontemRef.getMonth(),
-            ontemRef.getDate(),
-            23,
-            59,
-            59,
-            999
-          );
-
-          const vendasOntem = filtradosMes.filter((i) => {
-            const dt = new Date(i.data);
-            return dt.toDateString() === ontemRef.toDateString();
-          });
-
-          const vendidoOntem = vendasOntem.reduce(
-            (acc, i) => acc + Number(i.valor || 0),
-            0
-          );
-
-          const totalVendidoAteOntem = filtradosMes
-            .filter((i) => new Date(i.data) <= fimOntem)
-            .reduce((acc, i) => acc + Number(i.valor || 0), 0);
-
-          const faltanteAteOntem = Math.max(
-            META_MENSAL - totalVendidoAteOntem,
-            0
-          );
-
-          const diasUteisRestantesOntem = contarDiasUteisRestantes(ontemRef);
-
-          const metaDiariaOntem =
-            diasUteisRestantesOntem > 0
-              ? (faltanteAteOntem + vendidoOntem) / diasUteisRestantesOntem
-              : 0;
-
-          const saldoOntem = metaDiariaOntem - vendidoOntem;
-
-          valorDiarioAjustado = Math.max(metaAjustada + saldoOntem, 0);
-        }
-
-        setValorDiario(valorDiarioAjustado);
+        setValorDiario(valorDiarioCalc);
       } catch (err) {
         console.log("Erro ao buscar dados:", err);
       }
@@ -264,100 +174,12 @@ export default function LastDance() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    async function calcularEstornosEPercentual() {
-      try {
-        const rGeral = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
-        );
-        const vendas = await rGeral.json();
-
-        const rEstornos = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_reembolso`
-        );
-        const reembolsos = await rEstornos.json();
-
-        if (!Array.isArray(vendas) || !Array.isArray(reembolsos)) return;
-
-        const inicioMes = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
-        const fimMes = new Date(
-          hojeBR.getFullYear(),
-          hojeBR.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-          999
-        );
-
-        // ✅ TOTAL GERAL EXATO (MESMA QUERY DO POSTGRES)
-        const totalGeral = vendas
-          .filter((i) => {
-            const dt = new Date(i.data);
-            return dt >= inicioMes && dt <= fimMes;
-          })
-          .reduce((acc, i) => acc + Number(i.valor || 0), 0);
-
-        setTotalVendido(totalGeral);
-
-        // ✅ TOTAL ESTORNOS EXATO (MESMA QUERY DO POSTGRES)
-        const totalEstornos = reembolsos
-          .filter((item) => {
-            const dt = new Date(item?.Data_de_Devolucao);
-            return (
-              dt >= inicioMes &&
-              dt <= fimMes &&
-              item?.Devolucao_Status === "Feito ✅"
-            );
-          })
-          .reduce((acc, item) => {
-            const valorSanitizado = String(item?.Estorno_R || "0")
-              .replace(/\s/g, "")
-              .replace("R$", "")
-              .replace(/\./g, "")
-              .replace(",", ".");
-            const valor = parseFloat(valorSanitizado);
-            return acc + (Number.isFinite(valor) ? valor : 0);
-          }, 0);
-
-        setTotalEstornos(totalEstornos);
-
-        // ✅ PERCENTUAL EXATO DO SQL
-        const percentual =
-          totalGeral > 0 ? (totalEstornos / totalGeral) * 100 : 0;
-        setPercentualEstornos(percentual);
-
-        console.log("LASTDANCE DEBUG totalGeral:", totalGeral);
-        console.log("LASTDANCE DEBUG totalEstornos:", totalEstornos);
-        console.log("LASTDANCE DEBUG percentual:", percentual);
-      } catch (err) {
-        console.log("Erro ao calcular estornos LastDance:", err);
-      }
-    }
-
-    calcularEstornosEPercentual();
-  }, []);
+  // 🎯 REMOVIDO O BUG — não altera mais totalVendido aqui
 
   function playSom() {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
     audioRef.current.play().catch(() => {});
-  }
-
-  function stopSom() {
-    if (!audioRef.current) return;
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-  }
-
-  function tocarAlertaTemporario() {
-    setMostrarVideo(true);
-    playSom();
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      stopSom();
-      setMostrarVideo(false);
-    }, 12000);
   }
 
   const metaProgress = Math.min(
@@ -370,18 +192,6 @@ export default function LastDance() {
     <>
       <style>{ANIMATION_STYLES}</style>
 
-      {mostrarVideo && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/85">
-          <video
-            autoPlay
-            loop
-            playsInline
-            className="h-[90vh] w-auto rounded-[24px] shadow-[0_0_32px_rgba(202,208,3,0.55)]"
-            src="/videos/comemora.mp4"
-          />
-        </div>
-      )}
-
       <div
         className="flex h-screen w-full flex-col overflow-hidden text-white"
         style={{
@@ -391,19 +201,15 @@ export default function LastDance() {
           gap: "1.6vh",
         }}
       >
+        {/* ---- HEADER ---- */}
         <div
           className="h-[15vh] w-full rounded-b-[26px] overflow-hidden shadow-[0_0_26px_rgba(255,255,255,0.28)]"
-          style={{
-            border: "2px solid rgba(255,255,255,0.12)",
-          }}
+          style={{ border: "2px solid rgba(255,255,255,0.12)" }}
         >
-          <img
-            src={logolastdance}
-            className="h-full w-full object-cover"
-            alt="Last Dance"
-          />
+          <img src={logolastdance} className="h-full w-full object-cover" />
         </div>
 
+        {/* ---- BLOCO PRINCIPAL ---- */}
         <div
           className="relative flex h-[38vh] items-center justify-center rounded-[32px]"
           style={{ ...CARD_FULL, background: BLOCO2_BACKGROUND }}
@@ -444,12 +250,10 @@ export default function LastDance() {
                     fontWeight: 900,
                     color: "rgba(255,255,255,0.95)",
                     textShadow: `
-        0 0 8px rgba(255,255,255,0.9),
-        0 0 20px rgba(221,4,78,0.6),
-        0 0 36px rgba(202,208,3,0.65)
-      `,
-                    letterSpacing: "-0.01em",
-                    lineHeight: "1",
+                      0 0 8px rgba(255,255,255,0.9),
+                      0 0 20px rgba(221,4,78,0.6),
+                      0 0 36px rgba(202,208,3,0.65)
+                  `,
                   }}
                 >
                   {numero}
@@ -459,7 +263,9 @@ export default function LastDance() {
           </div>
         </div>
 
+        {/* ---- BLOCOS INFERIORES ---- */}
         <div className="flex flex-col flex-1 gap-[1.6vh]">
+          {/* ---- CONTAGEM TOTAL + PROGRESSO ---- */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="relative flex flex-[2] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
@@ -489,56 +295,28 @@ export default function LastDance() {
                 <div
                   className="relative flex-1 h-[34px] rounded-full overflow-hidden"
                   style={{
-                    background:
-                      "linear-gradient(90deg, rgba(0,0,0,0.45), rgba(0,0,0,0.7))",
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+                    background: "transparent",
+                    border: `1px solid ${GOLD}`,
+                    backdropFilter: "blur(2px)",
                   }}
                 >
                   <div
-                    className="h-full rounded-full relative"
+                    className="h-full rounded-full"
                     style={{
                       width: `${metaProgress * 100}%`,
-                      background: `linear-gradient(90deg, ${GOLD} 0%, #fffaa5 55%, ${GOLD} 100%)`,
-                      boxShadow: GOLD_GLOW,
-                      transition: "width 1s cubic-bezier(0.25, 1, 0.5, 1)",
-                      backgroundSize: "160% 100%",
-                      animation:
-                        metaProgress > 0
-                          ? "progressFlow 3s linear infinite"
-                          : "none",
-                    }}
-                  >
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background:
-                          "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 90%)",
-                        transform: "translateX(-60%) skewX(-10deg)",
-                        animation:
-                          metaProgress > 0
-                            ? "shineSweep 3.2s ease-in-out infinite"
-                            : "none",
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    className="pointer-events-none absolute inset-0 rounded-full"
-                    style={{
-                      backgroundImage: PROGRESS_SPARKLES,
-                      backgroundSize: "140% 100%",
-                      animation: "progressShimmer 3s linear infinite",
+                      background: `linear-gradient(90deg, ${GOLD}, #f7ff82, ${GOLD})`,
+                      transition: "width 0.8s ease-in-out",
+                      boxShadow: `0 0 12px rgba(202,208,3,0.55)`,
                     }}
                   />
 
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <span
-                      className="text-[2rem] font-extrabold uppercase tracking-[0.16em]"
+                      className="text-[1.8rem] font-extrabold uppercase tracking-[0.12em]"
                       style={{
-                        color: "rgba(0,0,0,0.82)",
-                        textShadow: "0 0 12px rgba(255,255,255,0.55)",
-                        letterSpacing: "0.16em",
+                        color: "white",
+                        textShadow:
+                          "0 0 6px rgba(255,255,255,0.85), 0 0 18px rgba(255,255,255,0.65)",
                       }}
                     >
                       {metaPercent}%
@@ -548,7 +326,7 @@ export default function LastDance() {
 
                 <span
                   className="text-[1.2rem] font-bold whitespace-nowrap"
-                  style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
+                  style={{ color: "white", textShadow: PINK_GLOW }}
                 >
                   {formatarValor(META_MENSAL)}
                 </span>
@@ -559,8 +337,7 @@ export default function LastDance() {
               className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
               style={{
                 ...CARD_STYLE,
-                background:
-                  "radial-gradient(circle at center, rgba(255,255,255,0.10), transparent 70%), #000",
+                background: BLOCO4_BACKGROUND,
               }}
             >
               <span
@@ -579,31 +356,24 @@ export default function LastDance() {
             </div>
           </div>
 
+          {/* ---- TABELA ---- */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
-              className="flex flex-[2] rounded-[32px] overflow-visible"
+              className="flex flex-[2] rounded-[32px] overflow-hidden"
               style={{ ...CARD_FULL, background: BLOCO4_BACKGROUND }}
             >
               <table className="w-full h-full text-center text-white table-fixed">
-                <colgroup>
-                  <col className="w-[10%]" />
-                  <col className="w-[32%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[18%]" />
-                </colgroup>
-
                 <thead>
                   <tr style={{ background: TABLE_HEADER_BG }}>
                     {["Lead", "Empresa", "Vendedor", "Pipeline", "Valor"].map(
                       (label, idx) => (
                         <th
-                          key={label}
+                          key={idx}
                           className="text-[1.45rem] py-[0.6vh]"
                           style={{
-                            color: WHITE_GLOW,
-                            textShadow: PINK_GLOW,
-                            textAlign: idx === 4 ? "center" : "center",
+                            color: GOLD,
+                            textShadow: GOLD_GLOW,
+                            textAlign: "center",
                           }}
                         >
                           {label}
@@ -622,32 +392,11 @@ export default function LastDance() {
                           i % 2 === 0 ? TABLE_ROW_ODD_BG : TABLE_ROW_EVEN_BG,
                       }}
                     >
-                      <td
-                        className="py-[0.4vh] text-center"
-                        style={{ color: WHITE_GLOW }}
-                      >
-                        {item.lead_id}
-                      </td>
-
-                      <td
-                        className="text-center truncate px-[0.4vw]"
-                        style={{ color: WHITE_GLOW }}
-                      >
-                        {item.empresa}
-                      </td>
-
-                      <td className="text-center" style={{ color: WHITE_GLOW }}>
-                        {item.assigned}
-                      </td>
-
-                      <td className="text-center" style={{ color: WHITE_GLOW }}>
-                        {item.pipeline}
-                      </td>
-
-                      <td
-                        className="text-center pr-[1vw]"
-                        style={{ color: WHITE_GLOW, whiteSpace: "nowrap" }}
-                      >
+                      <td style={{ color: WHITE_GLOW }}>{item.lead_id}</td>
+                      <td style={{ color: WHITE_GLOW }}>{item.empresa}</td>
+                      <td style={{ color: WHITE_GLOW }}>{item.assigned}</td>
+                      <td style={{ color: WHITE_GLOW }}>{item.pipeline}</td>
+                      <td style={{ color: WHITE_GLOW }}>
                         {formatarValor(item.valor)}
                       </td>
                     </tr>
@@ -656,12 +405,12 @@ export default function LastDance() {
               </table>
             </div>
 
+            {/* ---- ESTORNOS ---- */}
             <div
               className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
               style={{
                 ...CARD_STYLE,
-                background:
-                  "radial-gradient(circle at center, rgba(255,255,255,0.10), transparent 70%), #000",
+                background: BLOCO4_BACKGROUND,
               }}
             >
               <span
@@ -675,14 +424,14 @@ export default function LastDance() {
                 className="text-[6rem] font-black leading-none"
                 style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
               >
-                {formatarValor(totalEstornos)}
+                0,00
               </span>
 
               <span
                 className="text-[2rem] font-semibold"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                {percentualEstornos.toFixed(2)}%
+                0,00%
               </span>
             </div>
           </div>

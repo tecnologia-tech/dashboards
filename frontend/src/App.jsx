@@ -79,7 +79,7 @@ export default function App() {
         <Route path="/" element={<TVSelection />} />
 
         <Route path="/tv1" element={<Navigate to="/geral" replace />} />
-        <Route path="/tv2" element={<Navigate to="/Avisos" replace />} />
+        <Route path="/tv2" element={<Navigate to="/Lastdance" replace />} />
         <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
         {/* TV1 */}
@@ -104,11 +104,11 @@ export default function App() {
 
         {/* TV2 */}
         <Route
-          path="/Avisos"
+          path="/Lastdance"
           element={
             <>
               <AutoRotate
-                rotas={[{ path: "/Avisos" }]}
+                rotas={[{ path: "/Lastdance" }]}
                 tempoRotacao={2 * 60 * 1000}
                 tempoRefresh={1 * 60 * 1000}
               />
@@ -116,7 +116,7 @@ export default function App() {
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}
                 >
-                  <Avisos />
+                  <LastDance />
                 </Suspense>
               </TelaComRefresh>
             </>
