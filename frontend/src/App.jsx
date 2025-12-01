@@ -1,4 +1,11 @@
-import { Suspense, lazy } from "react";
+import {
+  Suspense,
+  createContext,
+  lazy,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import AutoRotate from "./components/AutoRotate";
@@ -12,19 +19,49 @@ const Geral = lazy(() => import("./pages/Geral/Geral"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const Avisos = lazy(() => import("./pages/Avisos/Avisos"));
 
-/* ============================================
-   WRAPPER PARA FORÇAR REMONTAGEM (REFRESH)
-=============================================== */
-import { useEffect, useState } from "react";
+/* ===========================================================
+   PRELOAD - Remove delay do lazy
+=========================================================== */
+import("./pages/Farmers/Farmers");
+import("./pages/Hunters/Hunters");
 
+/* ===========================================================
+   CONTEXTO INTERNO DA TV3 — NÃO EXPORTADO!
+=========================================================== */
+const TV3Context = createContext(null);
+
+function TV3Provider({ children }) {
+  const [dados, setDados] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      const res = await fetch(
+        "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+      );
+      const data = await res.json();
+      setDados(data);
+    }
+    load();
+  }, []);
+
+  return <TV3Context.Provider value={dados}>{children}</TV3Context.Provider>;
+}
+
+// Hook local (não exportado)
+function useTV3() {
+  return useContext(TV3Context);
+}
+
+/* ===========================================================
+   WRAPPER PARA FORÇAR REMONTAGEM
+=========================================================== */
 function TelaComRefresh({ children }) {
   const [key, setKey] = useState(0);
 
   useEffect(() => {
     function refresh() {
-      setKey((k) => k + 1); // força re-render
+      setKey((k) => k + 1);
     }
-
     document.addEventListener("refreshTela", refresh);
     return () => document.removeEventListener("refreshTela", refresh);
   }, []);
@@ -32,24 +69,20 @@ function TelaComRefresh({ children }) {
   return <div key={key}>{children}</div>;
 }
 
-/* ============================================
+/* ===========================================================
    APP PRINCIPAL
-=============================================== */
+=========================================================== */
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Seleção de TVs */}
         <Route path="/" element={<TVSelection />} />
 
-        {/* Atalhos */}
         <Route path="/tv1" element={<Navigate to="/geral" replace />} />
         <Route path="/tv2" element={<Navigate to="/Avisos" replace />} />
         <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
-        {/* =====================================================
-            TV1 — Geral fixa com refresh
-        ===================================================== */}
+        {/* TV1 */}
         <Route
           path="/geral"
           element={
@@ -58,7 +91,6 @@ export default function App() {
                 rotas={[{ path: "/geral" }]}
                 tempoRefresh={5 * 60 * 1000}
               />
-
               <TelaComRefresh>
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}
@@ -70,9 +102,7 @@ export default function App() {
           }
         />
 
-        {/* =====================================================
-            TV2 — BlackFriday fixa
-        ===================================================== */}
+        {/* TV2 */}
         <Route
           path="/Avisos"
           element={
@@ -82,7 +112,6 @@ export default function App() {
                 tempoRotacao={2 * 60 * 1000}
                 tempoRefresh={1 * 60 * 1000}
               />
-
               <TelaComRefresh>
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}
@@ -95,51 +124,27 @@ export default function App() {
         />
 
         {/* =====================================================
-            TV3 — Farmers ↔ Hunters (15s)
+           TV3 — Provider + Farmers/Hunters sem tela branca
         ===================================================== */}
         <Route
           path="/farmers"
           element={
-            <>
-              <AutoRotate
-                rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                tempoRotacao={15 * 1000}
-                tempoRefresh={1 * 60 * 1000}
-              />
-
-              <TelaComRefresh>
-                <Suspense
-                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
-                >
-                  <Farmers />
-                </Suspense>
-              </TelaComRefresh>
-            </>
+            <TV3Provider>
+              <TV3Wrapper component="farmers" />
+            </TV3Provider>
           }
         />
 
         <Route
           path="/hunters"
           element={
-            <>
-              <AutoRotate
-                rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
-                tempoRotacao={15 * 1000}
-                tempoRefresh={1 * 60 * 1000}
-              />
-
-              <TelaComRefresh>
-                <Suspense
-                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
-                >
-                  <Hunters />
-                </Suspense>
-              </TelaComRefresh>
-            </>
+            <TV3Provider>
+              <TV3Wrapper component="hunters" />
+            </TV3Provider>
           }
         />
 
-        {/* Página isolada */}
+        {/* LastDance */}
         <Route
           path="/lastdance"
           element={
@@ -151,9 +156,36 @@ export default function App() {
           }
         />
 
-        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+/* ===========================================================
+   WRAPPER DA TV3 — entrega dados como props
+=========================================================== */
+function TV3Wrapper({ component }) {
+  const dados = useTV3();
+
+  // Primeira montagem da TV3 — ainda carregando
+  if (!dados) return <div style={{ color: "white" }}>Carregando dados…</div>;
+
+  return (
+    <>
+      <AutoRotate
+        rotas={[{ path: "/farmers" }, { path: "/hunters" }]}
+        tempoRotacao={35 * 1000}
+        tempoRefresh={1 * 60 * 1000}
+      />
+
+      <TelaComRefresh>
+        {component === "farmers" ? (
+          <Farmers dados={dados} />
+        ) : (
+          <Hunters dados={dados} />
+        )}
+      </TelaComRefresh>
+    </>
   );
 }

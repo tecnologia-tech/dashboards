@@ -1,4 +1,3 @@
-import React from "react";
 import farmersImg from "../../assets/Farmers/Farmers.png";
 
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
@@ -185,76 +184,67 @@ const FARMERS = [
   { label: "Andrés", db: "Andrés Apolionario", meta: 0 },
 ];
 
-export default function Farmers() {
-  const [total, setTotal] = React.useState(null);
-  const [farmers, setFarmers] = React.useState([]);
+export default function Farmers({ dados }) {
+  // Caso ainda não tenha chegado o fetch do Provider:
+  if (!dados) return null;
 
-  React.useEffect(() => {
-    async function loadData() {
-      const res = await fetch(
-        "https://dashboards-exur.onrender.com/api/dash_geralcswon"
-      );
-      const data = await res.json();
+  // ============================================
+  // PROCESSAMENTO DE DADOS (SEM FETCH)
+  // ============================================
+  const parsed = dados.map((d) => ({
+    ...d,
+    valor: Number(d.valor) || 0,
+    data: new Date(d.data),
+    assigned: d.assigned?.trim() || "",
+  }));
 
-      const parsed = data.map((d) => ({
-        ...d,
-        valor: Number(d.valor) || 0,
-        data: new Date(d.data),
-        assigned: d.assigned?.trim() || "",
-      }));
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth(); // 0 = janeiro, 11 = dezembro
+  const start = new Date(year, month, 1, 0, 0, 0);
+  const end = new Date(year, month + 1, 0, 23, 59, 59);
 
-      const start = new Date(year, month, 1, 0, 0, 0);
-      const end = new Date(year, month + 1, 0, 23, 59, 59);
+  const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
 
-      const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
+  let totalVendas = 0;
+  let totalVendido = 0;
 
-      let totalVendas = 0;
-      let totalVendido = 0;
+  let farmersCalc = FARMERS.map((f) => {
+    const rows = filtered.filter(
+      (r) => r.assigned.toLowerCase() === f.db.trim().toLowerCase()
+    );
 
-      let farmersCalc = FARMERS.map((f) => {
-        const rows = filtered.filter(
-          (r) => r.assigned.toLowerCase() === f.db.trim().toLowerCase()
-        );
+    const vendas = rows.length;
+    const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
 
-        const vendas = rows.length;
-        const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
+    totalVendas += vendas;
+    totalVendido += vendido;
 
-        totalVendas += vendas;
-        totalVendido += vendido;
+    return {
+      nome: f.label,
+      vendas,
+      vendido,
+      meta: f.meta,
+    };
+  });
 
-        return {
-          nome: f.label,
-          vendas,
-          vendido,
-          meta: f.meta,
-        };
-      });
+  farmersCalc.sort((a, b) => b.vendido - a.vendido);
 
-      farmersCalc.sort((a, b) => b.vendido - a.vendido);
+  const farmers = farmersCalc;
 
-      setFarmers(farmersCalc);
-
-      const metaTotal = FARMERS.reduce((acc, f) => acc + f.meta, 0);
-
-      setTotal({
-        vendas: totalVendas,
-        vendido: totalVendido,
-        meta: metaTotal,
-      });
-    }
-
-    loadData();
-  }, []);
-
-  if (!total) return null;
+  const total = {
+    vendas: totalVendas,
+    vendido: totalVendido,
+    meta: FARMERS.reduce((acc, f) => acc + f.meta, 0),
+  };
 
   const percentualGeral =
     total.meta > 0 ? Math.round((total.vendido / total.meta) * 100) : 0;
 
+  // ============================================
+  // INTERFACE — IGUAL AO SEU CÓDIGO ORIGINAL
+  // ============================================
   return (
     <>
       <style>{ANIMATION_STYLES}</style>
@@ -294,7 +284,7 @@ export default function Farmers() {
             }}
           >
             <div className="flex w-full items-stretch gap-6 flex-nowrap overflow-hidden">
-              {/* TÍTULO GERAL FARMER */}
+              {/* TÍTULO */}
               <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden text-center text-[26px] leading-tight text-[#9fcfff] animate-[iceBreath_5.5s_ease-in-out_infinite_alternate,heatShimmer_16s_ease-in-out_infinite]">
                 <span className="text-[65px] font-bold leading-none">
                   Geral
@@ -347,10 +337,12 @@ export default function Farmers() {
               })}
             </div>
           </div>
+
           {/* GRID DE FARMERS */}
           <div className="relative z-10 grid flex-1 grid-cols-2 gap-2">
             {farmers.map((f, index) => {
               const photo = getFarmerImage(f.nome, index);
+
               const pctNumber = f.meta > 0 ? (f.vendido / f.meta) * 100 : 0;
               const pctCapped = Math.min(Math.max(pctNumber, 0), 100);
               const pctLabel = pctCapped.toFixed(0);
@@ -366,27 +358,26 @@ export default function Farmers() {
                       "inset 0 0 25px rgba(75,120,160,0.25), 0 0 35px rgba(40,80,110,0.25)",
                   }}
                 >
-                  {/* glow full card */}
+                  {/* GLOW */}
                   <div className="pointer-events-none absolute inset-0 farmer-full-glow" />
 
                   {/* COLUNA ESQUERDA */}
                   <div className="relative z-10 flex w-[260px] flex-col items-center gap-[19px]">
-                    {/* trilha interna */}
                     <div className="absolute inset-0 pointer-events-none farmer-column-glow" />
 
-                    {/* porcentagem */}
+                    {/* PORCENTAGEM */}
                     <div
                       className="relative mb-3 text-[33px] font-bold text-[#e4f5ff]"
                       style={{
                         textShadow: "0 0 6px rgba(159,207,255,0.35)",
                         animation:
-                          "iceBreath 5.5s ease-in-out infinite alternate, heatShimmer 12s ease-in-out infinite",
+                          "iceBreath 5.5s_ease-in-out_infinite_alternate,heatShimmer_12s_ease-in-out_infinite",
                       }}
                     >
                       {pctLabel}%
                     </div>
 
-                    {/* gauge + partículas + foto */}
+                    {/* GAUGE + FOTO */}
                     <div
                       className="relative flex h-[150px] w-[220px] items-start justify-center"
                       style={{
@@ -394,7 +385,6 @@ export default function Farmers() {
                           "radial-gradient(circle at 50% 70%, rgba(150,200,255,0.18), transparent 75%)",
                       }}
                     >
-                      {/* partículas de neve */}
                       <div className="farmer-particles">
                         {Array.from({ length: 14 }).map((_, i) => (
                           <span
@@ -421,13 +411,13 @@ export default function Farmers() {
                       )}
                     </div>
 
-                    {/* nome */}
+                    {/* NOME */}
                     <div
                       className="relative mt-[-30px] inline-flex items-center justify-center gap-[6px] text-center text-[36px] font-bold text-[#e4f5ff]"
                       style={{
                         textShadow: "0 0 6px rgba(159,207,255,0.35)",
                         animation:
-                          "iceBreath 5.5s ease-in-out infinite alternate, heatShimmer 14s ease-in-out infinite",
+                          "iceBreath 5.5s_ease-in-out_infinite_alternate,heatShimmer_14s_ease-in-out_infinite",
                       }}
                     >
                       <span
@@ -441,7 +431,7 @@ export default function Farmers() {
                       {f.nome}
                     </div>
 
-                    {/* badge */}
+                    {/* BADGE */}
                     {getFarmerBadge(f.nome) && (
                       <div className="relative flex items-center justify-center">
                         <img
@@ -459,6 +449,7 @@ export default function Farmers() {
                           }}
                           alt={`${f.nome} badge`}
                         />
+
                         <span
                           className="pointer-events-none absolute inset-0"
                           style={{
@@ -520,7 +511,7 @@ export default function Farmers() {
             })}
           </div>
 
-          {/* OVERLAY DE NEVE NO FUNDO */}
+          {/* SNOW EFFECT */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -536,6 +527,7 @@ export default function Farmers() {
     </>
   );
 }
+
 /* ========================= GAUGE ========================= */
 function Gauge({ percent }) {
   const pct = Math.min(Math.max(percent, 0), 100);

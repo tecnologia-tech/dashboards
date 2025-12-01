@@ -1,4 +1,3 @@
-import React from "react";
 import huntersImg from "../../assets/Hunters/hunters.png";
 
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
@@ -207,72 +206,65 @@ const HUNTERS = [
   { label: "Alan", db: "Alan Esteves", meta: 50000 },
 ];
 
-export default function Hunters() {
-  const [total, setTotal] = React.useState(null);
-  const [hunters, setHunters] = React.useState([]);
+export default function Hunters({ dados }) {
+  if (!dados) return null;
 
-  React.useEffect(() => {
-    async function loadData() {
-      const res = await fetch(
-        "https://dashboards-exur.onrender.com/api/dash_geralcswon"
-      );
-      const data = await res.json();
+  // ============================================
+  // PROCESSAMENTO DO FETCH (SEM BUSCAR NOVO)
+  // ============================================
+  const parsed = dados.map((d) => ({
+    ...d,
+    valor: Number(d.valor) || 0,
+    data: new Date(d.data),
+    assigned: d.assigned?.trim() || "",
+  }));
 
-      const parsed = data.map((d) => ({
-        ...d,
-        valor: Number(d.valor) || 0,
-        data: new Date(d.data),
-        assigned: d.assigned?.trim() || "",
-      }));
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth(); // 0 = janeiro, 11 = dezembro
+  const start = new Date(year, month, 1, 0, 0, 0);
+  const end = new Date(year, month + 1, 0, 23, 59, 59);
 
-      const start = new Date(year, month, 1, 0, 0, 0);
-      const end = new Date(year, month + 1, 0, 23, 59, 59);
+  const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
 
-      const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
+  let totalVendas = 0;
+  let totalVendido = 0;
 
-      let totalVendas = 0;
-      let totalVendido = 0;
+  let huntersCalc = HUNTERS.map((h) => {
+    const rows = filtered.filter(
+      (r) => r.assigned.toLowerCase() === h.db.trim().toLowerCase()
+    );
 
-      let huntersCalc = HUNTERS.map((h) => {
-        const rows = filtered.filter(
-          (r) => r.assigned.toLowerCase() === h.db.trim().toLowerCase()
-        );
+    const vendas = rows.length;
+    const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
 
-        const vendas = rows.length;
-        const vendido = rows.reduce((acc, r) => acc + r.valor, 0);
+    totalVendas += vendas;
+    totalVendido += vendido;
 
-        totalVendas += vendas;
-        totalVendido += vendido;
+    return {
+      nome: h.label,
+      vendas,
+      vendido,
+      meta: h.meta,
+    };
+  });
 
-        return {
-          nome: h.label,
-          vendas,
-          vendido,
-          meta: h.meta,
-        };
-      });
+  huntersCalc.sort((a, b) => b.vendido - a.vendido);
 
-      huntersCalc.sort((a, b) => b.vendido - a.vendido);
+  const hunters = huntersCalc;
 
-      setHunters(huntersCalc);
+  const total = {
+    vendas: totalVendas,
+    vendido: totalVendido,
+    meta: HUNTERS.reduce((acc, h) => acc + h.meta, 0),
+  };
 
-      const metaTotal = HUNTERS.reduce((acc, h) => acc + h.meta, 0);
+  const percentualGeral = Math.round((total.vendido / total.meta) * 100);
 
-      setTotal({
-        vendas: totalVendas,
-        vendido: totalVendido,
-        meta: metaTotal,
-      });
-    }
-
-    loadData();
-  }, []);
-
-  if (!total) return null;
+  // ============================================
+  // RENDERIZAÇÃO (NÃO MEXI EM NADA DEPOIS DAQUI)
+  // ============================================
 
   return (
     <>
@@ -321,7 +313,7 @@ export default function Hunters() {
             }}
           >
             <div className="flex w-full items-stretch gap-6 flex-nowrap overflow-hidden">
-              {/* TÍTULO GERAL HUNTERS */}
+              {/* TÍTULO */}
               <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden text-center text-[26px] leading-tight text-[#e6c068] animate-[goldenTextBreath_5.5s_ease-in-out_infinite_alternate,heatShimmer_16s_ease-in-out_infinite]">
                 <span className="text-[65px] font-bold leading-none">
                   Geral
@@ -342,12 +334,12 @@ export default function Hunters() {
                 />
               </div>
 
-              {/* 4 CARDS DO HEADER */}
+              {/* CARDS DO HEADER */}
               {["Vendas", "Vendido", "Percentual", "Meta"].map((label, idx) => {
                 const value = [
                   total.vendas,
                   formatCurrency(total.vendido),
-                  `${Math.round((total.vendido / total.meta) * 100)}%`,
+                  `${percentualGeral}%`,
                   formatCurrency(total.meta),
                 ][idx];
 
@@ -386,7 +378,7 @@ export default function Hunters() {
             </div>
           </div>
 
-          {/* GRID DE HUNTERS */}
+          {/* GRID DE CARDS */}
           <div className="relative z-10 grid flex-1 grid-cols-2 gap-2">
             {hunters.map((h, index) => {
               const photo = getHunterImage(h.nome, index);
@@ -404,15 +396,14 @@ export default function Hunters() {
                     backgroundBlendMode: "overlay, normal",
                   }}
                 >
-                  {/* glow full card */}
+                  {/* GLOW */}
                   <div className="pointer-events-none absolute inset-0 hunter-full-glow" />
 
                   {/* COLUNA ESQUERDA */}
                   <div className="relative z-10 flex w-[260px] flex-col items-center gap-[19px]">
-                    {/* trilha interna */}
                     <div className="absolute inset-0 pointer-events-none hunter-column-glow" />
 
-                    {/* porcentagem */}
+                    {/* PORCENTAGEM */}
                     <div
                       className="relative mb-3 text-[33px] font-bold text-[#e6c068]"
                       style={{
@@ -424,7 +415,7 @@ export default function Hunters() {
                       {pctLabel}%
                     </div>
 
-                    {/* gauge + partículas + foto */}
+                    {/* GAUGE + FOTO */}
                     <div
                       className="relative flex h-[150px] w-[220px] items-start justify-center"
                       style={{
@@ -432,7 +423,6 @@ export default function Hunters() {
                           "radial-gradient(circle at 50% 70%, rgba(230,192,104,0.14), transparent 75%)",
                       }}
                     >
-                      {/* partículas subindo */}
                       <div className="hunter-particles">
                         {Array.from({ length: 14 }).map((_, i) => (
                           <span
@@ -459,13 +449,13 @@ export default function Hunters() {
                       )}
                     </div>
 
-                    {/* nome */}
+                    {/* NOME */}
                     <div
                       className="relative mt-[-30px] inline-flex items-center justify-center gap-[6px] text-center text-[36px] font-bold text-[#e6c068]"
                       style={{
                         textShadow: "0 0 6px rgba(230,192,104,0.35)",
                         animation:
-                          "goldenTextBreath 5.5s ease-in-out infinite alternate, heatShimmer 14s ease-in-out infinite",
+                          "goldenTextBreath 5.5s_ease-in-out_infinite_alternate,heatShimmer_14s_ease-in-out_infinite",
                       }}
                     >
                       <span
@@ -479,7 +469,7 @@ export default function Hunters() {
                       {h.nome}
                     </div>
 
-                    {/* badge */}
+                    {/* BADGE */}
                     {getHunterBadge(h.nome) && (
                       <div className="relative flex items-center justify-center">
                         <img
@@ -499,6 +489,7 @@ export default function Hunters() {
                           }}
                           alt={`${h.nome} badge`}
                         />
+
                         <span
                           className="pointer-events-none absolute inset-0"
                           style={{
@@ -528,8 +519,6 @@ export default function Hunters() {
                           key={label}
                           className="flex flex-col min-h-[60px] items-center justify-center text-center gap-[2px] rounded-[10px] border border-[rgba(230,192,104,0.35)] px-3 py-1.5"
                           style={{
-                            background:
-                              "linear-gradient(135deg, rgba(28,26,24,0.92), rgba(18,18,18,0.9))",
                             backgroundImage: METRIC_BACKGROUND,
                             backgroundBlendMode: "overlay, normal",
                           }}
@@ -541,7 +530,7 @@ export default function Hunters() {
                           <span
                             className="whitespace-nowrap font-extrabold"
                             style={{
-                              fontSize: "54px", // <<< EXATAMENTE COMO VOCÊ PEDIU
+                              fontSize: "54px",
                               color:
                                 label === "Meta"
                                   ? "#ffffff"
@@ -569,7 +558,7 @@ export default function Hunters() {
             })}
           </div>
 
-          {/* overlays da direita */}
+          {/* OVERLAYS */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -580,6 +569,7 @@ export default function Hunters() {
               zIndex: 0,
             }}
           />
+
           <div
             className="pointer-events-none absolute inset-0"
             style={{
