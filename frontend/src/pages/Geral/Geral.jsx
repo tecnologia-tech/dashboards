@@ -64,17 +64,6 @@ const CARD_BACKGROUND =
 const RUNE_BACKGROUND =
   "radial-gradient(2px 6px at 12% 90%, rgba(230,192,104,0.12), transparent 60%), radial-gradient(2px 7px at 32% 95%, rgba(255,190,111,0.10), transparent 60%), radial-gradient(3px 8px at 54% 92%, rgba(255,214,170,0.08), transparent 60%), radial-gradient(2px 6px at 76% 94%, rgba(230,192,104,0.10), transparent 60%), radial-gradient(3px 9px at 88% 90%, rgba(255,190,111,0.10), transparent 60%), repeating-linear-gradient(110deg, rgba(230,192,104,0.05) 0 2px, transparent 2px 12px), radial-gradient(120% 140% at 50% 50%, rgba(230,192,104,0.05), transparent 65%)";
 
-const agora = new Date();
-const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-const fimMes = new Date(
-  agora.getFullYear(),
-  agora.getMonth() + 1,
-  0,
-  23,
-  59,
-  59
-);
-
 // ====================== FUNÇÕES AUXILIARES ======================
 async function contarOnboard(nome) {
   const res = await fetch(
@@ -103,6 +92,21 @@ function parseDataBR(d) {
   return new Date(d.replace(" ", "T"));
 }
 
+// intervalo do MÊS ATUAL (local)
+function getIntervaloMesAtual() {
+  const agora = new Date(); // horário local do browser
+  const inicio = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0);
+  const fim = new Date(
+    agora.getFullYear(),
+    agora.getMonth() + 1,
+    0,
+    23,
+    59,
+    59
+  );
+  return { inicio, fim };
+}
+
 function formatarValor(n) {
   if (!n) return "0";
 
@@ -125,21 +129,21 @@ export default function Geral() {
   const metaLTDA = 1500000;
   const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
 
-  // CS — último mês com dados
+  // CS — mês atual
   const [valueCS, setValueCS] = useState(0);
   const [estornosCS, setEstornosCS] = useState(0);
   const metaCS = 800000;
 
-  // REPEDITOS
+  // REPEDITOS — mês atual
   const [valueRepedidos, setValueRepedidos] = useState(0);
   const [estornosRepedidos, setEstornosRepedidos] = useState(0);
   const metaRepedidos = 200000;
 
-  // BÔNUS
+  // BÔNUS — mês atual
   const [valueBonus, setValueBonus] = useState(0);
   const metaBonus = 300000;
 
-  // 12P
+  // 12P — mês atual
   const [value12P, setValue12P] = useState(0);
   const [estornos12P, setEstornos12P] = useState(0);
   const meta12P = 2800000;
@@ -170,11 +174,11 @@ export default function Geral() {
         const res = await fetch(CSV_URL);
         const text = await res.text();
 
-        const rows = text.split("\\n");
+        const rows = text.split("\n");
         const linha9 = rows[8] || ""; // linha onde está F9 / G9
 
         // Pega todos os valores no formato 9.999,99
-        const matches = linha9.match(/\\d{1,3}(?:\\.\\d{3})*,\\d{2}/g) || [];
+        const matches = linha9.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g) || [];
 
         const valorDolar = matches[0] || "";
         const valorReal = matches[1] || "";
@@ -217,6 +221,7 @@ export default function Geral() {
     loadCompras();
   }, []);
 
+  // Atracam esse mês (já estava usando mês atual corretamente)
   useEffect(() => {
     async function loadAtracam() {
       try {
@@ -225,16 +230,7 @@ export default function Geral() {
         );
         const data = await res.json();
 
-        const agora = new Date();
-        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-        const fimMes = new Date(
-          agora.getFullYear(),
-          agora.getMonth() + 1,
-          0,
-          23,
-          59,
-          59
-        );
+        const { inicio, fim } = getIntervaloMesAtual();
 
         const total = data.filter((i) => {
           if (i.grupo !== "⭐Em Andamento") return false;
@@ -242,7 +238,7 @@ export default function Geral() {
 
           const eta = new Date(i.ETA.replace(" ", "T"));
 
-          return eta >= inicioMes && eta <= fimMes;
+          return eta >= inicio && eta <= fim;
         }).length;
 
         setAtracamMes(total);
@@ -254,6 +250,7 @@ export default function Geral() {
     loadAtracam();
   }, []);
 
+  // Reembolso / Estorno / Reclame Aqui — sempre mês atual
   useEffect(() => {
     async function loadReembolso() {
       try {
@@ -262,9 +259,11 @@ export default function Geral() {
         );
         const dados = await res.json();
 
+        const { inicio, fim } = getIntervaloMesAtual();
+
         const filtroMes = dados.filter((i) => {
           const d = new Date(i.Data_Reclamacao.replace(" ", "T"));
-          return d >= inicioMes && d <= fimMes;
+          return d >= inicio && d <= fim;
         });
 
         // Faturamento = value12P
@@ -297,7 +296,7 @@ export default function Geral() {
     loadReembolso();
   }, [value12P]);
 
-  // LTDA — último mês com dados
+  // LTDA — SEMPRE MÊS ATUAL
   useEffect(() => {
     async function loadDataLTDA() {
       try {
@@ -311,26 +310,9 @@ export default function Geral() {
         );
         const est = await resEst.json();
 
-        // PEGAR TODAS AS DATAS DO LTDA
-        const datasLTDA = geral
-          .filter((i) => ["15", "75"].includes(String(i.pipeline_id)))
-          .map((i) => parseDataBR(i.data));
+        const { inicio, fim } = getIntervaloMesAtual();
 
-        if (datasLTDA.length === 0) {
-          setValueLTDA(0);
-          setEstornosLTDA(0);
-          return;
-        }
-
-        // ÚLTIMO MÊS COM DADOS
-        const ultima = new Date(Math.max(...datasLTDA.map((d) => d.getTime())));
-        const ano = ultima.getFullYear();
-        const mes = ultima.getMonth();
-
-        const inicio = new Date(ano, mes, 1, 0, 0, 0);
-        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
-
-        // VALOR LTDA
+        // VALOR LTDA no mês atual
         const totalLTDA = geral
           .filter(
             (i) =>
@@ -342,7 +324,7 @@ export default function Geral() {
 
         setValueLTDA(totalLTDA);
 
-        // ESTORNOS
+        // ESTORNOS no mês atual
         const permitidos = [
           "DISNEYLEADS 🟡⚫️",
           "IMPORTAÇÃO CONJUNTA 12PXP 🟠🧩",
@@ -366,7 +348,7 @@ export default function Geral() {
     loadDataLTDA();
   }, []);
 
-  // CS — último mês com dados
+  // CS (Hunters) — SEMPRE MÊS ATUAL
   useEffect(() => {
     async function loadCS() {
       try {
@@ -387,22 +369,7 @@ export default function Geral() {
           "Alan Esteves",
         ];
 
-        const datasCS = geral
-          .filter((i) => CS_RESP.includes(i.assigned))
-          .map((i) => parseDataBR(i.data));
-
-        if (datasCS.length === 0) {
-          setValueCS(0);
-          setEstornosCS(0);
-          return;
-        }
-
-        const ultima = new Date(Math.max(...datasCS.map((d) => d.getTime())));
-        const ano = ultima.getFullYear();
-        const mes = ultima.getMonth();
-
-        const inicio = new Date(ano, mes, 1, 0, 0, 0);
-        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+        const { inicio, fim } = getIntervaloMesAtual();
 
         const totalCS = geral
           .filter(
@@ -433,7 +400,7 @@ export default function Geral() {
     loadCS();
   }, []);
 
-  // Bônus — último mês com dados
+  // Bônus — SEMPRE MÊS ATUAL
   useEffect(() => {
     async function loadBonus() {
       try {
@@ -444,23 +411,7 @@ export default function Geral() {
 
         const BONUS_PIPELINES = ["63", "35", "59"];
 
-        const datasBonus = geral
-          .filter((i) => BONUS_PIPELINES.includes(String(i.pipeline_id)))
-          .map((i) => parseDataBR(i.data));
-
-        if (datasBonus.length === 0) {
-          setValueBonus(0);
-          return;
-        }
-
-        const ultima = new Date(
-          Math.max(...datasBonus.map((d) => d.getTime()))
-        );
-        const ano = ultima.getFullYear();
-        const mes = ultima.getMonth();
-
-        const inicio = new Date(ano, mes, 1, 0, 0, 0);
-        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+        const { inicio, fim } = getIntervaloMesAtual();
 
         const totalBonus = geral
           .filter(
@@ -480,7 +431,7 @@ export default function Geral() {
     loadBonus();
   }, []);
 
-  // Repedidos — último mês com dados
+  // Repedidos — SEMPRE MÊS ATUAL
   useEffect(() => {
     async function loadRepedidos() {
       try {
@@ -496,22 +447,7 @@ export default function Geral() {
 
         const REP_RESP = ["Victor Biselli", "Raul Cruz", "Cleyton Cruz"];
 
-        const datasRep = geral
-          .filter((i) => REP_RESP.includes(i.assigned))
-          .map((i) => parseDataBR(i.data));
-
-        if (datasRep.length === 0) {
-          setValueRepedidos(0);
-          setEstornosRepedidos(0);
-          return;
-        }
-
-        const ultima = new Date(Math.max(...datasRep.map((d) => d.getTime())));
-        const ano = ultima.getFullYear();
-        const mes = ultima.getMonth();
-
-        const inicio = new Date(ano, mes, 1, 0, 0, 0);
-        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+        const { inicio, fim } = getIntervaloMesAtual();
 
         const totalRep = geral
           .filter(
@@ -542,7 +478,7 @@ export default function Geral() {
     loadRepedidos();
   }, []);
 
-  // 12P — último mês com dados
+  // 12P — SEMPRE MÊS ATUAL
   useEffect(() => {
     async function load12P() {
       try {
@@ -556,20 +492,7 @@ export default function Geral() {
         );
         const estornos = await resEst.json();
 
-        const datas12P = geral.map((i) => parseDataBR(i.data));
-
-        if (datas12P.length === 0) {
-          setValue12P(0);
-          setEstornos12P(0);
-          return;
-        }
-
-        const ultima = new Date(Math.max(...datas12P.map((d) => d.getTime())));
-        const ano = ultima.getFullYear();
-        const mes = ultima.getMonth();
-
-        const inicio = new Date(ano, mes, 1, 0, 0, 0);
-        const fim = new Date(ano, mes + 1, 0, 23, 59, 59);
+        const { inicio, fim } = getIntervaloMesAtual();
 
         const total12P = geral
           .filter(
@@ -691,7 +614,7 @@ export default function Geral() {
         "--black-main": "#050505",
       }}
     >
-      <style>{FONT_IMPORT + "\\n" + ANIMATION_STYLES}</style>
+      <style>{FONT_IMPORT + "\n" + ANIMATION_STYLES}</style>
 
       <style>{`
         .titulo-card {
