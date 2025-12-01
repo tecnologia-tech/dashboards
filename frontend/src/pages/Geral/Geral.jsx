@@ -646,7 +646,7 @@ export default function Geral() {
           title="LTDA"
           value={formatarValor(valueLTDA)}
           estornos={formatarValor(estornosLTDA)}
-          meta="R$ 1,5 mi"
+          meta="R$ 2 mi"
           percent={percentLTDA}
         />
 
@@ -654,28 +654,28 @@ export default function Geral() {
           title="Hunters"
           value={formatarValor(valueCS)}
           estornos={formatarValor(estornosCS)}
-          meta="R$ 800 mil"
+          meta="R$ 600 mil"
           percent={((valueCS / metaCS) * 100).toFixed(1)}
         />
         <Ring
           title="Farmers"
           value={formatarValor(valueRepedidos)}
           estornos={formatarValor(estornosRepedidos)}
-          meta="R$ 200 mil"
+          meta="R$ 170 mil"
           percent={((valueRepedidos / metaRepedidos) * 100).toFixed(1)}
         />
         <Ring
           title="Bônus"
           value={formatarValor(valueBonus)}
           estornos=" "
-          meta="R$ 300 mil"
+          meta="R$ 250 mil"
           percent={((valueBonus / metaBonus) * 100).toFixed(1)}
         />
         <Ring
           title="12P"
           value={formatarValor(value12P)}
           estornos={formatarValor(estornos12P)}
-          meta="R$ 2,7 mi"
+          meta="R$ 2 mi"
           percent={((value12P / meta12P) * 100).toFixed(1)}
         />
       </div>
