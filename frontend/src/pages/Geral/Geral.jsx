@@ -126,27 +126,27 @@ export default function Geral() {
   // 🔥 ESTADOS DO RING LTDA
   const [valueLTDA, setValueLTDA] = useState(0);
   const [estornosLTDA, setEstornosLTDA] = useState(0);
-  const metaLTDA = 1500000;
+  const metaLTDA = 1000000;
   const percentLTDA = ((valueLTDA / metaLTDA) * 100).toFixed(1);
 
-  // CS — mês atual
+  // Hunters — mês atual
   const [valueCS, setValueCS] = useState(0);
   const [estornosCS, setEstornosCS] = useState(0);
-  const metaCS = 800000;
+  const metaCS = 600000;
 
   // REPEDITOS — mês atual
   const [valueRepedidos, setValueRepedidos] = useState(0);
   const [estornosRepedidos, setEstornosRepedidos] = useState(0);
-  const metaRepedidos = 200000;
+  const metaRepedidos = 170000;
 
   // BÔNUS — mês atual
   const [valueBonus, setValueBonus] = useState(0);
-  const metaBonus = 300000;
+  const metaBonus = 250000;
 
   // 12P — mês atual
   const [value12P, setValue12P] = useState(0);
   const [estornos12P, setEstornos12P] = useState(0);
-  const meta12P = 2800000;
+  const meta12P = 2020000;
 
   // PEDIDOS (CHINA / LOG / DESEMBARAÇO)
   const [pedidosChina, setPedidosChina] = useState(0);
