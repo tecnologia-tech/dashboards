@@ -44,9 +44,6 @@ const BLOCO4_BACKGROUND =
 const TABLE_HEADER_BG = "rgba(221,4,78,0.8)";
 const TABLE_ROW_ODD_BG = "rgba(255, 255, 255, 0.06)";
 const TABLE_ROW_EVEN_BG = "rgba(255, 105, 145, 0.22)";
-const PROGRESS_SPARKLES =
-  "radial-gradient(6px 20px at 20% 40%, rgba(255,255,255,0.45), transparent 65%), radial-gradient(8px 30px at 60% 60%, rgba(255,250,165,0.4), transparent 70%), radial-gradient(5px 18px at 85% 20%, rgba(255,255,255,0.35), transparent 65%)";
-
 const GOLD = "#cad003";
 const PINK = "#dd044e";
 const WHITE_GLOW = "rgba(255,255,255,0.85)";
@@ -74,11 +71,8 @@ export default function LastDance() {
   const [dados, setDados] = useState([]);
   const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
-  const [mostrarVideo, setMostrarVideo] = useState(false);
   const [somaOpen, setSomaOpen] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
-  const [totalEstornos] = useState(0);
-  const [percentualEstornos] = useState(0);
 
   const audioRef = useRef(null);
   const hojeBR = new Date(
@@ -108,7 +102,6 @@ export default function LastDance() {
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
 
-          // NORMALIZAÇÃO DE DATA
           const dataVenda = new Date(
             dt.getFullYear(),
             dt.getMonth(),
@@ -131,7 +124,7 @@ export default function LastDance() {
 
         setDados(recentes);
 
-        // SOMA DO MÊS → CORRETO
+        // SOMA DO MÊS
         const somaMes = filtradosMes.reduce(
           (acc, i) => acc + Number(i.valor || 0),
           0
@@ -139,25 +132,26 @@ export default function LastDance() {
 
         setTotalVendido(somaMes);
 
+        // FALTAM PARA A META MENSAL
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        // -----------------------------
-        // CÁLCULO DESATIVADO
-        // -----------------------------
+        // ================================
+        // NOVA LÓGICA DA META POR SEMANA
+        // ================================
+        const dia = hojeBR.getDate();
 
-        // // DIAS ÚTEIS FIXOS (15)
-        // const diasRestantesUteis = 14;
+        let metaAcumulada;
+        if (dia <= 7) {
+          metaAcumulada = 350000;
+        } else if (dia <= 14) {
+          metaAcumulada = 350000 + 350000; // 700.000
+        } else {
+          metaAcumulada = 350000 + 350000 + 300000; // 1.000.000
+        }
 
-        // const valorDiarioCalc =
-        //   diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
-
-        // setValorDiario(valorDiarioCalc);
-
-        // -----------------------------
-        // VALOR ESTÁTICO DEFINIDO AQUI
-        // -----------------------------
-        setValorDiario(350000); // <<< ajuste o valor que quiser
+        const valorSemanalFaltante = Math.max(metaAcumulada - somaMes, 0);
+        setValorDiario(valorSemanalFaltante);
       } catch (err) {
         console.log("Erro ao buscar dados:", err);
       }
@@ -175,6 +169,7 @@ export default function LastDance() {
 
     fetchData();
     fetchOpen();
+
     const interval = setInterval(() => {
       fetchData();
       fetchOpen();
@@ -182,8 +177,6 @@ export default function LastDance() {
 
     return () => clearInterval(interval);
   }, []);
-
-  // 🎯 REMOVIDO O BUG — não altera mais totalVendido aqui
 
   function playSom() {
     if (!audioRef.current) return;
@@ -210,7 +203,7 @@ export default function LastDance() {
           gap: "1.6vh",
         }}
       >
-        {/* ---- HEADER ---- */}
+        {/* HEADER */}
         <div
           className="h-[15vh] w-full rounded-b-[26px] overflow-hidden shadow-[0_0_26px_rgba(255,255,255,0.28)]"
           style={{ border: "2px solid rgba(255,255,255,0.12)" }}
@@ -218,7 +211,7 @@ export default function LastDance() {
           <img src={logolastdance} className="h-full w-full object-cover" />
         </div>
 
-        {/* ---- BLOCO PRINCIPAL ---- */}
+        {/* BLOCO PRINCIPAL */}
         <div
           className="relative flex h-[38vh] items-center justify-center rounded-[32px]"
           style={{ ...CARD_FULL, background: BLOCO2_BACKGROUND }}
@@ -272,9 +265,9 @@ export default function LastDance() {
           </div>
         </div>
 
-        {/* ---- BLOCOS INFERIORES ---- */}
+        {/* BLOCOS INFERIORES */}
         <div className="flex flex-col flex-1 gap-[1.6vh]">
-          {/* ---- CONTAGEM TOTAL + PROGRESSO ---- */}
+          {/* CONTAGEM TOTAL */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="relative flex flex-[2] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
@@ -365,7 +358,7 @@ export default function LastDance() {
             </div>
           </div>
 
-          {/* ---- TABELA ---- */}
+          {/* TABELA */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="flex flex-[2] rounded-[32px] overflow-hidden"
@@ -414,7 +407,7 @@ export default function LastDance() {
               </table>
             </div>
 
-            {/* ---- ESTORNOS ---- */}
+            {/* ESTORNOS */}
             <div
               className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
               style={{
