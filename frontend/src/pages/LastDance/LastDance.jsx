@@ -142,13 +142,22 @@ export default function LastDance() {
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        // DIAS ÚTEIS FIXOS (15)
-        const diasRestantesUteis = 14;
+        // -----------------------------
+        // CÁLCULO DESATIVADO
+        // -----------------------------
 
-        const valorDiarioCalc =
-          diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
+        // // DIAS ÚTEIS FIXOS (15)
+        // const diasRestantesUteis = 14;
 
-        setValorDiario(valorDiarioCalc);
+        // const valorDiarioCalc =
+        //   diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
+
+        // setValorDiario(valorDiarioCalc);
+
+        // -----------------------------
+        // VALOR ESTÁTICO DEFINIDO AQUI
+        // -----------------------------
+        setValorDiario(350000); // <<< ajuste o valor que quiser
       } catch (err) {
         console.log("Erro ao buscar dados:", err);
       }
@@ -239,7 +248,7 @@ export default function LastDance() {
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Faltam hoje para a meta diária
+                Faltam hoje para a meta semanal
               </span>
 
               <div className="flex items-end gap-[1rem] leading-none">
