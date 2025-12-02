@@ -445,7 +445,7 @@ export default function Geral() {
         );
         const estornos = await resEst.json();
 
-        const REP_RESP = ["Victor Biselli", "Raul Cruz", "Cleyton Cruz"];
+        const REP_RESP = ["Victor Biselli", "Raul Cruz", "Andrês Apolionário"];
 
         const { inicio, fim } = getIntervaloMesAtual();
 

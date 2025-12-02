@@ -180,7 +180,6 @@ function formatCurrency(v) {
 const FARMERS = [
   { label: "Tchoco", db: "Victor Biselli", meta: 50000 },
   { label: "Texugão", db: "Raul Cruz", meta: 50000 },
-  { label: "Cleyton", db: "Cleyton Cruz", meta: 50000 },
   { label: "Andrés", db: "Andrés Apolionario", meta: 20000 },
 ];
 
