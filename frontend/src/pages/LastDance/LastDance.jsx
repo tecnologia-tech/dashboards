@@ -143,7 +143,7 @@ export default function LastDance() {
         setFaltamParaMetaMensal(restante);
 
         // DIAS ÚTEIS FIXOS (15)
-        const diasRestantesUteis = 15;
+        const diasRestantesUteis = 14;
 
         const valorDiarioCalc =
           diasRestantesUteis > 0 ? restante / diasRestantesUteis : 0;
