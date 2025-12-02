@@ -97,7 +97,7 @@ export default function LastDance() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
-        const pipelineIds = ["71", "23", "47", "59", "63", "35"];
+        const pipelineIds = ["71", "23", "47", "59", "63"];
 
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
@@ -132,22 +132,28 @@ export default function LastDance() {
 
         setTotalVendido(somaMes);
 
-        // FALTAM PARA A META MENSAL
+        // FALTAM PARA META MENSAL
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
         // ================================
-        // NOVA LÓGICA DA META POR SEMANA
+        // NOVA LÓGICA DE META POR SEMANA
         // ================================
         const dia = hojeBR.getDate();
 
-        let metaAcumulada;
+        // metas por semana
+        const semana1 = 275000;
+        const semana2 = 275000;
+        const semana3mais = 200000;
+
+        let metaAcumulada = 0;
+
         if (dia <= 7) {
-          metaAcumulada = 350000;
+          metaAcumulada = semana1; // 275k
         } else if (dia <= 14) {
-          metaAcumulada = 350000 + 350000; // 700.000
+          metaAcumulada = semana1 + semana2; // 275k + 275k = 550k
         } else {
-          metaAcumulada = 350000 + 350000 + 300000; // 1.000.000
+          metaAcumulada = semana1 + semana2 + semana3mais; // 750k
         }
 
         const valorSemanalFaltante = Math.max(metaAcumulada - somaMes, 0);
