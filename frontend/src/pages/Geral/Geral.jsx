@@ -4,7 +4,18 @@ import { Cell, Label, Pie, PieChart } from "recharts";
 import jayanneImg from "../../assets/Geral/Jayanne.png";
 import jeniferImg from "../../assets/Geral/Jenifer.png";
 import raissaImg from "../../assets/Geral/Raissa.png";
+function toNumber(v) {
+  if (!v) return 0;
+  const s = String(v).trim();
 
+  if (s.includes(".") && s.includes(",")) {
+    return Number(s.replace(/\./g, "").replace(",", "."));
+  }
+  if (s.includes(",")) {
+    return Number(s.replace(",", "."));
+  }
+  return Number(s);
+}
 const FONT_IMPORT = `
   @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
   @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
@@ -254,52 +265,55 @@ export default function Geral() {
   useEffect(() => {
     async function loadReembolso() {
       try {
-        const res = await fetch(
+        const r = await fetch(
           "https://dashboards-exur.onrender.com/api/dash_reembolso"
         );
-        const dados = await res.json();
+        const dados = await r.json();
 
-        const { inicio, fim } = getIntervaloMesAtual();
+        const agora = new Date();
+        const ano = agora.getFullYear();
+        const mes = String(agora.getMonth() + 1).padStart(2, "0");
+        const prefixoMes = `${ano}-${mes}`;
 
-        // 🎯 FILTRAGEM EXATA DA SUA SQL
-        const filtroMes = dados.filter((i) => {
-          if (!i.Data_de_Devolucao) return false;
+        const proibidos = ["Acordo Judicial", "Acordo Extrajudicial"];
 
-          const d = new Date(i.Data_de_Devolucao.replace(" ", "T"));
+        let somaEstorno = 0;
+        let somaReembolso = 0;
+        let countRA = 0;
 
-          return (
-            d >= inicio &&
-            d <= fim &&
-            i.Status !== "Acordo Judicial" &&
-            i.Status !== "Acordo Extrajudicial"
-          );
-        });
+        for (const item of dados) {
+          const d = item.Data_de_Devolucao || "";
 
-        // 💰 Estorno REAL (12500 + 10000 = 22500)
-        const totalEstorno = filtroMes.reduce((acc, cur) => {
-          return acc + (Number(cur.Estorno_R) || 0);
-        }, 0);
+          if (!d.startsWith(prefixoMes)) continue;
 
-        // 💵 Reembolso REAL (17441.01 + 2500 = 19941.01)
-        const totalReembolso = filtroMes.reduce((acc, cur) => {
-          return acc + (Number(cur.Reembolso_R) || 0);
-        }, 0);
+          const status = (item.Status || "").trim();
+          if (proibidos.includes(status)) continue;
 
-        setEstorno12p(totalEstorno);
-        setReembolso12p(totalReembolso);
+          // Estorno
+          if (status === "Estorno") {
+            somaEstorno += toNumber(item.Estorno_R || 0);
+          }
 
-        setFat12p(value12P);
+          // Reembolso
+          if (status !== "Estorno") {
+            somaReembolso += toNumber(item.Reembolso_R || 0);
+          }
 
-        setReclameAqui(
-          filtroMes.filter((i) => i.Reclame_Aqui === "Sim").length
-        );
+          if ((item.Reclame_Aqui || "") === "Sim") {
+            countRA++;
+          }
+        }
+
+        setEstorno12p(somaEstorno); // deve dar 22.500
+        setReembolso12p(somaReembolso); // deve dar 19.941,01
+        setReclameAqui(countRA);
       } catch (err) {
-        console.error("Erro ao carregar reembolso:", err);
+        console.error("Erro loadReembolso:", err);
       }
     }
 
     loadReembolso();
-  }, [value12P]);
+  }, []);
 
   // LTDA — SEMPRE MÊS ATUAL
   useEffect(() => {
@@ -514,6 +528,7 @@ export default function Geral() {
           .reduce((acc, cur) => acc + Number(cur.valor || 0), 0);
 
         setEstornos12P(totalEst12P);
+        setFat12p(total12P);
       } catch (err) {
         console.error("Erro 12P:", err);
       }
@@ -1276,16 +1291,6 @@ function CSATCard() {
 // REPUTAÇÃO 12P
 // =====================================================================
 function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
-  // Mantém os dados do gráfico iguais
-  const data = [
-    { name: "Faturamento", value: fat12p, color: "#8BCF7A" },
-    { name: "Estorno", value: estorno12p, color: "#E85B5B" },
-    { name: "Reembolso", value: reembolso12p, color: "#E6A347" },
-  ];
-
-  const COLORS = ["#8BCF7A", "#E85B5B", "#E6A347"];
-
-  // 👉 formatação SEM “mil” / “mi”, igual LastDance
   function formatarMoedaCompleta(n) {
     if (!n) return "0,00";
     return n.toLocaleString("pt-BR", {
@@ -1294,37 +1299,37 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
     });
   }
 
-  // 👉 % baseada na SOMA (Estorno + Reembolso) / 2.000.000
-  const META_BASE_12P = 2_000_000; // 2 milhões
+  const META_BASE_12P = 2_000_000;
 
   const somaDevolucoes = (estorno12p || 0) + (reembolso12p || 0);
-  const percentualReputacao =
+  const percentual =
     META_BASE_12P > 0
       ? ((somaDevolucoes / META_BASE_12P) * 100).toFixed(2).replace(".", ",")
       : "0,00";
 
-  const percentualNumero = Number(percentualReputacao.replace(",", "."));
+  const percentualNumero = Number(percentual.replace(",", "."));
   const corPercentual = percentualNumero <= 4 ? "#8BCF7A" : "#E85B5B";
+
+  const data = [
+    { name: "Faturamento", value: fat12p, color: "#8BCF7A" },
+    { name: "Estorno", value: estorno12p, color: "#E85B5B" },
+    { name: "Reembolso", value: reembolso12p, color: "#E6A347" },
+  ];
+
+  const COLORS = ["#8BCF7A", "#E85B5B", "#E6A347"];
 
   return (
     <div
       className="flex flex-col rounded-xl px-1 py-0"
-      style={{
-        backgroundImage: `${CARD_BACKGROUND}, ${RUNE_BACKGROUND}`,
-        backgroundBlendMode: "overlay, normal",
-        backgroundSize: "160% 160%, 120% 120%",
-        border: "1px solid rgba(230,192,104,0.40)",
-      }}
+      style={{ background: "#1115" }}
     >
       <h2 className="titulo-card">Reputação 12P</h2>
 
-      <div className="flex-1 pt-0 grid grid-cols-[2fr_1fr_1fr] gap-1 items-center">
-        {/* COLUNA ESQUERDA - TEXTOS */}
-        <div className="flex flex-col text-2xl leading-tight space-y-2 pl-2">
+      <div className="flex-1 grid grid-cols-[2fr_1fr_1fr] gap-1 items-center">
+        {/* COLUNA ESQUERDA */}
+        <div className="flex flex-col text-2xl space-y-2 pl-2">
           <div>
-            <span className="font-bold" style={{ color: "#8BCF7A" }}>
-              FATURAMENTO:
-            </span>
+            <b style={{ color: "#8BCF7A" }}>FATURAMENTO:</b>
             <span className="text-gray-200">
               {" "}
               R$ {formatarMoedaCompleta(fat12p)}
@@ -1332,9 +1337,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
           </div>
 
           <div>
-            <span className="font-bold" style={{ color: "var(--gold-mid)" }}>
-              ESTORNO:
-            </span>
+            <b style={{ color: "var(--gold-mid)" }}>ESTORNO:</b>
             <span className="text-gray-200">
               {" "}
               R$ {formatarMoedaCompleta(estorno12p)}
@@ -1342,9 +1345,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
           </div>
 
           <div>
-            <span className="font-bold" style={{ color: "#E85B5B" }}>
-              REEMBOLSO:
-            </span>
+            <b style={{ color: "#E85B5B" }}>REEMBOLSO:</b>
             <span className="text-gray-200">
               {" "}
               R$ {formatarMoedaCompleta(reembolso12p)}
@@ -1352,29 +1353,26 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
           </div>
 
           <div className="pt-2">
-            <span className="font-bold" style={{ color: "var(--gold-light)" }}>
-              RECLAME AQUI:
-            </span>
+            <b style={{ color: "var(--gold-light)" }}>RECLAME AQUI:</b>
             <span className="text-3xl font-extrabold numero-branco">
               {reclameAqui}
             </span>
           </div>
         </div>
 
-        {/* % CENTRAL */}
+        {/* PERCENTUAL */}
         <div
           className="text-8xl font-extrabold"
           style={{
             color: corPercentual,
             WebkitTextStroke: "1px black",
             textShadow: `0 0 12px ${corPercentual}55`,
-            animation: "goldenTextBreath 6s ease-in-out infinite",
           }}
         >
-          {percentualReputacao}%
+          {percentual}%
         </div>
 
-        {/* GRÁFICO DE PIZZA */}
+        {/* GRÁFICO */}
         <div className="flex justify-center items-center">
           <PieChart width={240} height={240}>
             <Pie
@@ -1392,7 +1390,6 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
                 <Cell key={i} fill={COLORS[i]} />
               ))}
 
-              {/* FATURAMENTO */}
               <Label
                 value={`R$ ${formatarMoedaCompleta(fat12p)}`}
                 position="outside"
@@ -1401,8 +1398,6 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
                 fontWeight="bold"
                 offset={20}
               />
-
-              {/* ESTORNO */}
               <Label
                 value={`R$ ${formatarMoedaCompleta(estorno12p)}`}
                 position="outside"
@@ -1411,8 +1406,6 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
                 fontWeight="bold"
                 offset={40}
               />
-
-              {/* REEMBOLSO */}
               <Label
                 value={`R$ ${formatarMoedaCompleta(reembolso12p)}`}
                 position="outside"
@@ -1428,7 +1421,6 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
     </div>
   );
 }
-
 // =====================================================================
 // FOOTER – DNB
 // =====================================================================
