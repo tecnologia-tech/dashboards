@@ -86,6 +86,25 @@ export default function LastDance() {
     });
   }
 
+  // 🔥 FUNÇÃO QUE CORRIGE TODAS AS SOMAS
+  function toNumber(valor) {
+    if (valor == null) return 0;
+    const v = String(valor).trim();
+
+    // Ex: 79.701,50 → 79701.50
+    if (v.includes(",") && v.includes(".")) {
+      return Number(v.replace(/\./g, "").replace(",", "."));
+    }
+
+    // Ex: 4701,50 → 4701.50
+    if (v.includes(",") && !v.includes(".")) {
+      return Number(v.replace(",", "."));
+    }
+
+    // Ex: 4701.50 → 4701.50
+    return Number(v);
+  }
+
   const numero = formatarValor(valorDiario);
 
   useEffect(() => {
@@ -118,15 +137,17 @@ export default function LastDance() {
           );
         });
 
+        console.log("ITEM COMPLETO:", JSON.stringify(filtradosMes, null, 2));
+
         const recentes = [...filtradosMes]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
 
         setDados(recentes);
 
-        // SOMA DO MÊS
+        // 🔥 SOMA DO MÊS (CORRIGIDA)
         const somaMes = filtradosMes.reduce(
-          (acc, i) => acc + Number(i.valor || 0),
+          (acc, i) => acc + toNumber(i.valor),
           0
         );
 
@@ -141,7 +162,6 @@ export default function LastDance() {
         // ================================
         const dia = hojeBR.getDate();
 
-        // metas por semana
         const semana1 = 275000;
         const semana2 = 275000;
         const semana3mais = 200000;
@@ -149,11 +169,11 @@ export default function LastDance() {
         let metaAcumulada = 0;
 
         if (dia <= 7) {
-          metaAcumulada = semana1; // 275k
+          metaAcumulada = semana1;
         } else if (dia <= 14) {
-          metaAcumulada = semana1 + semana2; // 275k + 275k = 550k
+          metaAcumulada = semana1 + semana2;
         } else {
-          metaAcumulada = semana1 + semana2 + semana3mais; // 750k
+          metaAcumulada = semana1 + semana2 + semana3mais;
         }
 
         const valorSemanalFaltante = Math.max(metaAcumulada - somaMes, 0);
@@ -169,7 +189,9 @@ export default function LastDance() {
           `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
         );
         const data = await r.json();
-        setSomaOpen(data.reduce((acc, i) => acc + Number(i.valor || 0), 0));
+
+        // 🔥 SOMA DOS ABERTOS (CORRIGIDA)
+        setSomaOpen(data.reduce((acc, i) => acc + toNumber(i.valor), 0));
       } catch {}
     }
 
@@ -271,9 +293,9 @@ export default function LastDance() {
           </div>
         </div>
 
-        {/* BLOCOS INFERIORES */}
+        {/* INFERIOR */}
         <div className="flex flex-col flex-1 gap-[1.6vh]">
-          {/* CONTAGEM TOTAL */}
+          {/* TOTAL */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="relative flex flex-[2] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
@@ -341,6 +363,7 @@ export default function LastDance() {
               </div>
             </div>
 
+            {/* PROJEÇÃO */}
             <div
               className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
               style={{
