@@ -1,15 +1,16 @@
 import farmersImg from "../../assets/Farmers/Farmers.png";
+import rightSideImg from "../../assets/Farmers/RightSide.png";
 
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
 const farmerPhotos = import.meta.glob("../../assets/Farmers/*.png", {
   eager: true,
 });
 
+/* ======================== ANIMAÇÕES, GLOWS E ESTILOS ======================== */
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap");
 
 /* ======================== ANIMAÇÕES GELO ======================== */
-
 @keyframes iceBreath {
   0% { text-shadow: 0 0 6px rgba(159,207,255,0.26), 0 0 12px rgba(124,202,255,0.16); filter: saturate(1); }
   50% { text-shadow: 0 0 10px rgba(159,207,255,0.36), 0 0 18px rgba(124,202,255,0.22); filter: saturate(1.07); }
@@ -42,7 +43,6 @@ const ANIMATION_STYLES = `
   100% { transform: translate3d(0,0,0) skewX(0deg); filter: drop-shadow(0 0 1px rgba(124,202,255,0.2)); }
 }
 
-/* ❄️ GLOW FULL HEIGHT NO CARD INTEIRO */
 .farmer-full-glow {
   background:
     linear-gradient(
@@ -65,7 +65,6 @@ const ANIMATION_STYLES = `
   100% { opacity: 0.35; transform: scaleY(0.96); }
 }
 
-/* ❄️ Glow interno da coluna esquerda */
 .farmer-column-glow {
   background:
     linear-gradient(
@@ -89,7 +88,6 @@ const ANIMATION_STYLES = `
   100% { opacity: 0.30; }
 }
 
-/* ✨ PARTÍCULAS DE NEVE NO GAUGE */
 .farmer-particles {
   position: absolute;
   inset: 0;
@@ -114,9 +112,7 @@ const ANIMATION_STYLES = `
     transform: translateY(0) translateX(0) scale(0.4);
     opacity: 0.2;
   }
-  40% {
-    opacity: 0.85;
-  }
+  40% { opacity: 0.85; }
   100% {
     transform: translateY(-140px) translateX(10px) scale(1);
     opacity: 0;
@@ -137,13 +133,13 @@ const SNOW_BACKGROUND =
   "radial-gradient(4px 18px at 20% 96%, rgba(150,200,255,0.08), transparent 60%), radial-gradient(5px 20px at 55% 99%, rgba(100,160,220,0.07), transparent 55%), radial-gradient(4px 18px at 85% 97%, rgba(217,217,217,0.06), transparent 60%)";
 
 const BADGE_CLIP_PATH =
-  "polygon(50% 0%, 95% 8%, 100% 22%, 100% 78%, 95% 92%, 50% 100%, 5% 92%, 0 78%, 0 22%, 5% 8%)";
+  "polygon(50% 0%, 95% 8%, 100% 22%, 100% 78%, 95% 92%, 50% 100%, 5% 92%, 0 78%, 0 22%, 5 8%)";
 
 /* HELPERS */
-function getRankEmoji(index) {
-  if (index === 0) return "🥇";
-  if (index === 1) return "🥈";
-  if (index === 2) return "🥉";
+function getRankEmoji(i) {
+  if (i === 0) return "🥇";
+  if (i === 1) return "🥈";
+  if (i === 2) return "🥉";
   return "⚔️";
 }
 
@@ -176,20 +172,16 @@ function formatCurrency(v) {
   return `R$ ${n}`;
 }
 
-/* CONFIG DOS FARMERS */
+/* ========================= DADOS DOS FARMERS ========================= */
 const FARMERS = [
   { label: "Tchoco", db: "Victor Biselli", meta: 50000 },
   { label: "Texugão", db: "Raul Cruz", meta: 50000 },
-  { label: "Andrés", db: "Andrés Apolionario", meta: 20000 },
+  { label: "Andrés", db: "Andrés Apolionario", meta: 50000 },
 ];
 
 export default function Farmers({ dados }) {
-  // Caso ainda não tenha chegado o fetch do Provider:
   if (!dados) return null;
 
-  // ============================================
-  // PROCESSAMENTO DE DADOS (SEM FETCH)
-  // ============================================
   const parsed = dados.map((d) => ({
     ...d,
     valor: Number(d.valor) || 0,
@@ -201,7 +193,7 @@ export default function Farmers({ dados }) {
   const year = now.getFullYear();
   const month = now.getMonth();
 
-  const start = new Date(year, month, 1, 0, 0, 0);
+  const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0, 23, 59, 59);
 
   const filtered = parsed.filter((d) => d.data >= start && d.data <= end);
@@ -241,9 +233,7 @@ export default function Farmers({ dados }) {
   const percentualGeral =
     total.meta > 0 ? Math.round((total.vendido / total.meta) * 100) : 0;
 
-  // ============================================
-  // INTERFACE — IGUAL AO SEU CÓDIGO ORIGINAL
-  // ============================================
+  /* ========================= INTERFACE ========================= */
   return (
     <>
       <style>{ANIMATION_STYLES}</style>
@@ -251,12 +241,7 @@ export default function Farmers({ dados }) {
       <div className="flex h-screen w-full overflow-hidden bg-black font-['Cinzel'] text-[#e4f5ff]">
         {/* LATERAL */}
         <div className="relative flex w-[220px] min-w-[220px] items-center justify-center overflow-hidden bg-black">
-          <img
-            src={farmersImg}
-            alt="Farmers"
-            className="h-full w-full object-cover"
-            style={{ filter: "brightness(0.95) contrast(1.02)" }}
-          />
+          <img src={farmersImg} className="h-full w-full object-cover" />
 
           <div
             className="pointer-events-none absolute"
@@ -272,18 +257,14 @@ export default function Farmers({ dados }) {
           />
         </div>
 
-        {/* CONTEÚDO PRINCIPAL */}
+        {/* CONTEÚDO */}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-visible p-1.5 text-[#e4f5ff]">
           {/* HEADER */}
           <div
             className="relative z-10 mb-2 flex items-center justify-center rounded-[10px] border-2 border-[rgba(160,200,255,0.25)] px-4 py-4"
-            style={{
-              backgroundImage: HERO_BACKGROUND,
-              backgroundSize: "140% 140%",
-            }}
+            style={{ backgroundImage: HERO_BACKGROUND }}
           >
-            <div className="flex w-full items-stretch gap-6 flex-nowrap overflow-hidden">
-              {/* TÍTULO */}
+            <div className="flex w-full items-stretch gap-6 overflow-hidden">
               <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden text-center text-[26px] leading-tight text-[#9fcfff] animate-[iceBreath_5.5s_ease-in-out_infinite_alternate,heatShimmer_16s_ease-in-out_infinite]">
                 <span className="text-[65px] font-bold leading-none">
                   Geral
@@ -293,7 +274,6 @@ export default function Farmers({ dados }) {
                 </span>
               </div>
 
-              {/* 4 CARDS DO HEADER */}
               {["Vendas", "Vendido", "Percentual", "Meta"].map((label, idx) => {
                 const value = [
                   total.vendas,
@@ -308,13 +288,9 @@ export default function Farmers({ dados }) {
                   <div
                     key={label}
                     className="flex-1 flex flex-col items-center justify-center text-center min-w-[150px] gap-[4px] rounded-lg border border-[rgba(160,200,255,0.25)] px-4 py-2"
-                    style={{
-                      backgroundImage: METRIC_BACKGROUND,
-                      backgroundSize: "220% 220%",
-                      backgroundBlendMode: "overlay, normal",
-                    }}
+                    style={{ backgroundImage: METRIC_BACKGROUND }}
                   >
-                    <label className="text-[16px] font-semibold uppercase tracking-[0.06em] text-[#e4f5ff]">
+                    <label className="text-[16px] font-semibold uppercase tracking-[0.06em]">
                       {label}
                     </label>
 
@@ -326,7 +302,6 @@ export default function Farmers({ dados }) {
                         textShadow: highlight
                           ? "0 0 10px rgba(124,202,255,0.45)"
                           : "0 0 6px rgba(210,230,255,0.3)",
-                        animation: "heatShimmer 16s ease-in-out infinite",
                       }}
                     >
                       {value}
@@ -337,7 +312,7 @@ export default function Farmers({ dados }) {
             </div>
           </div>
 
-          {/* GRID DE FARMERS */}
+          {/* GRID FARMERS */}
           <div className="relative z-10 grid flex-1 grid-cols-2 gap-2">
             {farmers.map((f, index) => {
               const photo = getFarmerImage(f.nome, index);
@@ -350,28 +325,17 @@ export default function Farmers({ dados }) {
                 <div
                   key={f.nome}
                   className="relative flex gap-4 overflow-visible rounded-2xl border-2 border-[rgba(160,200,255,0.35)] p-4"
-                  style={{
-                    backgroundImage: CARD_BACKGROUND,
-                    backgroundSize: "160% 160%",
-                    boxShadow:
-                      "inset 0 0 25px rgba(75,120,160,0.25), 0 0 35px rgba(40,80,110,0.25)",
-                  }}
+                  style={{ backgroundImage: CARD_BACKGROUND }}
                 >
-                  {/* GLOW */}
                   <div className="pointer-events-none absolute inset-0 farmer-full-glow" />
 
                   {/* COLUNA ESQUERDA */}
                   <div className="relative z-10 flex w-[260px] flex-col items-center gap-[19px]">
                     <div className="absolute inset-0 pointer-events-none farmer-column-glow" />
 
-                    {/* PORCENTAGEM */}
                     <div
                       className="relative mb-3 text-[33px] font-bold text-[#e4f5ff]"
-                      style={{
-                        textShadow: "0 0 6px rgba(159,207,255,0.35)",
-                        animation:
-                          "iceBreath 5.5s_ease-in-out_infinite_alternate,heatShimmer_12s_ease-in-out_infinite",
-                      }}
+                      style={{ textShadow: "0 0 6px rgba(159,207,255,0.35)" }}
                     >
                       {pctLabel}%
                     </div>
@@ -392,8 +356,6 @@ export default function Farmers({ dados }) {
                               left: `${10 + ((i * 6.3) % 80)}%`,
                               animationDelay: `${i * 0.35}s`,
                               animationDuration: `${3.4 + (i % 5) * 0.25}s`,
-                              width: `${4 + (i % 3)}px`,
-                              height: `${4 + (i % 3)}px`,
                             }}
                           />
                         ))}
@@ -404,62 +366,24 @@ export default function Farmers({ dados }) {
                       {photo && (
                         <img
                           src={photo}
-                          className="absolute left-1/2 top-[43%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(124,202,255,0.9)] object-cover shadow-[0_0_6px_rgba(150,200,255,0.45)]"
-                          alt={f.nome}
+                          className="absolute left-1/2 top-[43%] h-[130px] w-[130px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[rgba(124,202,255,0.9)] object-cover"
                         />
                       )}
                     </div>
 
                     {/* NOME */}
-                    <div
-                      className="relative mt-[-30px] inline-flex items-center justify-center gap-[6px] text-center text-[36px] font-bold text-[#e4f5ff]"
-                      style={{
-                        textShadow: "0 0 6px rgba(159,207,255,0.35)",
-                        animation:
-                          "iceBreath 5.5s_ease-in-out_infinite_alternate,heatShimmer_14s_ease-in-out_infinite",
-                      }}
-                    >
-                      <span
-                        className="mr-1"
-                        style={{
-                          filter: "drop-shadow(0 0 4px rgba(159,207,255,0.4))",
-                        }}
-                      >
-                        {getRankEmoji(index)}
-                      </span>
+                    <div className="relative mt-[-30px] inline-flex items-center justify-center gap-[6px] text-center text-[36px] font-bold">
+                      <span>{getRankEmoji(index)}</span>
                       {f.nome}
                     </div>
 
                     {/* BADGE */}
                     {getFarmerBadge(f.nome) && (
-                      <div className="relative flex items-center justify-center">
-                        <img
-                          src={getFarmerBadge(f.nome)}
-                          className="mt-[-6px] h-[110px] w-[110px] object-cover"
-                          style={{
-                            clipPath: BADGE_CLIP_PATH,
-                            border: "3px solid #7ccaff",
-                            boxShadow: `
-                              0 0 12px rgba(150,200,255,0.45),
-                              0 0 22px rgba(200,240,255,0.25),
-                              inset 0 0 12px rgba(150,200,255,0.40)
-                            `,
-                            filter: "brightness(1.05) saturate(1.12)",
-                          }}
-                          alt={`${f.nome} badge`}
-                        />
-
-                        <span
-                          className="pointer-events-none absolute inset-0"
-                          style={{
-                            clipPath: BADGE_CLIP_PATH,
-                            background:
-                              "radial-gradient(circle at 50% 50%, rgba(150,200,255,0.20), transparent 70%)",
-                            mixBlendMode: "screen",
-                            filter: "blur(14px)",
-                          }}
-                        />
-                      </div>
+                      <img
+                        src={getFarmerBadge(f.nome)}
+                        className="h-[110px] w-[110px] object-cover"
+                        style={{ clipPath: BADGE_CLIP_PATH }}
+                      />
                     )}
                   </div>
 
@@ -471,33 +395,20 @@ export default function Farmers({ dados }) {
                         formatCurrency(f.vendido),
                         formatCurrency(f.meta),
                       ];
-                      const highlighted = idx < 2;
 
                       return (
                         <div
                           key={label}
                           className="flex flex-col min-h-[60px] items-center justify-center text-center gap-[2px] rounded-[10px] border border-[rgba(160,200,255,0.35)] px-3 py-1.5"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, rgba(12,22,32,0.92), rgba(5,10,18,0.9))",
-                            backgroundImage: METRIC_BACKGROUND,
-                            backgroundBlendMode: "overlay, normal",
-                          }}
+                          style={{ backgroundImage: METRIC_BACKGROUND }}
                         >
-                          <label className="text-[18px] font-semibold tracking-wide text-[#e4f5ff]">
+                          <label className="text-[18px] font-semibold tracking-wide">
                             {label}
                           </label>
 
                           <span
-                            className="whitespace-nowrap font-extrabold"
-                            style={{
-                              fontSize: "54px",
-                              color: highlighted ? "#7ccaff" : "#ffffff",
-                              textShadow: highlighted
-                                ? "0 0 10px rgba(124,202,255,0.4)"
-                                : "0 0 6px rgba(210,230,255,0.3)",
-                              animation: "heatShimmer 18s ease-in-out infinite",
-                            }}
+                            className="font-extrabold"
+                            style={{ fontSize: "54px" }}
                           >
                             {values[idx]}
                           </span>
@@ -508,6 +419,25 @@ export default function Farmers({ dados }) {
                 </div>
               );
             })}
+
+            {/* ========================= SLOT VAZIO COM IMAGEM ========================= */}
+            {farmers.length % 2 !== 0 && (
+              <div
+                className="relative flex items-center justify-center rounded-2xl border-2 border-[rgba(160,200,255,0.35)] overflow-hidden"
+                style={{ backgroundImage: CARD_BACKGROUND }}
+              >
+                <img
+                  src={rightSideImg}
+                  alt="Decorativo"
+                  className="w-full h-full object-cover opacity-[0.93]"
+                  style={{
+                    filter: "brightness(1.03) contrast(1.05) saturate(1.1)",
+                  }}
+                />
+
+                <div className="pointer-events-none absolute inset-0 farmer-full-glow" />
+              </div>
+            )}
           </div>
 
           {/* SNOW EFFECT */}
@@ -518,7 +448,6 @@ export default function Farmers({ dados }) {
               opacity: 0.16,
               mixBlendMode: "screen",
               animation: "snowDrift 26s linear infinite",
-              zIndex: 0,
             }}
           />
         </div>
@@ -530,21 +459,12 @@ export default function Farmers({ dados }) {
 /* ========================= GAUGE ========================= */
 function Gauge({ percent }) {
   const pct = Math.min(Math.max(percent, 0), 100);
-
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
-
-  const activeLength = circumference / 2;
-  const dash = (pct / 100) * activeLength;
+  const dash = (pct / 100) * (circumference / 2);
 
   return (
-    <div
-      className="relative mt-[-50px] h-[140px] w-[220px]"
-      style={{
-        background: "transparent", // removido o glow
-        filter: "none", // removido drop-shadow
-      }}
-    >
+    <div className="relative mt-[-50px] h-[140px] w-[220px]">
       <svg viewBox="0 0 200 120" preserveAspectRatio="none">
         <defs>
           <linearGradient id="gaugeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -554,7 +474,6 @@ function Gauge({ percent }) {
           </linearGradient>
         </defs>
 
-        {/* trilho */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
@@ -564,7 +483,6 @@ function Gauge({ percent }) {
           strokeLinecap="round"
         />
 
-        {/* ativo */}
         <path
           d="M30 100 A70 70 0 0 1 170 100"
           fill="none"
