@@ -261,33 +261,38 @@ export default function Geral() {
 
         const { inicio, fim } = getIntervaloMesAtual();
 
+        // 🎯 FILTRAGEM EXATA DA SUA SQL
         const filtroMes = dados.filter((i) => {
-          const d = new Date(i.Data_Reclamacao.replace(" ", "T"));
-          return d >= inicio && d <= fim;
+          if (!i.Data_de_Devolucao) return false;
+
+          const d = new Date(i.Data_de_Devolucao.replace(" ", "T"));
+
+          return (
+            d >= inicio &&
+            d <= fim &&
+            i.Status !== "Acordo Judicial" &&
+            i.Status !== "Acordo Extrajudicial"
+          );
         });
 
-        // Faturamento = value12P
-        setFat12p(value12P);
+        // 💰 Estorno REAL (12500 + 10000 = 22500)
+        const totalEstorno = filtroMes.reduce((acc, cur) => {
+          return acc + (Number(cur.Estorno_R) || 0);
+        }, 0);
 
-        // Estorno
-        const totalEstorno = filtroMes.reduce(
-          (acc, cur) => acc + (Number(cur.Estorno_R) || 0),
-          0
-        );
+        // 💵 Reembolso REAL (17441.01 + 2500 = 19941.01)
+        const totalReembolso = filtroMes.reduce((acc, cur) => {
+          return acc + (Number(cur.Reembolso_R) || 0);
+        }, 0);
+
         setEstorno12p(totalEstorno);
-
-        // Reembolso
-        const totalReembolso = filtroMes.reduce(
-          (acc, cur) => acc + (Number(cur.Reembolso_R) || 0),
-          0
-        );
         setReembolso12p(totalReembolso);
 
-        // Reclame Aqui (Sim)
-        const totalRA = filtroMes.filter(
-          (i) => i.Reclame_Aqui === "Sim"
-        ).length;
-        setReclameAqui(totalRA);
+        setFat12p(value12P);
+
+        setReclameAqui(
+          filtroMes.filter((i) => i.Reclame_Aqui === "Sim").length
+        );
       } catch (err) {
         console.error("Erro ao carregar reembolso:", err);
       }
@@ -1271,6 +1276,7 @@ function CSATCard() {
 // REPUTAÇÃO 12P
 // =====================================================================
 function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
+  // Mantém os dados do gráfico iguais
   const data = [
     { name: "Faturamento", value: fat12p, color: "#8BCF7A" },
     { name: "Estorno", value: estorno12p, color: "#E85B5B" },
@@ -1278,11 +1284,26 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
   ];
 
   const COLORS = ["#8BCF7A", "#E85B5B", "#E6A347"];
-  const percentualReembolso =
-    fat12p > 0
-      ? ((reembolso12p / fat12p) * 100).toFixed(2).replace(".", ",")
+
+  // 👉 formatação SEM “mil” / “mi”, igual LastDance
+  function formatarMoedaCompleta(n) {
+    if (!n) return "0,00";
+    return n.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  // 👉 % baseada na SOMA (Estorno + Reembolso) / 2.000.000
+  const META_BASE_12P = 2_000_000; // 2 milhões
+
+  const somaDevolucoes = (estorno12p || 0) + (reembolso12p || 0);
+  const percentualReputacao =
+    META_BASE_12P > 0
+      ? ((somaDevolucoes / META_BASE_12P) * 100).toFixed(2).replace(".", ",")
       : "0,00";
-  const percentualNumero = Number(percentualReembolso.replace(",", "."));
+
+  const percentualNumero = Number(percentualReputacao.replace(",", "."));
   const corPercentual = percentualNumero <= 4 ? "#8BCF7A" : "#E85B5B";
 
   return (
@@ -1298,31 +1319,38 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
       <h2 className="titulo-card">Reputação 12P</h2>
 
       <div className="flex-1 pt-0 grid grid-cols-[2fr_1fr_1fr] gap-1 items-center">
+        {/* COLUNA ESQUERDA - TEXTOS */}
         <div className="flex flex-col text-2xl leading-tight space-y-2 pl-2">
           <div>
             <span className="font-bold" style={{ color: "#8BCF7A" }}>
               FATURAMENTO:
             </span>
-            <span className="text-gray-200"> R$ {formatarValor(fat12p)}</span>
+            <span className="text-gray-200">
+              {" "}
+              R$ {formatarMoedaCompleta(fat12p)}
+            </span>
           </div>
+
           <div>
             <span className="font-bold" style={{ color: "var(--gold-mid)" }}>
               ESTORNO:
             </span>
             <span className="text-gray-200">
               {" "}
-              R$ {formatarValor(estorno12p)}
+              R$ {formatarMoedaCompleta(estorno12p)}
             </span>
           </div>
+
           <div>
             <span className="font-bold" style={{ color: "#E85B5B" }}>
               REEMBOLSO:
             </span>
             <span className="text-gray-200">
               {" "}
-              R$ {formatarValor(reembolso12p)}
+              R$ {formatarMoedaCompleta(reembolso12p)}
             </span>
           </div>
+
           <div className="pt-2">
             <span className="font-bold" style={{ color: "var(--gold-light)" }}>
               RECLAME AQUI:
@@ -1333,6 +1361,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
           </div>
         </div>
 
+        {/* % CENTRAL */}
         <div
           className="text-8xl font-extrabold"
           style={{
@@ -1342,9 +1371,10 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
             animation: "goldenTextBreath 6s ease-in-out infinite",
           }}
         >
-          {percentualReembolso}%
+          {percentualReputacao}%
         </div>
 
+        {/* GRÁFICO DE PIZZA */}
         <div className="flex justify-center items-center">
           <PieChart width={240} height={240}>
             <Pie
@@ -1364,7 +1394,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
 
               {/* FATURAMENTO */}
               <Label
-                value={`R$ ${formatarValor(fat12p)}`}
+                value={`R$ ${formatarMoedaCompleta(fat12p)}`}
                 position="outside"
                 fill="#8BCF7A"
                 fontSize={18}
@@ -1374,7 +1404,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
 
               {/* ESTORNO */}
               <Label
-                value={`R$ ${formatarValor(estorno12p)}`}
+                value={`R$ ${formatarMoedaCompleta(estorno12p)}`}
                 position="outside"
                 fill="#E6A347"
                 fontSize={18}
@@ -1384,7 +1414,7 @@ function ReputacaoCard({ fat12p, estorno12p, reembolso12p, reclameAqui }) {
 
               {/* REEMBOLSO */}
               <Label
-                value={`R$ ${formatarValor(reembolso12p)}`}
+                value={`R$ ${formatarMoedaCompleta(reembolso12p)}`}
                 position="outside"
                 fill="#E85B5B"
                 fontSize={18}

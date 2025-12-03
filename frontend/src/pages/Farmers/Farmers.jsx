@@ -1,5 +1,4 @@
 import farmersImg from "../../assets/Farmers/Farmers.png";
-import rightSideImg from "../../assets/Farmers/RightSide.png";
 
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
 const farmerPhotos = import.meta.glob("../../assets/Farmers/*.png", {
@@ -420,19 +419,17 @@ export default function Farmers({ dados }) {
               );
             })}
 
-            {/* ========================= SLOT VAZIO COM IMAGEM ========================= */}
+            {/* ========================= SLOT VAZIO COM VIDEO ========================= */}
             {farmers.length % 2 !== 0 && (
               <div
                 className="relative flex items-center justify-center rounded-2xl border-2 border-[rgba(160,200,255,0.35)] overflow-hidden"
                 style={{ backgroundImage: CARD_BACKGROUND }}
               >
-                <img
-                  src={rightSideImg}
-                  alt="Decorativo"
-                  className="w-full h-full object-cover opacity-[0.93]"
-                  style={{
-                    filter: "brightness(1.03) contrast(1.05) saturate(1.1)",
-                  }}
+                <iframe
+                  src="https://www.youtube.com/embed/ePIZWK-rDf4?autoplay=1&mute=1&loop=1&playlist=ePIZWK-rDf4&controls=0&showinfo=0&modestbranding=1"
+                  title="Video"
+                  className="w-full h-full object-cover"
+                  allow="autoplay; fullscreen"
                 />
 
                 <div className="pointer-events-none absolute inset-0 farmer-full-glow" />

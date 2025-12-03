@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import logolastdance from "../../assets/LastDance/lastdance.png";
 
 const META_MENSAL = 1000000;
+const META_ESTORNOS = 2000000;
+
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
 
@@ -37,13 +39,17 @@ const ANIMATION_STYLES = `
 
 const ROOT_BACKGROUND =
   "radial-gradient(circle at 10% 20%, rgba(202,208,3,0.25), transparent 45%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.15), transparent 55%), linear-gradient(135deg, #dd044e, #f2266c 40%, #c4034e 100%)";
+
 const BLOCO2_BACKGROUND =
   "linear-gradient(135deg, rgba(221,4,78,0.92), rgba(221,4,78,0.75))";
+
 const BLOCO4_BACKGROUND =
   "linear-gradient(135deg, rgba(221,4,78,0.85), rgba(221,4,78,0.65))";
+
 const TABLE_HEADER_BG = "rgba(221,4,78,0.8)";
-const TABLE_ROW_ODD_BG = "rgba(255, 255, 255, 0.06)";
-const TABLE_ROW_EVEN_BG = "rgba(255, 105, 145, 0.22)";
+const TABLE_ROW_ODD_BG = "rgba(255,255,255,0.06)";
+const TABLE_ROW_EVEN_BG = "rgba(255,105,145,0.22)";
+
 const GOLD = "#cad003";
 const PINK = "#dd044e";
 const WHITE_GLOW = "rgba(255,255,255,0.85)";
@@ -74,7 +80,11 @@ export default function LastDance() {
   const [somaOpen, setSomaOpen] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
 
+  const [totalEstornos, setTotalEstornos] = useState(0);
+  const [pctEstornos, setPctEstornos] = useState(0);
+
   const audioRef = useRef(null);
+
   const hojeBR = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
@@ -86,22 +96,16 @@ export default function LastDance() {
     });
   }
 
-  // 🔥 FUNÇÃO QUE CORRIGE TODAS AS SOMAS
   function toNumber(valor) {
     if (valor == null) return 0;
     const v = String(valor).trim();
 
-    // Ex: 79.701,50 → 79701.50
     if (v.includes(",") && v.includes(".")) {
       return Number(v.replace(/\./g, "").replace(",", "."));
     }
-
-    // Ex: 4701,50 → 4701.50
     if (v.includes(",") && !v.includes(".")) {
       return Number(v.replace(",", "."));
     }
-
-    // Ex: 4701.50 → 4701.50
     return Number(v);
   }
 
@@ -137,15 +141,12 @@ export default function LastDance() {
           );
         });
 
-        console.log("ITEM COMPLETO:", JSON.stringify(filtradosMes, null, 2));
-
         const recentes = [...filtradosMes]
           .sort((a, b) => new Date(b.data) - new Date(a.data))
           .slice(0, 3);
 
         setDados(recentes);
 
-        // 🔥 SOMA DO MÊS (CORRIGIDA)
         const somaMes = filtradosMes.reduce(
           (acc, i) => acc + toNumber(i.valor),
           0
@@ -153,13 +154,9 @@ export default function LastDance() {
 
         setTotalVendido(somaMes);
 
-        // FALTAM PARA META MENSAL
         const restante = Math.max(META_MENSAL - somaMes, 0);
         setFaltamParaMetaMensal(restante);
 
-        // ================================
-        // NOVA LÓGICA DE META POR SEMANA
-        // ================================
         const dia = hojeBR.getDate();
 
         const semana1 = 275000;
@@ -168,13 +165,9 @@ export default function LastDance() {
 
         let metaAcumulada = 0;
 
-        if (dia <= 7) {
-          metaAcumulada = semana1;
-        } else if (dia <= 14) {
-          metaAcumulada = semana1 + semana2;
-        } else {
-          metaAcumulada = semana1 + semana2 + semana3mais;
-        }
+        if (dia <= 7) metaAcumulada = semana1;
+        else if (dia <= 14) metaAcumulada = semana1 + semana2;
+        else metaAcumulada = semana1 + semana2 + semana3mais;
 
         const valorSemanalFaltante = Math.max(metaAcumulada - somaMes, 0);
         setValorDiario(valorSemanalFaltante);
@@ -190,27 +183,62 @@ export default function LastDance() {
         );
         const data = await r.json();
 
-        // 🔥 SOMA DOS ABERTOS (CORRIGIDA)
         setSomaOpen(data.reduce((acc, i) => acc + toNumber(i.valor), 0));
       } catch {}
     }
 
+    async function fetchEstornos() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_Reembolso`
+        );
+        const data = await r.json();
+
+        const agora = new Date();
+        const ano = agora.getFullYear();
+        const mes = String(agora.getMonth() + 1).padStart(2, "0");
+
+        const prefixoMes = `${ano}-${mes}`;
+
+        const proibidos = ["Acordo Judicial", "Acordo Extrajudicial"];
+
+        let total = 0;
+
+        for (const item of data) {
+          const dataDev = item.Data_de_Devolucao || "";
+
+          if (!dataDev.startsWith(prefixoMes)) continue;
+
+          const status = (item.Status || "").trim();
+
+          if (proibidos.includes(status)) continue;
+
+          if (status === "Estorno") {
+            total += toNumber(item.Estorno_R || 0);
+          } else {
+            total += toNumber(item.Reembolso_R || 0);
+          }
+        }
+
+        setTotalEstornos(total);
+        setPctEstornos((total / META_ESTORNOS) * 100);
+      } catch (err) {
+        console.log("Erro nos estornos:", err);
+      }
+    }
+
     fetchData();
     fetchOpen();
+    fetchEstornos();
 
     const interval = setInterval(() => {
       fetchData();
       fetchOpen();
+      fetchEstornos();
     }, 30000);
 
     return () => clearInterval(interval);
   }, []);
-
-  function playSom() {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
-  }
 
   const metaProgress = Math.min(
     1,
@@ -455,14 +483,14 @@ export default function LastDance() {
                 className="text-[6rem] font-black leading-none"
                 style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
               >
-                0,00
+                {formatarValor(totalEstornos)}
               </span>
 
               <span
                 className="text-[2rem] font-semibold"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                0,00%
+                {pctEstornos.toFixed(2)}%
               </span>
             </div>
           </div>
