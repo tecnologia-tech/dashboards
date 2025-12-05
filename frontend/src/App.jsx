@@ -18,6 +18,7 @@ const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 const Geral = lazy(() => import("./pages/Geral/Geral"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const Avisos = lazy(() => import("./pages/Avisos/Avisos"));
+const Conjunta = lazy(() => import("./pages/Conjunta/Conjunta"));
 
 /* ===========================================================
    PRELOAD - Remove delay do lazy
@@ -78,24 +79,24 @@ export default function App() {
       <Routes>
         <Route path="/" element={<TVSelection />} />
 
-        <Route path="/tv1" element={<Navigate to="/geral" replace />} />
+        <Route path="/tv1" element={<Navigate to="/Conjunta" replace />} />
         <Route path="/tv2" element={<Navigate to="/Lastdance" replace />} />
         <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
         {/* TV1 */}
         <Route
-          path="/geral"
+          path="/conjunta"
           element={
             <>
               <AutoRotate
-                rotas={[{ path: "/geral" }]}
+                rotas={[{ path: "/conjunta" }]}
                 tempoRefresh={5 * 60 * 1000}
               />
               <TelaComRefresh>
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}
                 >
-                  <Geral />
+                  <Conjunta />
                 </Suspense>
               </TelaComRefresh>
             </>

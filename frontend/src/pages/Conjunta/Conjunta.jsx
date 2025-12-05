@@ -45,15 +45,14 @@ export default function Conjunta() {
     backgroundImage: `url(${fundo})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
-    opacity: 3,
+    opacity: 0.7,
   };
 
   const overlayStyle = {
     position: "absolute",
     inset: 0,
-    backdropFilter: "blur(12px)",
-    background:
-      "radial-gradient(circle at 18% 24%, rgba(255,255,255,0.42), transparent 34%), radial-gradient(circle at 78% 12%, rgba(174,211,183,0.32), transparent 30%), linear-gradient(135deg, rgba(255,255,255,0.22), rgba(186,219,190,0.25))",
+    backdropFilter: "none",
+    background: "transparent",
   };
 
   const contentWrapper = {
@@ -83,29 +82,31 @@ export default function Conjunta() {
       "0 16px 32px rgba(17,60,36,0.18), inset 0 1px 0 rgba(255,255,255,0.5)",
   };
 
-  const puzzleClip = {
-    clipPath:
-      "path('M10 0 H38 C44 0 46 8 46 14 C46 20 50 26 56 26 C62 26 66 20 66 14 C66 8 68 0 74 0 H90 Q100 0 100 10 V32 C100 38 94 42 88 42 C80 42 74 48 74 54 C74 60 80 66 88 66 C94 66 100 70 100 76 V90 Q100 100 90 100 H74 C68 100 66 108 66 114 C66 120 62 126 56 126 C50 126 46 120 46 114 C46 108 44 100 38 100 H10 Q0 100 0 90 V76 C0 70 6 66 12 66 C20 66 26 60 26 54 C26 48 20 42 12 42 C6 42 0 38 0 32 V10 Q0 0 10 0 Z')",
-    WebkitClipPath:
-      "path('M10 0 H38 C44 0 46 8 46 14 C46 20 50 26 56 26 C62 26 66 20 66 14 C66 8 68 0 74 0 H90 Q100 0 100 10 V32 C100 38 94 42 88 42 C80 42 74 48 74 54 C74 60 80 66 88 66 C94 66 100 70 100 76 V90 Q100 100 90 100 H74 C68 100 66 108 66 114 C66 120 62 126 56 126 C50 126 46 120 46 114 C46 108 44 100 38 100 H10 Q0 100 0 90 V76 C0 70 6 66 12 66 C20 66 26 60 26 54 C26 48 20 42 12 42 C6 42 0 38 0 32 V10 Q0 0 10 0 Z')",
-  };
+  const textShadowStyle = { textShadow: "0 1px 1px rgba(255,255,255,0.7)" };
 
   // ============================
   // COMPONENTE REUTILIZÁVEL DE TABELA
   // ============================
 
   const Table = ({ title, dado2 }) => (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden">
-      <h2 className="text-5xl font-bold text-center mb-4 shrink-0 text-emerald-950 drop-shadow-[0_1px_3px_rgba(0,0,0,0.16)]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden overflow-x-hidden">
+      {/* TÍTULO */}
+      <h2
+        className="text-5xl font-bold text-center mb-3 shrink-0 text-emerald-950 drop-shadow-[0_1px_3px_rgba(0,0,0,0.16)]"
+        style={textShadowStyle}
+      >
         {title}
       </h2>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-        <table className="table-fixed w-full border-collapse scale-[1.25] origin-top text-emerald-950">
-          <thead className="text-4xl leading-[4rem] shrink-0 text-emerald-900/85">
-            <tr className="border-b border-emerald-100/70 text-center"></tr>
-          </thead>
+      {/* LINHA SEPARADORA PADRONIZADA */}
+      <div className="w-full h-[2px] bg-emerald-100/60 mb-4"></div>
 
+      {/* TABELA */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2">
+        <table
+          className="table-fixed w-full border-collapse text-emerald-950"
+          style={textShadowStyle}
+        >
           <tbody className="text-3xl leading-[3.5rem] text-emerald-950/90">
             {dado2.map((item, i) => (
               <tr key={i} className="text-center">
@@ -130,7 +131,13 @@ export default function Conjunta() {
 
       <div style={contentWrapper} className="min-h-0">
         {/* HEADER */}
-        <div className="w-full text-center rounded-2xl  bg-white/25 backdrop-blur-2xl shadow-[0_16px_32px_rgba(0,0,0,0.15)] ring-1 ring-emerald-100/60 py-6 px-10 text-6xl font-extrabold tracking-wide text-emerald-900/95 drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]">
+        <div
+          className="inline-block mx-auto text-center rounded-2xl border-white/70 bg-white/25 backdrop-blur-2xl 
+             shadow-[0_16px_32px_rgba(0,0,0,0.15)] ring-1 ring-white/40 
+             py-6 px-10 text-6xl font-extrabold tracking-wide text-emerald-900/95 
+             drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
+          style={textShadowStyle}
+        >
           Importação Conjunta 🧩
         </div>
 
@@ -180,9 +187,12 @@ export default function Conjunta() {
             }}
             className="border-4 border-white/70 rounded-xl ring-1 ring-emerald-100/60 bg-white/25 backdrop-blur-xl shadow-[0_14px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)] transition-shadow duration-150 p-4 text-5xl text-emerald-900"
           >
-            <span>Total</span>
-            <span>CBM</span>
-            <div className="w-10 h-10 border-2 border-white/70 rounded-md bg-white/15 shadow-inner backdrop-blur" />
+            <span style={textShadowStyle}>Total</span>
+            <span style={textShadowStyle}>CBM</span>
+            <div
+              className="w-10 h-10 border-2 border-white/70 rounded-md bg-white/15 shadow-inner backdrop-blur"
+              style={textShadowStyle}
+            />
           </div>
         </div>
       </div>
