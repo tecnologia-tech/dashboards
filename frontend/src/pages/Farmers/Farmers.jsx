@@ -1,4 +1,4 @@
-import ytImg from "../../assets/Avisos/bg-video-youtube.png";
+import ytImg from "../../assets/Farmers/video.png";
 import farmersImg from "../../assets/Farmers/Farmers.png";
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
 const farmerPhotos = import.meta.glob("../../assets/Farmers/*.png", {
