@@ -1,3 +1,4 @@
+import ytImg from "../../assets/Avisos/bg-video-youtube.png";
 import farmersImg from "../../assets/Farmers/Farmers.png";
 /* IMPORTAÇÃO AUTOMÁTICA DAS FOTOS */
 const farmerPhotos = import.meta.glob("../../assets/Farmers/*.png", {
@@ -424,13 +425,10 @@ export default function Farmers({ dados }) {
                 className="relative flex items-center justify-center rounded-2xl border-2 border-[rgba(160,200,255,0.35)] overflow-hidden"
                 style={{ backgroundImage: CARD_BACKGROUND }}
               >
-                <iframe
-                  className="absolute inset-0 w-full h-full"
-                  src="https://www.youtube.com/embed/ePIZWK-rDf4?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=ePIZWK-rDf4&modestbranding=1&playsinline=1"
-                  title="YouTube video"
-                  frameBorder="0"
-                  allow="autoplay; encrypted-media"
-                  allowFullScreen={false}
+                {/* FOTO NO LUGAR DO VIDEO */}
+                <img
+                  src={ytImg}
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
 
                 <div className="pointer-events-none absolute inset-0 farmer-full-glow" />
