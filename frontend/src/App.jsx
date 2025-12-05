@@ -17,7 +17,6 @@ const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 const Geral = lazy(() => import("./pages/Geral/Geral"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
-const Avisos = lazy(() => import("./pages/Avisos/Avisos"));
 const Conjunta = lazy(() => import("./pages/Conjunta/Conjunta"));
 
 /* ===========================================================
@@ -28,7 +27,6 @@ import("./pages/Hunters/Hunters");
 import("./pages/BlackFriday/BlackFriday");
 import("./pages/Geral/Geral");
 import("./pages/LastDance/LastDance");
-import("./pages/Avisos/Avisos");
 import("./pages/Conjunta/Conjunta");
 /* ===========================================================
    CONTEXTO INTERNO DA TV3 — NÃO EXPORTADO!
@@ -75,6 +73,27 @@ function TelaComRefresh({ children }) {
 }
 
 /* ===========================================================
+   WRAPPER DA TV1 — rotaciona Conjunta/Geral
+=========================================================== */
+function TV1Wrapper({ children }) {
+  return (
+    <>
+      <AutoRotate
+        rotas={[{ path: "/conjunta" }, { path: "/geral" }]}
+        tempoRotacao={2 * 60 * 1000} // 2 minutos
+        tempoRefresh={3 * 60 * 1000}
+      />
+
+      <TelaComRefresh>
+        <Suspense fallback={<div style={{ color: "white" }}>Carregando…</div>}>
+          {children}
+        </Suspense>
+      </TelaComRefresh>
+    </>
+  );
+}
+
+/* ===========================================================
    APP PRINCIPAL
 =========================================================== */
 export default function App() {
@@ -91,21 +110,17 @@ export default function App() {
         <Route
           path="/conjunta"
           element={
-            <>
-              <AutoRotate
-                rotas={[{ path: "/conjunta" }, { path: "/geral" }]}
-                tempoRotacao={2 * 60 * 1000} // 2 minutos
-                tempoRefresh={3 * 60 * 1000} // se quiser continuar usando
-              />
-
-              <TelaComRefresh>
-                <Suspense
-                  fallback={<div style={{ color: "white" }}>Carregando…</div>}
-                >
-                  <Conjunta />
-                </Suspense>
-              </TelaComRefresh>
-            </>
+            <TV1Wrapper>
+              <Conjunta />
+            </TV1Wrapper>
+          }
+        />
+        <Route
+          path="/geral"
+          element={
+            <TV1Wrapper>
+              <Geral />
+            </TV1Wrapper>
           }
         />
 
