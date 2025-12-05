@@ -94,7 +94,8 @@ export default function App() {
             <>
               <AutoRotate
                 rotas={[{ path: "/conjunta" }, { path: "/geral" }]}
-                tempoRefresh={3 * 60 * 1000}
+                tempoRotacao={2 * 60 * 1000} // 2 minutos
+                tempoRefresh={3 * 60 * 1000} // se quiser continuar usando
               />
 
               <TelaComRefresh>
