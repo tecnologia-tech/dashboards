@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Slab:wght@100..900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,4 +14,14 @@ body,
 #root {
   @apply h-full w-full;
   margin: 0;
+}
+.scroll-area {
+  display: flex;
+  flex-direction: column;
+  animation: scroll-loop 60s linear infinite;
+}
+
+@keyframes scroll-loop {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
 }

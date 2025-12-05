@@ -25,7 +25,11 @@ const Conjunta = lazy(() => import("./pages/Conjunta/Conjunta"));
 =========================================================== */
 import("./pages/Farmers/Farmers");
 import("./pages/Hunters/Hunters");
-
+import("./pages/BlackFriday/BlackFriday");
+import("./pages/Geral/Geral");
+import("./pages/LastDance/LastDance");
+import("./pages/Avisos/Avisos");
+import("./pages/Conjunta/Conjunta");
 /* ===========================================================
    CONTEXTO INTERNO DA TV3 — NÃO EXPORTADO!
 =========================================================== */
@@ -89,9 +93,10 @@ export default function App() {
           element={
             <>
               <AutoRotate
-                rotas={[{ path: "/conjunta" }]}
-                tempoRefresh={5 * 60 * 1000}
+                rotas={[{ path: "/conjunta" }, { path: "/geral" }]}
+                tempoRefresh={3 * 60 * 1000}
               />
+
               <TelaComRefresh>
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}

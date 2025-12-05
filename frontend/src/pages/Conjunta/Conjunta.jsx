@@ -1,42 +1,21 @@
+import { useEffect, useState } from "react";
 import fundo from "../../assets/Conjunta/fundo.png";
 
 export default function Conjunta() {
   // ============================
-  // DADOS DIFERENTES PARA CADA TABELA
-  // ============================
-
-  const dadosProducao = [
-    { dado1: "João", dado2: "12/01/2025" },
-    { dado1: "Maria", dado2: "14/01/2025" },
-    { dado1: "Pedro", dado2: "17/01/2025" },
-  ];
-
-  const dadosAuditoria = [
-    { dado1: "Lucas", dado2: "08/01/2025" },
-    { dado1: "Fernanda", dado2: "10/01/2025" },
-  ];
-
-  const dadosEmbarque = [
-    { dado1: "Carga 1", dado2: "20/01/2025" },
-    { dado1: "Carga 2", dado2: "22/01/2025" },
-    { dado1: "Carga 3", dado2: "25/01/2025" },
-  ];
-
-  const dadosQC = [
-    { dado1: "Lote A", dado2: "05/01/2025" },
-    { dado1: "Lote B", dado2: "07/01/2025" },
-  ];
-
-  // ============================
   // ESTILOS
   // ============================
+
+  const textGlow = {
+    textShadow: "0 0 6px rgba(0,0,0,0.65)",
+  };
 
   const pageStyle = {
     width: "100vw",
     height: "100vh",
     overflow: "hidden",
     position: "relative",
-    backgroundColor: "#edf5ed",
+    backgroundColor: "#0d1f16",
   };
 
   const backgroundStyle = {
@@ -51,8 +30,9 @@ export default function Conjunta() {
   const overlayStyle = {
     position: "absolute",
     inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
     backdropFilter: "none",
-    background: "transparent",
+    zIndex: 1,
   };
 
   const contentWrapper = {
@@ -74,124 +54,363 @@ export default function Conjunta() {
   };
 
   const glass = {
-    background:
-      "linear-gradient(155deg, rgba(255,255,255,0.32), rgba(255,255,255,0.18))",
-    backdropFilter: "blur(14px) saturate(1.06)",
-    borderColor: "rgba(255,255,255,0.78)",
-    boxShadow:
-      "0 16px 32px rgba(17,60,36,0.18), inset 0 1px 0 rgba(255,255,255,0.5)",
+    background: "rgba(255,255,255,0.03)",
+    backdropFilter: "blur(6px)",
+    borderColor: "rgba(255,255,255,0.12)",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
   };
 
-  const textShadowStyle = { textShadow: "0 1px 1px rgba(255,255,255,0.7)" };
-
   // ============================
-  // COMPONENTE REUTILIZÁVEL DE TABELA
+  // TABELA
   // ============================
 
-  const Table = ({ title, dado2 }) => (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden overflow-x-hidden">
-      {/* TÍTULO */}
-      <h2
-        className="text-5xl font-bold text-center mb-3 shrink-0 text-emerald-950 drop-shadow-[0_1px_3px_rgba(0,0,0,0.16)]"
-        style={textShadowStyle}
-      >
-        {title}
-      </h2>
-
-      {/* LINHA SEPARADORA PADRONIZADA */}
-      <div className="w-full h-[2px] bg-emerald-100/60 mb-4"></div>
-
-      {/* TABELA */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2">
-        <table
-          className="table-fixed w-full border-collapse text-emerald-950"
-          style={textShadowStyle}
+  const Table = ({ title, dado2, totalCBM }) => (
+    <div className="flex flex-col h-full min-h-0 overflow-hidden relative">
+      {/* ======== TÍTULO CENTRALIZADO + BADGE DIREITA ======== */}
+      <div className="relative mb-6 w-full pb-5">
+        {/* Título centralizado */}
+        <h2
+          className="
+          text-4xl font-montserrat font-bold 
+          text-emerald-200 text-center w-full
+          absolute left-1/2 -translate-x-1/2
+        "
+          style={textGlow}
         >
-          <tbody className="text-3xl leading-[3.5rem] text-emerald-950/90">
-            {dado2.map((item, i) => (
-              <tr key={i} className="text-center">
-                <td className="py-2">{item.dado1}</td>
-                <td className="py-2">{item.dado2}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          {title}
+        </h2>
+
+        {/* Badge (número de itens) */}
+        <div
+          className="
+          absolute right-0 top-1/2 -translate-y-1/2 
+          w-10 h-10 flex items-center justify-center 
+          rounded-md bg-emerald-300/30 border border-emerald-300/60 
+          text-emerald-200 font-montserrat font-bold text-2xl shadow-md
+        "
+          style={textGlow}
+        >
+          {dado2.length}
+        </div>
+
+        {/* Elemento fantasma só para manter altura */}
+        <div className="h-10"></div>
       </div>
+
+      {/* Linha separadora */}
+      <div className="w-full h-[1px] bg-white/20 mb-4"></div>
+
+      {/* ======== ÁREA DE SCROLL INFINITO ======== */}
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        {/* Se tiver poucos itens → lista fixa sem scroll */}
+        {dado2.length < 10 ? (
+          <table className="table-fixed w-full border-collapse">
+            <tbody className="text-2xl leading-[3rem]">
+              {dado2.map((item, i) => (
+                <tr key={i} className="text-center">
+                  <td
+                    className="py-2 font-montserrat font-semibold text-white"
+                    style={textGlow}
+                  >
+                    {item.dado1}
+                  </td>
+                  <td
+                    className="py-2 font-montserrat text-emerald-300 text-right pr-6"
+                    style={{ ...textGlow, width: "120px" }}
+                  >
+                    {item.dado2}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          /* ======== SCROLL INFINITO ======== */
+          <div className="scroll-area">
+            {/* Lista normal */}
+            <table className="table-fixed w-full border-collapse">
+              <tbody className="text-2xl leading-[3rem]">
+                {dado2.map((item, i) => (
+                  <tr key={i} className="text-center">
+                    <td
+                      className="py-2 font-montserrat font-semibold text-white"
+                      style={textGlow}
+                    >
+                      {item.dado1}
+                    </td>
+                    <td
+                      className="py-2 font-montserrat text-emerald-300"
+                      style={textGlow}
+                    >
+                      {item.dado2}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Lista duplicada → rolagem contínua */}
+            <table className="table-fixed w-full border-collapse opacity-80">
+              <tbody className="text-2xl leading-[3rem]">
+                {dado2.map((item, i) => (
+                  <tr key={`clone-${i}`} className="text-center">
+                    <td
+                      className="py-2 font-montserrat font-semibold text-white"
+                      style={textGlow}
+                    >
+                      {item.dado1}
+                    </td>
+                    <td
+                      className="py-2 font-montserrat text-emerald-300"
+                      style={textGlow}
+                    >
+                      {item.dado2}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ======== TOTAL CBM — APENAS PARA EMBARQUE ======== */}
+      {title === "AGUARDANDO EMBARQUE" && (
+        <div className="mt-4">
+          <div className="w-full h-[2px] bg-white/25 mb-3"></div>
+
+          <div
+            className="text-3xl font-montserrat font-semibold text-emerald-200 text-center"
+            style={textGlow}
+          >
+            TOTAL:{" "}
+            <span className="text-emerald-300">
+              {totalCBM?.toFixed(2) ?? "0.00"}
+            </span>{" "}
+            CBM
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  // ============================
+  // ESTADOS DINÂMICOS
+  // ============================
+
+  const [dadosAuditoria, setDadosAuditoria] = useState([]);
+  const [dadosQCdinamico, setDadosQCdinamico] = useState([]);
+  const [dadosEmbarqueAPI, setDadosEmbarqueAPI] = useState([]);
+  const [totalCBM, setTotalCBM] = useState(0);
+  const [dadosProducaoAPI, setDadosProducaoAPI] = useState([]);
+  // ============================
+  // API — AGUARDANDO EMBARQUE
+  // ============================
+  useEffect(() => {
+    async function carregarProducao() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_ixdelivery`
+        );
+        const data = await r.json();
+
+        const filtrados = data
+          .filter(
+            (item) =>
+              item.grupo === "⭐ Pedidos em andamento" &&
+              item.N_Pedido === "CONJUNTA" &&
+              item.Stage_Pedido === "Produção"
+          )
+          .map((item) => ({
+            dado1: item.name,
+            dado2: item.Stage_Pedido, // mostra "Produção"
+          }));
+
+        setDadosProducaoAPI(filtrados);
+      } catch (error) {
+        console.error("Erro ao carregar PRODUÇÃO:", error);
+      }
+    }
+
+    carregarProducao();
+  }, []);
+
+  useEffect(() => {
+    async function carregarEmbarque() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_ixlogcomex`
+        );
+        const data = await r.json();
+
+        const filtrados = data.filter(
+          (item) =>
+            item.grupo === "⭐Em Andamento" && item.N_Pedido === "CONJUNTA"
+        );
+
+        const tabela = filtrados.map((item) => ({
+          dado1: String(item.name).replace(/\s+/g, " ").trim(), // evita quebras
+          dado2: Number(item.CBM) || 0,
+        }));
+
+        setDadosEmbarqueAPI(tabela);
+
+        const soma = filtrados.reduce(
+          (acc, item) => acc + (Number(item.CBM) || 0),
+          0
+        );
+
+        setTotalCBM(soma);
+      } catch (error) {
+        console.error("Erro ao carregar embarque:", error);
+      }
+    }
+
+    carregarEmbarque();
+  }, []);
+
+  // ============================
+  // API — QC
+  // ============================
+
+  useEffect(() => {
+    async function carregarQC() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_ixdelivery`
+        );
+        const data = await r.json();
+
+        const allowedStages = ["QC", "Pagamento 70%", "Pagamento 30%"];
+
+        const filtrados = data
+          .filter(
+            (item) =>
+              item.grupo === "⭐ Pedidos em andamento" &&
+              item.N_Pedido === "CONJUNTA" &&
+              allowedStages.includes(item.Stage_Pedido)
+          )
+          .map((item) => ({
+            dado1: item.name,
+            dado2: item.Stage_Pedido,
+          }));
+
+        setDadosQCdinamico(filtrados);
+      } catch (error) {
+        console.error("Erro ao carregar QC:", error);
+      }
+    }
+
+    carregarQC();
+  }, []);
+
+  // ============================
+  // API — AUDITORIA
+  // ============================
+
+  useEffect(() => {
+    async function carregarAuditoria() {
+      try {
+        const r = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dash_ixdelivery`
+        );
+        const data = await r.json();
+
+        const allowedStages = [
+          "Certificação/Amostra",
+          "Auditoria",
+          "Câmbio 30%",
+          "Pagamento 30%",
+        ];
+
+        const filtrados = data
+          .filter(
+            (item) =>
+              item.grupo === "⭐ Pedidos em andamento" &&
+              item.N_Pedido === "CONJUNTA" &&
+              allowedStages.includes(item.Stage_Pedido)
+          )
+          .map((item) => ({
+            dado1: item.name,
+            dado2: item.Stage_Pedido,
+          }));
+
+        setDadosAuditoria(filtrados);
+      } catch (error) {
+        console.error("Erro ao carregar Auditoria:", error);
+      }
+    }
+
+    carregarAuditoria();
+  }, []);
 
   // ============================
   // RENDER
   // ============================
 
   return (
-    <div style={pageStyle} className="font-sans min-h-0 text-emerald-950">
+    <div style={pageStyle} className="font-sans min-h-0 text-white">
       <div style={backgroundStyle} />
       <div style={overlayStyle} />
 
       <div style={contentWrapper} className="min-h-0">
-        {/* HEADER */}
         <div
-          className="inline-block mx-auto text-center rounded-2xl border-white/70 bg-white/25 backdrop-blur-2xl 
-             shadow-[0_16px_32px_rgba(0,0,0,0.15)] ring-1 ring-white/40 
-             py-6 px-10 text-6xl font-extrabold tracking-wide text-emerald-900/95 
-             drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
-          style={textShadowStyle}
+          className="inline-block mx-auto text-center rounded-xl border-white/20 bg-white/10 
+                     backdrop-blur-xl shadow-[0_4px_18px_rgba(0,0,0,0.3)] 
+                     py-6 px-10 text-6xl font-montserrat font-bold tracking-wide text-emerald-200"
+          style={textGlow}
         >
-          Importação Conjunta 🧩
+          IMPORTAÇÃO CONJUNTA
         </div>
 
-        {/* GRID */}
         <div style={grid} className="h-full min-h-0 overflow-hidden">
-          {/* PRODUÇÃO */}
+          {/* Produção */}
           <div
             style={{ ...glass, gridColumn: "span 3", gridRow: "span 6" }}
-            className="border-4 border-white/70 rounded-xl ring-1 ring-emerald-100/60 bg-white/25 backdrop-blur-xl shadow-[0_14px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)] transition-shadow duration-150 p-4 overflow-hidden"
+            className="border rounded-xl p-4 overflow-hidden"
           >
-            <Table title="Produção" dado2={dadosProducao} />
+            <Table title="PRODUÇÃO" dado2={dadosProducaoAPI} />
           </div>
 
-          {/* AUDITORIA E CÂMBIO INICIAL */}
-          <div
-            style={{ ...glass, gridColumn: "span 5", gridRow: "span 3" }}
-            className="border-4 border-white/70 rounded-xl ring-1 ring-emerald-100/60 bg-white/25 backdrop-blur-xl shadow-[0_14px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)] transition-shadow duration-150 p-4 overflow-hidden"
-          >
-            <Table title="Auditoria e Câmbio Inicial" dado2={dadosAuditoria} />
-          </div>
-
-          {/* AGUARDANDO EMBARQUE */}
-          <div
-            style={{ ...glass, gridColumn: "span 4", gridRow: "span 5" }}
-            className="border-4 border-white/70 rounded-xl ring-1 ring-emerald-100/60 bg-white/25 backdrop-blur-xl shadow-[0_14px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)] transition-shadow duration-150 p-4 overflow-hidden"
-          >
-            <Table title="Aguardando Embarque" dado2={dadosEmbarque} />
-          </div>
-
-          {/* QC E CÂMBIO FINAL */}
-          <div
-            style={{ ...glass, gridColumn: "span 5", gridRow: "span 3" }}
-            className="border-4 border-white/70 rounded-xl ring-1 ring-emerald-100/60 bg-white/25 backdrop-blur-xl shadow-[0_14px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)] transition-shadow duration-150 p-4 overflow-hidden"
-          >
-            <Table title="QC e Câmbio Final" dado2={dadosQC} />
-          </div>
-
-          {/* TOTAL / CBM (sem tabela) */}
+          {/* Bloco central */}
           <div
             style={{
-              ...glass,
-              gridColumn: "span 4",
-              gridRow: "span 1",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              gridColumn: "span 6",
+              gridRow: "span 6",
+              display: "grid",
+              gridTemplateRows: "1fr 1fr",
+              gap: "20px",
             }}
-            className="border-4 border-white/70 rounded-xl ring-1 ring-emerald-100/60 bg-white/25 backdrop-blur-xl shadow-[0_14px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)] transition-shadow duration-150 p-4 text-5xl text-emerald-900"
           >
-            <span style={textShadowStyle}>Total</span>
-            <span style={textShadowStyle}>CBM</span>
+            {/* Auditoria */}
             <div
-              className="w-10 h-10 border-2 border-white/70 rounded-md bg-white/15 shadow-inner backdrop-blur"
-              style={textShadowStyle}
+              style={{ ...glass, height: "100%" }}
+              className="border rounded-xl p-4 overflow-hidden"
+            >
+              <Table
+                title="AUDITORIA E CÂMBIO INICIAL"
+                dado2={dadosAuditoria}
+              />
+            </div>
+
+            {/* QC */}
+            <div
+              style={{ ...glass, height: "100%" }}
+              className="border rounded-xl p-4 overflow-hidden"
+            >
+              <Table title="QC E CÂMBIO FINAL" dado2={dadosQCdinamico} />
+            </div>
+          </div>
+
+          {/* Embarque */}
+          <div
+            style={{ ...glass, gridColumn: "span 3", gridRow: "span 6" }}
+            className="border rounded-xl p-4 overflow-hidden"
+          >
+            <Table
+              title="AGUARDANDO EMBARQUE"
+              dado2={dadosEmbarqueAPI}
+              totalCBM={totalCBM}
             />
           </div>
         </div>
