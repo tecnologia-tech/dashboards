@@ -938,7 +938,7 @@ function OnboardingCard() {
         </div>
 
         <div className="flex flex-col justify-center gap-4">
-          <Person name="Jayanne" avatar={jayanneImg} count={jayanne} />
+          <Person name="Jayanna" avatar={jayanneImg} count={jayanne} />
           <Person name="Jenifer" avatar={jeniferImg} count={jenifer} />
           <Person name="Raissa" avatar={raissaImg} count={raissa} />
         </div>
