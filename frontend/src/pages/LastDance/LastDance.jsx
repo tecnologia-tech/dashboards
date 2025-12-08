@@ -120,7 +120,7 @@ export default function LastDance() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
-        const pipelineIds = ["71", "23", "47", "59", "63"];
+        const pipelineIds = ["71", "23", "47", "59", "63", "75"];
 
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
