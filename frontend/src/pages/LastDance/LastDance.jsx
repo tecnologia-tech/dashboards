@@ -3,38 +3,15 @@ import logolastdance from "../../assets/LastDance/lastdance.png";
 
 const META_MENSAL = 1000000;
 const META_ESTORNOS = 2000000;
+const META_ANUAL = 23000000;
 
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
-
-@keyframes pulseArrow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(12px); }
-}
-
-@keyframes progressFlow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 180% 50%; }
-}
-
-@keyframes shineSweep {
-  0% { transform: translateX(-80%) skewX(-12deg); opacity: 0; }
-  35% { opacity: 0.9; }
-  60% { opacity: 0; }
-  100% { transform: translateX(130%) skewX(-12deg); opacity: 0; }
-}
-
-@keyframes goalPulse {
-  0% { box-shadow: 0 0 0 0 rgba(202,208,3,0.35); transform: scale(1); }
-  70% { box-shadow: 0 0 0 10px rgba(202,208,3,0); transform: scale(1.05); }
-  100% { box-shadow: 0 0 0 0 rgba(202,208,3,0); transform: scale(1); }
-}
-
-@keyframes progressShimmer {
-  0% { background-position: 0% 50%; opacity: 0.25; }
-  50% { opacity: 0.65; }
-  100% { background-position: 140% 50%; opacity: 0.25; }
-}
+@keyframes pulseArrow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(12px); } }
+@keyframes progressFlow { 0% { background-position: 0% 50%; } 100% { background-position: 180% 50%; } }
+@keyframes shineSweep { 0% { transform: translateX(-80%) skewX(-12deg); opacity: 0; } 35% { opacity: 0.9; } 60% { opacity: 0; } 100% { transform: translateX(130%) skewX(-12deg); opacity: 0; } }
+@keyframes goalPulse { 0% { box-shadow: 0 0 0 0 rgba(202,208,3,0.35); transform: scale(1); } 70% { box-shadow: 0 0 0 10px rgba(202,208,3,0); transform: scale(1.05); } 100% { box-shadow: 0 0 0 0 rgba(202,208,3,0); transform: scale(1); } }
+@keyframes progressShimmer { 0% { background-position: 0% 50%; opacity: 0.25; } 50% { opacity: 0.65; } 100% { background-position: 140% 50%; opacity: 0.25; } }
 `;
 
 const ROOT_BACKGROUND =
@@ -83,6 +60,9 @@ export default function LastDance() {
   const [totalEstornos, setTotalEstornos] = useState(0);
   const [pctEstornos, setPctEstornos] = useState(0);
 
+  const [totalAno, setTotalAno] = useState(0);
+  const [faltaMetaAnual, setFaltaMetaAnual] = useState(0);
+
   const audioRef = useRef(null);
 
   const hojeBR = new Date(
@@ -120,7 +100,35 @@ export default function LastDance() {
         const rawData = await r.json();
         if (!Array.isArray(rawData)) return;
 
-        const pipelineIds = ["71", "23", "47", "59", "63", "75"];
+        // -----------------------------
+        // FILTRO ANUAL
+        // -----------------------------
+        const pipelineIdsAno = ["15", "71", "23", "47", "59", "63", "35", "75"];
+
+        const inicioAno = new Date(hojeBR.getFullYear(), 0, 1);
+        const fimAno = new Date(hojeBR.getFullYear(), 11, 31);
+
+        const filtradosAno = rawData.filter((i) => {
+          const dt = new Date(i.data);
+          return (
+            pipelineIdsAno.includes(String(i.pipeline_id)) &&
+            dt >= inicioAno &&
+            dt <= fimAno
+          );
+        });
+
+        const somaAno = filtradosAno.reduce(
+          (acc, i) => acc + toNumber(i.valor),
+          0
+        );
+
+        setTotalAno(somaAno);
+        setFaltaMetaAnual(Math.max(META_ANUAL - somaAno, 0));
+
+        // -----------------------------
+        // FILTRO MENSAL
+        // -----------------------------
+        const pipelineIdsMes = ["71", "23", "47", "59", "63", "75"];
 
         const filtradosMes = rawData.filter((i) => {
           const dt = new Date(i.data);
@@ -135,7 +143,7 @@ export default function LastDance() {
           const fim = new Date(hojeBR.getFullYear(), hojeBR.getMonth() + 1, 0);
 
           return (
-            pipelineIds.includes(String(i.pipeline_id)) &&
+            pipelineIdsMes.includes(String(i.pipeline_id)) &&
             dataVenda >= inicio &&
             dataVenda <= fim
           );
@@ -244,6 +252,7 @@ export default function LastDance() {
     1,
     Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
   );
+
   const metaPercent = Math.round(metaProgress * 100);
 
   return (
@@ -297,7 +306,7 @@ export default function LastDance() {
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Faltam hoje para a meta semanal
+                Faltam para a meta semanal
               </span>
 
               <div className="flex items-end gap-[1rem] leading-none">
@@ -323,7 +332,7 @@ export default function LastDance() {
 
         {/* INFERIOR */}
         <div className="flex flex-col flex-1 gap-[1.6vh]">
-          {/* TOTAL */}
+          {/* TOTAL MENSAL */}
           <div className="flex flex-1 gap-[1.6vw]">
             <div
               className="relative flex flex-[2] flex-col items-center justify-center gap-[0.5vh] rounded-[32px]"
@@ -391,7 +400,7 @@ export default function LastDance() {
               </div>
             </div>
 
-            {/* PROJEÇÃO */}
+            {/* META ANUAL */}
             <div
               className="flex flex-col flex-1 items-center justify-center rounded-[32px] text-center"
               style={{
@@ -403,14 +412,21 @@ export default function LastDance() {
                 className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Projeção Geral
+                Falta para meta anual
               </span>
 
               <span
                 className="text-[6rem] font-black"
                 style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
               >
-                {formatarValor(somaOpen)}
+                {formatarValor(faltaMetaAnual)}
+              </span>
+
+              <span
+                className="text-[1.6rem] font-semibold"
+                style={{ color: GOLD, textShadow: GOLD_GLOW }}
+              >
+                Meta: {formatarValor(META_ANUAL)}
               </span>
             </div>
           </div>
@@ -442,7 +458,7 @@ export default function LastDance() {
                   </tr>
                 </thead>
 
-                <tbody className="text-[1.55rem] leading-[1.15]">
+                <tbody className="text-[1.55rem] leading-[1.15] font-extrabold">
                   {dados.map((item, i) => (
                     <tr
                       key={i}
