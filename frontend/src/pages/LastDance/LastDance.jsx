@@ -176,11 +176,23 @@ export default function LastDance() {
       const mes = String(agora.getMonth() + 1).padStart(2, "0");
       const prefixoMes = `${ano}-${mes}`;
 
+      const proibidos = ["Acordo Judicial", "Acordo Extrajudicial"];
+
       let total = 0;
 
       for (const item of data) {
-        if (!item.Data_de_Devolucao?.startsWith(prefixoMes)) continue;
-        total += toNumber(item.Estorno_R || item.Reembolso_R || 0);
+        const d = item.Data_de_Devolucao || "";
+        if (!d.startsWith(prefixoMes)) continue;
+
+        const status = (item.Status || "").trim();
+        if (proibidos.includes(status)) continue;
+
+        // 🔑 REGRA IGUAL AO CÓDIGO QUE FUNCIONA
+        if (status === "Estorno") {
+          total += toNumber(item.Estorno_R || 0);
+        } else {
+          total += toNumber(item.Reembolso_R || 0);
+        }
       }
 
       setTotalEstornos(total);
