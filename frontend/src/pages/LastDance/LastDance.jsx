@@ -36,6 +36,14 @@ const PINK_GLOW = `0 0 14px ${PINK}, 0 0 32px rgba(221,4,78,0.65)`;
 const CARD_BG = `
 linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.82) 100%)
 `;
+const NUMBER_STYLE = {
+  color: "rgba(255,255,255,0.95)",
+  textShadow: `
+    0 0 8px rgba(255,255,255,0.9),
+    0 0 20px rgba(221,4,78,0.6),
+    0 0 36px rgba(202,208,3,0.65)
+  `,
+};
 
 const CARD_STYLE = {
   backgroundImage: CARD_BG,
@@ -52,14 +60,10 @@ const CARD_FULL = {
 
 export default function LastDance() {
   const [dados, setDados] = useState([]);
-  const [faltamParaMetaMensal, setFaltamParaMetaMensal] = useState(0);
   const [valorDiario, setValorDiario] = useState(0);
-  const [somaOpen, setSomaOpen] = useState(0);
   const [totalVendido, setTotalVendido] = useState(0);
-
   const [totalEstornos, setTotalEstornos] = useState(0);
   const [pctEstornos, setPctEstornos] = useState(0);
-
   const [totalAno, setTotalAno] = useState(0);
   const [faltaMetaAnual, setFaltaMetaAnual] = useState(0);
 
@@ -79,11 +83,10 @@ export default function LastDance() {
   function toNumber(valor) {
     if (valor == null) return 0;
     const v = String(valor).trim();
-
     if (v.includes(",") && v.includes(".")) {
       return Number(v.replace(/\./g, "").replace(",", "."));
     }
-    if (v.includes(",") && !v.includes(".")) {
+    if (v.includes(",")) {
       return Number(v.replace(",", "."));
     }
     return Number(v);
@@ -93,166 +96,109 @@ export default function LastDance() {
 
   useEffect(() => {
     async function fetchData() {
-      try {
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
+      const r = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/dash_geralcsWon`
+      );
+      const rawData = await r.json();
+      if (!Array.isArray(rawData)) return;
+
+      // ANUAL
+      const pipelineIdsAno = [
+        "15",
+        "71",
+        "23",
+        "47",
+        "59",
+        "63",
+        "35",
+        "75",
+        "35",
+      ];
+      const inicioAno = new Date(hojeBR.getFullYear(), 0, 1);
+      const fimAno = new Date(hojeBR.getFullYear(), 11, 31);
+
+      const filtradosAno = rawData.filter((i) => {
+        const dt = new Date(i.data);
+        return (
+          pipelineIdsAno.includes(String(i.pipeline_id)) &&
+          dt >= inicioAno &&
+          dt <= fimAno
         );
-        const rawData = await r.json();
-        if (!Array.isArray(rawData)) return;
+      });
 
-        // -----------------------------
-        // FILTRO ANUAL
-        // -----------------------------
-        const pipelineIdsAno = ["15", "71", "23", "47", "59", "63", "35", "75"];
+      const somaAno = filtradosAno.reduce(
+        (acc, i) => acc + toNumber(i.valor),
+        0
+      );
 
-        const inicioAno = new Date(hojeBR.getFullYear(), 0, 1);
-        const fimAno = new Date(hojeBR.getFullYear(), 11, 31);
+      setTotalAno(somaAno);
+      setFaltaMetaAnual(Math.max(META_ANUAL - somaAno, 0));
 
-        const filtradosAno = rawData.filter((i) => {
-          const dt = new Date(i.data);
-          return (
-            pipelineIdsAno.includes(String(i.pipeline_id)) &&
-            dt >= inicioAno &&
-            dt <= fimAno
-          );
-        });
+      // MENSAL
+      const pipelineIdsMes = ["71", "23", "47", "59", "63", "75", "35"];
+      const inicio = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
+      const fim = new Date(hojeBR.getFullYear(), hojeBR.getMonth() + 1, 0);
 
-        const somaAno = filtradosAno.reduce(
-          (acc, i) => acc + toNumber(i.valor),
-          0
+      const filtradosMes = rawData.filter((i) => {
+        const dt = new Date(i.data);
+        return (
+          pipelineIdsMes.includes(String(i.pipeline_id)) &&
+          dt >= inicio &&
+          dt <= fim
         );
+      });
 
-        setTotalAno(somaAno);
-        setFaltaMetaAnual(Math.max(META_ANUAL - somaAno, 0));
+      const somaMes = filtradosMes.reduce(
+        (acc, i) => acc + toNumber(i.valor),
+        0
+      );
 
-        // -----------------------------
-        // FILTRO MENSAL
-        // -----------------------------
-        const pipelineIdsMes = ["71", "23", "47", "59", "63", "75"];
+      setTotalVendido(somaMes);
 
-        const filtradosMes = rawData.filter((i) => {
-          const dt = new Date(i.data);
+      // 🔥 AQUI É O PONTO CHAVE
+      setValorDiario(Math.max(META_MENSAL - somaMes, 0));
 
-          const dataVenda = new Date(
-            dt.getFullYear(),
-            dt.getMonth(),
-            dt.getDate()
-          );
+      const recentes = [...filtradosMes]
+        .sort((a, b) => new Date(b.data) - new Date(a.data))
+        .slice(0, 3);
 
-          const inicio = new Date(hojeBR.getFullYear(), hojeBR.getMonth(), 1);
-          const fim = new Date(hojeBR.getFullYear(), hojeBR.getMonth() + 1, 0);
-
-          return (
-            pipelineIdsMes.includes(String(i.pipeline_id)) &&
-            dataVenda >= inicio &&
-            dataVenda <= fim
-          );
-        });
-
-        const recentes = [...filtradosMes]
-          .sort((a, b) => new Date(b.data) - new Date(a.data))
-          .slice(0, 3);
-
-        setDados(recentes);
-
-        const somaMes = filtradosMes.reduce(
-          (acc, i) => acc + toNumber(i.valor),
-          0
-        );
-
-        setTotalVendido(somaMes);
-
-        const restante = Math.max(META_MENSAL - somaMes, 0);
-        setFaltamParaMetaMensal(restante);
-
-        const dia = hojeBR.getDate();
-
-        const semana1 = 275000;
-        const semana2 = 275000;
-        const semana3mais = 200000;
-
-        let metaAcumulada = 0;
-
-        if (dia <= 7) metaAcumulada = semana1;
-        else if (dia <= 14) metaAcumulada = semana1 + semana2;
-        else metaAcumulada = semana1 + semana2 + semana3mais;
-
-        const valorSemanalFaltante = Math.max(metaAcumulada - somaMes, 0);
-        setValorDiario(valorSemanalFaltante);
-      } catch (err) {
-        console.log("Erro ao buscar dados:", err);
-      }
-    }
-
-    async function fetchOpen() {
-      try {
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_geralcsopen`
-        );
-        const data = await r.json();
-
-        setSomaOpen(data.reduce((acc, i) => acc + toNumber(i.valor), 0));
-      } catch {}
+      setDados(recentes);
     }
 
     async function fetchEstornos() {
-      try {
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/dash_Reembolso`
-        );
-        const data = await r.json();
+      const r = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/dash_Reembolso`
+      );
+      const data = await r.json();
 
-        const agora = new Date();
-        const ano = agora.getFullYear();
-        const mes = String(agora.getMonth() + 1).padStart(2, "0");
+      const agora = new Date();
+      const ano = agora.getFullYear();
+      const mes = String(agora.getMonth() + 1).padStart(2, "0");
+      const prefixoMes = `${ano}-${mes}`;
 
-        const prefixoMes = `${ano}-${mes}`;
+      let total = 0;
 
-        const proibidos = ["Acordo Judicial", "Acordo Extrajudicial"];
-
-        let total = 0;
-
-        for (const item of data) {
-          const dataDev = item.Data_de_Devolucao || "";
-
-          if (!dataDev.startsWith(prefixoMes)) continue;
-
-          const status = (item.Status || "").trim();
-
-          if (proibidos.includes(status)) continue;
-
-          if (status === "Estorno") {
-            total += toNumber(item.Estorno_R || 0);
-          } else {
-            total += toNumber(item.Reembolso_R || 0);
-          }
-        }
-
-        setTotalEstornos(total);
-        setPctEstornos((total / META_ESTORNOS) * 100);
-      } catch (err) {
-        console.log("Erro nos estornos:", err);
+      for (const item of data) {
+        if (!item.Data_de_Devolucao?.startsWith(prefixoMes)) continue;
+        total += toNumber(item.Estorno_R || item.Reembolso_R || 0);
       }
+
+      setTotalEstornos(total);
+      setPctEstornos((total / META_ESTORNOS) * 100);
     }
 
     fetchData();
-    fetchOpen();
     fetchEstornos();
 
     const interval = setInterval(() => {
       fetchData();
-      fetchOpen();
       fetchEstornos();
     }, 30000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const metaProgress = Math.min(
-    1,
-    Math.max(0, 1 - faltamParaMetaMensal / META_MENSAL)
-  );
-
+  const metaProgress = Math.min(1, totalVendido / META_MENSAL);
   const metaPercent = Math.round(metaProgress * 100);
 
   return (
@@ -306,7 +252,7 @@ export default function LastDance() {
                 className="text-[2.3rem] font-bold uppercase tracking-[0.14em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Faltam para a meta semanal
+                Faltam para a meta
               </span>
 
               <div className="flex items-end gap-[1rem] leading-none">
@@ -344,16 +290,13 @@ export default function LastDance() {
             >
               <div className="flex items-center gap-[1vw]">
                 <span
-                  className="text-[3rem] font-bold"
+                  className="text-[3rem] font-bold "
                   style={{ color: GOLD, textShadow: GOLD_GLOW }}
                 >
                   Contagem total vendida:
                 </span>
 
-                <span
-                  className="text-[5rem] font-black"
-                  style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
-                >
+                <span className="text-[5rem] font-black" style={NUMBER_STYLE}>
                   {formatarValor(totalVendido)}
                 </span>
               </div>
@@ -381,9 +324,7 @@ export default function LastDance() {
                     <span
                       className="text-[1.8rem] font-extrabold uppercase tracking-[0.12em]"
                       style={{
-                        color: "white",
-                        textShadow:
-                          "0 0 6px rgba(255,255,255,0.85), 0 0 18px rgba(255,255,255,0.65)",
+                        color: "#dd044e",
                       }}
                     >
                       {metaPercent}%
@@ -412,13 +353,10 @@ export default function LastDance() {
                 className="text-[2.5rem] font-bold uppercase tracking-[0.18em]"
                 style={{ color: GOLD, textShadow: GOLD_GLOW }}
               >
-                Falta para meta anual
+                Restante meta anual
               </span>
 
-              <span
-                className="text-[6rem] font-black"
-                style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
-              >
+              <span className="text-[6rem] font-black" style={NUMBER_STYLE}>
                 {formatarValor(faltaMetaAnual)}
               </span>
 
@@ -497,7 +435,7 @@ export default function LastDance() {
 
               <span
                 className="text-[6rem] font-black leading-none"
-                style={{ color: WHITE_GLOW, textShadow: PINK_GLOW }}
+                style={NUMBER_STYLE}
               >
                 {formatarValor(totalEstornos)}
               </span>
