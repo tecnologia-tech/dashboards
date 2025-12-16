@@ -11,7 +11,9 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AutoRotate from "./components/AutoRotate";
 import TVSelection from "./components/TVSelection";
 
-// Lazy pages
+/* ===========================================================
+   LAZY PAGES
+=========================================================== */
 const Hunters = lazy(() => import("./pages/Hunters/Hunters"));
 const Farmers = lazy(() => import("./pages/Farmers/Farmers"));
 const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
@@ -20,7 +22,7 @@ const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const Conjunta = lazy(() => import("./pages/Conjunta/Conjunta"));
 
 /* ===========================================================
-   PRELOAD - Remove delay do lazy
+   PRELOAD
 =========================================================== */
 import("./pages/Farmers/Farmers");
 import("./pages/Hunters/Hunters");
@@ -28,8 +30,9 @@ import("./pages/BlackFriday/BlackFriday");
 import("./pages/Geral/Geral");
 import("./pages/LastDance/LastDance");
 import("./pages/Conjunta/Conjunta");
+
 /* ===========================================================
-   CONTEXTO INTERNO DA TV3 — NÃO EXPORTADO!
+   CONTEXTO TV3
 =========================================================== */
 const TV3Context = createContext(null);
 
@@ -37,26 +40,45 @@ function TV3Provider({ children }) {
   const [dados, setDados] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function load() {
-      const res = await fetch(
-        "https://dashboards-exur.onrender.com/api/dash_geralcswon"
-      );
-      const data = await res.json();
-      setDados(data);
+      try {
+        const res = await fetch(
+          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+        );
+        const data = await res.json();
+
+        if (isMounted) {
+          setDados(data);
+        }
+      } catch (err) {
+        console.error("Erro ao atualizar dados TV3:", err);
+      }
     }
+
+    // primeira carga
     load();
+
+    // refresh automático a cada 1 min
+    const interval = setInterval(load, 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return <TV3Context.Provider value={dados}>{children}</TV3Context.Provider>;
 }
 
-// Hook local (não exportado)
+// hook interno
 function useTV3() {
   return useContext(TV3Context);
 }
 
 /* ===========================================================
-   WRAPPER PARA FORÇAR REMONTAGEM
+   WRAPPER DE REFRESH VISUAL
 =========================================================== */
 function TelaComRefresh({ children }) {
   const [key, setKey] = useState(0);
@@ -65,6 +87,7 @@ function TelaComRefresh({ children }) {
     function refresh() {
       setKey((k) => k + 1);
     }
+
     document.addEventListener("refreshTela", refresh);
     return () => document.removeEventListener("refreshTela", refresh);
   }, []);
@@ -73,14 +96,14 @@ function TelaComRefresh({ children }) {
 }
 
 /* ===========================================================
-   WRAPPER DA TV1 — rotaciona Conjunta/Geral
+   TV1 WRAPPER
 =========================================================== */
 function TV1Wrapper({ children }) {
   return (
     <>
       <AutoRotate
         rotas={[{ path: "/conjunta" }, { path: "/geral" }]}
-        tempoRotacao={2 * 60 * 1000} // 2 minutos
+        tempoRotacao={2 * 60 * 1000}
         tempoRefresh={3 * 60 * 1000}
       />
 
@@ -94,7 +117,7 @@ function TV1Wrapper({ children }) {
 }
 
 /* ===========================================================
-   APP PRINCIPAL
+   APP
 =========================================================== */
 export default function App() {
   return (
@@ -102,11 +125,11 @@ export default function App() {
       <Routes>
         <Route path="/" element={<TVSelection />} />
 
-        <Route path="/tv1" element={<Navigate to="/Conjunta" replace />} />
-        <Route path="/tv2" element={<Navigate to="/Lastdance" replace />} />
+        <Route path="/tv1" element={<Navigate to="/conjunta" replace />} />
+        <Route path="/tv2" element={<Navigate to="/lastdance" replace />} />
         <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
 
-        {/* TV1 */}
+        {/* ================= TV1 ================= */}
         <Route
           path="/conjunta"
           element={
@@ -115,6 +138,7 @@ export default function App() {
             </TV1Wrapper>
           }
         />
+
         <Route
           path="/geral"
           element={
@@ -124,16 +148,17 @@ export default function App() {
           }
         />
 
-        {/* TV2 */}
+        {/* ================= TV2 ================= */}
         <Route
-          path="/Lastdance"
+          path="/lastdance"
           element={
             <>
               <AutoRotate
-                rotas={[{ path: "/Lastdance" }]}
+                rotas={[{ path: "/lastdance" }]}
                 tempoRotacao={2 * 60 * 1000}
                 tempoRefresh={1 * 60 * 1000}
               />
+
               <TelaComRefresh>
                 <Suspense
                   fallback={<div style={{ color: "white" }}>Carregando…</div>}
@@ -145,9 +170,7 @@ export default function App() {
           }
         />
 
-        {/* =====================================================
-           TV3 — Provider + Farmers/Hunters sem tela branca
-        ===================================================== */}
+        {/* ================= TV3 ================= */}
         <Route
           path="/farmers"
           element={
@@ -166,18 +189,6 @@ export default function App() {
           }
         />
 
-        {/* LastDance */}
-        <Route
-          path="/lastdance"
-          element={
-            <Suspense
-              fallback={<div style={{ color: "white" }}>Carregando…</div>}
-            >
-              <LastDance />
-            </Suspense>
-          }
-        />
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
@@ -185,13 +196,14 @@ export default function App() {
 }
 
 /* ===========================================================
-   WRAPPER DA TV3 — entrega dados como props
+   TV3 WRAPPER
 =========================================================== */
 function TV3Wrapper({ component }) {
   const dados = useTV3();
 
-  // Primeira montagem da TV3 — ainda carregando
-  if (!dados) return <div style={{ color: "white" }}>Carregando dados…</div>;
+  if (!dados) {
+    return <div style={{ color: "white" }}>Carregando dados…</div>;
+  }
 
   return (
     <>
