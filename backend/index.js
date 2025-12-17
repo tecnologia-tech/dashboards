@@ -126,7 +126,13 @@ const batches = [
   ["dash_nps .js", "dash_onboarding.js", "dash_reembolso.js"],
 ];
 */
-  const batches = [["dash_geralcsWon.js"]];
+
+  const batches = [
+    ["dash_geralcsWon.js"],
+    ["dash_geralcsWon.js"],
+    ["dash_geralcsWon.js"],
+  ];
+
   while (true) {
     const cicloStart = Date.now();
     console.log(`🧭 [${hora()}] Iniciando ciclo #${ciclo}...`);
