@@ -10,11 +10,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
+const { NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
 
 const AUTH_HEADER =
   "Basic " +
-  Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
+  Buffer.from(`${NUTSHELL_API_TOKEN}`).toString("base64");
 
 const httpsAgent = new https.Agent({ keepAlive: true });
 const limit = pLimit(10);
