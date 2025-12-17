@@ -8,7 +8,7 @@ import { pool } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, "banco.env") });
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
 
