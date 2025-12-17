@@ -102,15 +102,13 @@ function mapLeadToRow(lead) {
 
 async function getAllLeadIds() {
   const ids = new Set();
-  const statusFilter = process.env.NUTSHELL_STATUS_WON ?? "won";
+  const statusFilter = process.env.NUTSHELL_STATUS_WON ?? ""; // vazio = não filtra
   const useDateFilter =
     process.env.NUTSHELL_USE_MODIFIED_FILTER === "true" ||
     process.env.NUTSHELL_USE_MODIFIED_FILTER === "1";
 
   const baseQuery =
-    statusFilter === "all" || statusFilter === ""
-      ? {}
-      : { status: statusFilter };
+    statusFilter && statusFilter !== "all" ? { status: statusFilter } : {};
 
   const baseParams = {
     query: { ...baseQuery },
@@ -144,6 +142,7 @@ async function getAllLeadIds() {
     );
   }
 
+  // 1) tenta com filtro de data (se habilitado)
   try {
     await fetchWithParams(paginatedParams, "filtro_data");
   } catch (err) {
@@ -153,17 +152,19 @@ async function getAllLeadIds() {
     );
   }
 
+  // 2) se vazio, tenta sem filtro de data
   if (!ids.size) {
     await fetchWithParams(baseParams, "sem_data");
   }
 
+  // 3) se ainda vazio, tenta completamente sem query (sem status)
   if (!ids.size) {
-    const paramsNoStatus = {
+    const paramsNoFilters = {
       orderBy: "modifiedTime",
       orderDirection: "DESC",
       limit: 100,
     };
-    await fetchWithParams(paramsNoStatus, "sem_status");
+    await fetchWithParams(paramsNoFilters, "sem_filtros");
   }
 
   console.log(`📦 Total final: ${ids.size} leads coletadas para processamento.`);
