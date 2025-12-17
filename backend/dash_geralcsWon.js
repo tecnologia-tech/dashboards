@@ -102,41 +102,25 @@ function mapLeadToRow(lead) {
 
 async function getAllLeadIds() {
   const ids = new Set();
-  const baseParams = {
-    query: { status: 10 }, // só WON
-    orderBy: "modifiedTime",
-    orderDirection: "DESC",
-    limit: 100,
-  };
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // últimos 7 dias
 
-  // Tentativa principal: filtrar últimos 7 dias para reduzir carga
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const paginatedParams = {
-    ...baseParams,
-    query: { ...baseParams.query, modifiedTime: { operator: "after", value: since } },
-  };
-
-  async function fetchWithParams(params) {
-    for (let page = 1; ; page++) {
-      const leads = await callRPC("findLeads", { ...params, page });
-      if (!Array.isArray(leads) || leads.length === 0) break;
-      for (const l of leads) if (l?.id) ids.add(l.id);
-      if (leads.length < (params.limit || 0)) break;
+  for (let page = 1; ; page++) {
+    const leads = await callRPC("findLeads", {
+      query: {
+        modifiedTime: {
+          operator: "after",
+          value: since,
+        },
+      },
+      orderBy: "modifiedTime",
+      orderDirection: "DESC",
+      page,
+    });
+    if (!Array.isArray(leads) || leads.length === 0) break;
+    for (const l of leads) {
+      if (l?.id) ids.add(l.id);
     }
   }
-
-  try {
-    await fetchWithParams(paginatedParams);
-  } catch (err) {
-    console.warn(
-      "⚠️ findLeads com filtro modifiedTime falhou, tentando sem filtro de data:",
-      err.message
-    );
-    // Fallback: só status=10, sem filtro de data
-    ids.clear();
-    await fetchWithParams(baseParams);
-  }
-
   console.log(`📦 ${ids.size} leads recentes encontradas.`);
   return [...ids];
 }
@@ -364,8 +348,8 @@ export default async function main() {
           try {
             const lead = await callRPC("getLead", { leadId: id });
 
-            const statusVal = lead?.status?.id ?? lead?.status;
-            if (statusVal === 10 || String(statusVal).toLowerCase() === "won") {
+            // status WON = 10
+            if (lead?.status?.id === 10) {
               allRows.push(mapLeadToRow(lead));
             }
           } catch (err) {
