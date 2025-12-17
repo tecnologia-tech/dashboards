@@ -102,26 +102,71 @@ function mapLeadToRow(lead) {
 
 async function getAllLeadIds() {
   const ids = new Set();
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // últimos 7 dias
+  const statusFilter = process.env.NUTSHELL_STATUS_WON ?? "won";
+  const useDateFilter =
+    process.env.NUTSHELL_USE_MODIFIED_FILTER === "true" ||
+    process.env.NUTSHELL_USE_MODIFIED_FILTER === "1";
 
-  for (let page = 1; ; page++) {
-    const leads = await callRPC("findLeads", {
-      query: {
-        modifiedTime: {
-          operator: "after",
-          value: since,
+  const baseQuery =
+    statusFilter === "all" || statusFilter === ""
+      ? {}
+      : { status: statusFilter };
+
+  const baseParams = {
+    query: { ...baseQuery },
+    orderBy: "modifiedTime",
+    orderDirection: "DESC",
+    limit: 100,
+  };
+
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const paginatedParams = useDateFilter
+    ? {
+        ...baseParams,
+        query: {
+          ...baseParams.query,
+          updatedTime: { operator: "after", value: since },
         },
-      },
+      }
+    : baseParams;
+
+  async function fetchWithParams(params, label) {
+    for (let page = 1; ; page++) {
+      const leads = await callRPC("findLeads", { ...params, page });
+      if (!Array.isArray(leads) || leads.length === 0) break;
+      for (const l of leads) if (l?.id) ids.add(l.id);
+      if (leads.length < (params.limit || 0)) break;
+    }
+    console.log(
+      `📦 findLeads(${label}) acumulou ${ids.size} ids (query=${JSON.stringify(
+        params.query
+      )})`
+    );
+  }
+
+  try {
+    await fetchWithParams(paginatedParams, "filtro_data");
+  } catch (err) {
+    console.warn(
+      "⚠️ findLeads falhou com filtro de data, tentando sem filtro:",
+      err.message
+    );
+  }
+
+  if (!ids.size) {
+    await fetchWithParams(baseParams, "sem_data");
+  }
+
+  if (!ids.size) {
+    const paramsNoStatus = {
       orderBy: "modifiedTime",
       orderDirection: "DESC",
-      page,
-    });
-    if (!Array.isArray(leads) || leads.length === 0) break;
-    for (const l of leads) {
-      if (l?.id) ids.add(l.id);
-    }
+      limit: 100,
+    };
+    await fetchWithParams(paramsNoStatus, "sem_status");
   }
-  console.log(`📦 ${ids.size} leads recentes encontradas.`);
+
+  console.log(`📦 Total final: ${ids.size} leads coletadas para processamento.`);
   return [...ids];
 }
 
@@ -144,7 +189,8 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
       });
 
       if (!res.ok) {
-        const errorMessage = `Erro na requisição (status ${res.status}): ${res.statusText}`;
+        const body = await res.text().catch(() => "");
+        const errorMessage = `Erro na requisição (status ${res.status}): ${res.statusText} - ${body}`;
         console.error(errorMessage);
         throw new Error(errorMessage);
       }
@@ -348,8 +394,8 @@ export default async function main() {
           try {
             const lead = await callRPC("getLead", { leadId: id });
 
-            // status WON = 10
-            if (lead?.status?.id === 10) {
+            const statusVal = lead?.status?.id ?? lead?.status;
+            if (statusVal === 10 || String(statusVal).toLowerCase() === "won") {
               allRows.push(mapLeadToRow(lead));
             }
           } catch (err) {
