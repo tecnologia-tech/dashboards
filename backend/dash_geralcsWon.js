@@ -13,8 +13,7 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const { NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
 
 const AUTH_HEADER =
-  "Basic " +
-  Buffer.from(`${NUTSHELL_API_TOKEN}`).toString("base64");
+  "Basic " + Buffer.from(`${NUTSHELL_API_TOKEN}`).toString("base64");
 
 const httpsAgent = new https.Agent({ keepAlive: true });
 const limit = pLimit(10);
@@ -102,26 +101,23 @@ function mapLeadToRow(lead) {
 
 async function getAllLeadIds() {
   const ids = new Set();
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // últimos 7 dias
 
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
-      query: {
-        modifiedTime: {
-          operator: "after",
-          value: since,
-        },
-      },
-      orderBy: "modifiedTime",
+      orderBy: "id",
       orderDirection: "DESC",
       page,
+      limit: 100,
     });
+
     if (!Array.isArray(leads) || leads.length === 0) break;
+
     for (const l of leads) {
       if (l?.id) ids.add(l.id);
     }
   }
-  console.log(`📦 ${ids.size} leads recentes encontradas.`);
+
+  console.log(`📦 ${ids.size} leads encontrados.`);
   return [...ids];
 }
 
