@@ -120,10 +120,12 @@ async function getAllLeadIds() {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const paginatedParams = useDateFilter
     ? {
-        ...baseParams,
         query: {
           ...baseParams.query,
-          updatedTime: { operator: "after", value: since },
+          OR: [
+            { closedTime: { operator: "after", value: since } },
+            { modifiedTime: { operator: "after", value: since } },
+          ],
         },
       }
     : baseParams;
@@ -167,7 +169,9 @@ async function getAllLeadIds() {
     await fetchWithParams(paramsNoFilters, "sem_filtros");
   }
 
-  console.log(`📦 Total final: ${ids.size} leads coletadas para processamento.`);
+  console.log(
+    `📦 Total final: ${ids.size} leads coletadas para processamento.`
+  );
   return [...ids];
 }
 
