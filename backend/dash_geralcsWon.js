@@ -8,7 +8,7 @@ import { pool } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, "banco.env") });
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const { NUTSHELL_USERNAME, NUTSHELL_API_TOKEN, NUTSHELL_API_URL } = process.env;
 
@@ -99,32 +99,19 @@ function mapLeadToRow(lead) {
     lead_id: id,
   };
 }
-
 async function getAllLeadIds() {
-  const ids = new Set();
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // últimos 7 dias
-
+  const ids = [];
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
-      query: {
-        modifiedTime: {
-          operator: "after",
-          value: since,
-        },
-      },
-      orderBy: "modifiedTime",
-      orderDirection: "DESC",
+      query: { status: 10 },
       page,
     });
     if (!Array.isArray(leads) || leads.length === 0) break;
-    for (const l of leads) {
-      if (l?.id) ids.add(l.id);
-    }
+    ids.push(...leads.map((l) => l.id));
   }
-  console.log(`📦 ${ids.size} leads recentes encontradas.`);
-  return [...ids];
+  console.log(`📦 ${ids.length} leads encontrados.`);
+  return ids;
 }
-
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -347,11 +334,7 @@ export default async function main() {
         limit(async () => {
           try {
             const lead = await callRPC("getLead", { leadId: id });
-
-            // status WON = 10
-            if (lead?.status?.id === 10) {
-              allRows.push(mapLeadToRow(lead));
-            }
+            allRows.push(mapLeadToRow(lead));
           } catch (err) {
             console.warn("⚠️ Falha ao processar lead", id, err.message);
           }
