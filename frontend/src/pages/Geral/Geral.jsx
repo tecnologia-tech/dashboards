@@ -681,7 +681,7 @@ export default function Geral() {
           title="Farmers"
           value={formatarValor(valueRepedidos)}
           estornos={formatarValor(estornosRepedidos)}
-          meta="R$ 170 mil"
+          meta="R$ 150 mil"
           percent={((valueRepedidos / metaRepedidos) * 100).toFixed(1)}
         />
         <Ring
