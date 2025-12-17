@@ -97,40 +97,32 @@ async function runModule(file) {
 async function runSequentialLoop() {
   let ciclo = 1;
 
-  /*
-const batches = [
-  [
-    "dash_apoio.js",
-    "dash_comprasdoc.js",
-    "dash_cs.js",
-    "dash_csat.js",
-    "dash_compraspricing.js",
-  ],
-  ["estornos_nutshell.js"],
-  [("dash_geralcsOpen.js", "dash_geralcsWon.js")],
-  ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-  [
-    "dash_cx.js",
-    "dash_delivery.js",
-    "dash_fornecedores.js",
-    "dash_handover.js",
-  ],
-  ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-  [
-    "dash_icp.js",
-    "dash_ixdelivery.js",
-    "dash_ixlogcomex.js",
-    "dash_logmakers.js",
-  ],
-  ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
-  ["dash_nps .js", "dash_onboarding.js", "dash_reembolso.js"],
-];
-*/
-
   const batches = [
-    ["dash_geralcsWon.js"],
-    ["dash_geralcsWon.js"],
-    ["dash_geralcsWon.js"],
+    [
+      "dash_apoio.js",
+      "dash_comprasdoc.js",
+      "dash_cs.js",
+      "dash_csat.js",
+      "dash_compraspricing.js",
+    ],
+    ["estornos_nutshell.js"],
+    [("dash_geralcsOpen.js", "dash_geralcsWon.js")],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    [
+      "dash_cx.js",
+      "dash_delivery.js",
+      "dash_fornecedores.js",
+      "dash_handover.js",
+    ],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    [
+      "dash_icp.js",
+      "dash_ixdelivery.js",
+      "dash_ixlogcomex.js",
+      "dash_logmakers.js",
+    ],
+    ["dash_geralcsOpen.js", "dash_geralcsWon.js"],
+    ["dash_nps.js", "dash_onboarding.js", "dash_reembolso.js"],
   ];
 
   while (true) {

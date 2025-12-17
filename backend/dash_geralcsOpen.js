@@ -1,6 +1,7 @@
+import { pool } from "./db.js";
 import dotenv from "dotenv";
 import path from "path";
-import { pool } from "./db.js";
+import { fileURLToPath } from "url";
 
 const __filename = new URL(import.meta.url).pathname;
 
@@ -8,11 +9,15 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-const { NUTSHELL_USERNAME, NUTSHELL_API_KEY, NUTSHELL_API_URL } = process.env;
+const {
+  NUTSHELL_USERNAME,
+  NUTSHELL_API_TOKEN,
+  NUTSHELL_API_URL,
+} = process.env;
 
 const AUTH_HEADER =
   "Basic " +
-  Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_KEY}`).toString("base64");
+  Buffer.from(`${NUTSHELL_USERNAME}:${NUTSHELL_API_TOKEN}`).toString("base64");
 
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
