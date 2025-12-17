@@ -78,7 +78,7 @@ const RUNE_BACKGROUND =
 // ====================== FUNÇÕES AUXILIARES ======================
 async function contarOnboard(nome) {
   const res = await fetch(
-    "https://dashboards-exur.onrender.com/api/dash_onboarding"
+    "https://dashboards-ku14.onrender.com/api/dash_onboarding"
   );
   const dados = await res.json();
 
@@ -91,7 +91,7 @@ async function contarOnboard(nome) {
 
 async function totalOnboarding() {
   const res = await fetch(
-    "https://dashboards-exur.onrender.com/api/dash_onboarding"
+    "https://dashboards-ku14.onrender.com/api/dash_onboarding"
   );
   const dados = await res.json();
 
@@ -207,7 +207,7 @@ export default function Geral() {
   useEffect(() => {
     async function loadCompras() {
       const res = await fetch(
-        "https://dashboards-exur.onrender.com/api/dash_comprasdoc"
+        "https://dashboards-ku14.onrender.com/api/dash_comprasdoc"
       );
       const rows = await res.json();
 
@@ -237,7 +237,7 @@ export default function Geral() {
     async function loadAtracam() {
       try {
         const res = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_ixlogcomex"
+          "https://dashboards-ku14.onrender.com/api/dash_ixlogcomex"
         );
         const data = await res.json();
 
@@ -266,7 +266,7 @@ export default function Geral() {
     async function loadReembolso() {
       try {
         const r = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_reembolso"
+          "https://dashboards-ku14.onrender.com/api/dash_reembolso"
         );
         const dados = await r.json();
 
@@ -320,12 +320,12 @@ export default function Geral() {
     async function loadDataLTDA() {
       try {
         const resGeral = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+          "https://dashboards-ku14.onrender.com/api/dash_geralcswon"
         );
         const geral = await resGeral.json();
 
         const resEst = await fetch(
-          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+          "https://dashboards-ku14.onrender.com/api/estornos_nutshell"
         );
         const est = await resEst.json();
 
@@ -372,12 +372,12 @@ export default function Geral() {
     async function loadCS() {
       try {
         const resGeral = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+          "https://dashboards-ku14.onrender.com/api/dash_geralcswon"
         );
         const geral = await resGeral.json();
 
         const resEst = await fetch(
-          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+          "https://dashboards-ku14.onrender.com/api/estornos_nutshell"
         );
         const estornos = await resEst.json();
 
@@ -424,7 +424,7 @@ export default function Geral() {
     async function loadBonus() {
       try {
         const resGeral = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+          "https://dashboards-ku14.onrender.com/api/dash_geralcswon"
         );
         const geral = await resGeral.json();
 
@@ -455,12 +455,12 @@ export default function Geral() {
     async function loadRepedidos() {
       try {
         const resGeral = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+          "https://dashboards-ku14.onrender.com/api/dash_geralcswon"
         );
         const geral = await resGeral.json();
 
         const resEst = await fetch(
-          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+          "https://dashboards-ku14.onrender.com/api/estornos_nutshell"
         );
         const estornos = await resEst.json();
 
@@ -502,12 +502,12 @@ export default function Geral() {
     async function load12P() {
       try {
         const resGeral = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+          "https://dashboards-ku14.onrender.com/api/dash_geralcswon"
         );
         const geral = await resGeral.json();
 
         const resEst = await fetch(
-          "https://dashboards-exur.onrender.com/api/estornos_nutshell"
+          "https://dashboards-ku14.onrender.com/api/estornos_nutshell"
         );
         const estornos = await resEst.json();
 
@@ -542,7 +542,7 @@ export default function Geral() {
     async function loadPedidosChina() {
       try {
         const res = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_ixdelivery"
+          "https://dashboards-ku14.onrender.com/api/dash_ixdelivery"
         );
         const data = await res.json();
 
@@ -574,7 +574,7 @@ export default function Geral() {
       try {
         // 1) dash_ixdelivery → Pedidos na China
         const deliveryRes = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_ixdelivery"
+          "https://dashboards-ku14.onrender.com/api/dash_ixdelivery"
         );
         const deliveryData = await deliveryRes.json();
 
@@ -584,7 +584,7 @@ export default function Geral() {
 
         // 2) dash_ixlogcomex → Logística & Desembaraço
         const logRes = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_ixlogcomex"
+          "https://dashboards-ku14.onrender.com/api/dash_ixlogcomex"
         );
         const logData = await logRes.json();
 
@@ -1187,7 +1187,7 @@ function CSATCard() {
     async function loadCSAT() {
       try {
         const res = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_csat"
+          "https://dashboards-ku14.onrender.com/api/dash_csat"
         );
         const dados = await res.json();
 

@@ -45,7 +45,7 @@ function TV3Provider({ children }) {
     async function load() {
       try {
         const res = await fetch(
-          "https://dashboards-exur.onrender.com/api/dash_geralcswon"
+          "https://dashboards-ku14.onrender.com/api/dash_geralcswon"
         );
         const data = await res.json();
 
