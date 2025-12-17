@@ -103,19 +103,10 @@ function mapLeadToRow(lead) {
 async function getAllLeadIds() {
   const ids = new Set();
 
-  const baseParams = {
-    orderBy: "closedTime",
+  const params = {
+    orderBy: "id", // ✅ sempre válido
     orderDirection: "DESC",
     limit: 100,
-  };
-
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  const params = {
-    ...baseParams,
-    query: {
-      closedTime: { operator: "after", value: since },
-    },
   };
 
   for (let page = 1; ; page++) {
@@ -127,7 +118,7 @@ async function getAllLeadIds() {
       if (l?.id) ids.add(l.id);
     }
 
-    if (leads.length < baseParams.limit) break;
+    if (leads.length < params.limit) break;
   }
 
   console.log(
