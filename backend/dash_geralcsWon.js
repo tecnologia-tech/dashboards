@@ -6,6 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { pool } from "./db.js";
 
+/* ===================== SETUP ===================== */
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "banco.env") });
@@ -19,41 +21,34 @@ const AUTH_HEADER =
 const httpsAgent = new https.Agent({ keepAlive: true });
 const limit = pLimit(10);
 
+/* ===================== UTILS ===================== */
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function toSQLDateFromISO(isoString, leadId) {
-  if (!isoString || typeof isoString !== "string") return null;
-
+function toSQLDateFromISO(isoString) {
+  if (!isoString) return null;
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return null;
 
-  const adjustedDate = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-
-  const datePart = adjustedDate.toISOString().slice(0, 10);
-  const timePart = adjustedDate.toISOString().slice(11, 19);
-
-  const finalDate = `${datePart} ${timePart}`;
-
-  return finalDate;
+  // ajuste UTC → Brasil
+  const adjusted = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+  return adjusted.toISOString().replace("T", " ").slice(0, 19);
 }
+
 function formatTags(tags) {
-  if (!Array.isArray(tags) || tags.length === 0) return null;
-  const validTags = tags
-    .map((tag) => (typeof tag === "object" ? tag.name : tag))
-    .filter(Boolean);
-
-  if (validTags.length === 0) return null;
-  const uniqueTags = [...new Set(validTags)];
-  return uniqueTags.join(" | ");
+  if (!Array.isArray(tags) || !tags.length) return null;
+  return [...new Set(tags.map((t) => (typeof t === "object" ? t.name : t)))]
+    .filter(Boolean)
+    .join(" | ");
 }
+
 function extractNumeroFromLead(lead) {
   const pathVal = lead.htmlUrlPath ?? lead.htmlUrl ?? "";
-  if (typeof pathVal === "string" && pathVal.includes("/lead/")) {
-    const parts = pathVal.split("/").filter(Boolean);
-    const last = parts[parts.length - 1];
-    if (last && /^\d+$/.test(last)) return last;
+  if (pathVal.includes("/lead/")) {
+    const last = pathVal.split("/").filter(Boolean).pop();
+    if (/^\d+$/.test(last)) return last;
   }
 
   if (typeof lead.name === "string") {
@@ -61,74 +56,13 @@ function extractNumeroFromLead(lead) {
     if (m) return m[1];
   }
 
-  return String(lead.id ?? lead.leadId ?? "");
-}
-function mapLeadToRow(lead) {
-  const id = String(lead.id ?? lead.leadId);
-  if (!id) {
-    console.warn(`⚠️ Lead sem ID encontrado. Lead: ${JSON.stringify(lead)}`);
-  }
-  const valor = Number(lead.value?.amount ?? 0);
-  const empresa = lead.primaryAccount?.name ?? "";
-  const assigned = lead.assignee?.name ?? "";
-  const tag = formatTags(lead.tags);
-  const pipelineId = lead.stageset?.id ? String(lead.stageset.id) : null;
-  const pipeline = lead.stageset?.name ?? null;
-  const data = toSQLDateFromISO(
-    lead.closedTime ??
-      lead.dueTime ??
-      lead.modifiedTime ??
-      new Date().toISOString(),
-    id
-  );
-
-  const id_primary_company = lead.primaryAccount?.id ?? "";
-  const id_primary_person = lead.contacts?.[0]?.id ?? "";
-
-  return {
-    data,
-    pipeline_id: pipelineId,
-    pipeline,
-    empresa,
-    assigned,
-    valor,
-    numero: extractNumeroFromLead(lead),
-    tag,
-    id_primary_company,
-    id_primary_person,
-    lead_id: id,
-  };
+  return String(lead.id);
 }
 
-async function getAllLeadIds() {
-  const ids = new Set();
-
-  const params = {
-    orderBy: "id", // ✅ sempre válido
-    orderDirection: "DESC",
-    limit: 100,
-  };
-
-  for (let page = 1; ; page++) {
-    const leads = await callRPC("findLeads", { ...params, page });
-
-    if (!Array.isArray(leads) || leads.length === 0) break;
-
-    for (const l of leads) {
-      if (l?.id) ids.add(l.id);
-    }
-
-    if (leads.length < params.limit) break;
-  }
-
-  console.log(
-    `📦 Total final: ${ids.size} leads coletadas para processamento.`
-  );
-  return [...ids];
-}
+/* ===================== API ===================== */
 
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
-  for (let attempt = 0; attempt < retries; attempt++) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(NUTSHELL_API_URL, {
         method: "POST",
@@ -145,67 +79,99 @@ async function callRPC(method, params = {}, retries = 3, delay = 1000) {
         }),
       });
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        const errorMessage = `Erro na requisição (status ${res.status}): ${res.statusText} - ${body}`;
-        console.error(errorMessage);
-        throw new Error(errorMessage);
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        throw new Error(JSON.stringify(json.error ?? json));
       }
 
-      const json = await res.json();
-      if (json.error) {
-        const errorMessage = `Erro na resposta da API: ${JSON.stringify(
-          json.error
-        )}`;
-        console.error(errorMessage);
-        throw new Error(errorMessage);
-      }
       return json.result;
     } catch (err) {
-      console.error(
-        `⚠️ Erro na requisição para API (tentativa ${
-          attempt + 1
-        } de ${retries}): ${err.message}`
-      );
-      if (attempt < retries - 1) {
-        console.log(`⏳ Tentando novamente em ${delay / 1000} segundos...`);
+      console.error(`⚠️ Erro API (${attempt}/${retries}): ${err.message}`);
+      if (attempt < retries) {
         await sleep(delay);
         delay *= 2;
       } else {
-        throw new Error(
-          `Erro persistente após ${retries} tentativas: ${err.message}`
-        );
+        throw err;
       }
     }
   }
 }
+
+/* ===================== FIND LEADS ===================== */
+/**
+ * ⚠️ REGRA DO NUTSHELL:
+ * - query é OBRIGATÓRIO
+ * - NÃO usar closedTime / modifiedTime / status
+ */
+async function getAllLeadIds() {
+  const ids = new Set();
+
+  const params = {
+    query: {}, // 🔴 obrigatório
+    orderBy: "id", // 🔒 único confiável
+    orderDirection: "DESC",
+    limit: 100,
+  };
+
+  for (let page = 1; ; page++) {
+    const leads = await callRPC("findLeads", { ...params, page });
+    if (!Array.isArray(leads) || !leads.length) break;
+
+    for (const l of leads) {
+      if (l?.id) ids.add(l.id);
+    }
+
+    if (leads.length < params.limit) break;
+  }
+
+  console.log(`📦 Total de leads encontrados: ${ids.size}`);
+  return [...ids];
+}
+
+/* ===================== MAP ===================== */
+
+function mapLeadToRow(lead) {
+  return {
+    lead_id: String(lead.id),
+    data: toSQLDateFromISO(lead.closedTime),
+    pipeline_id: lead.stageset?.id ? String(lead.stageset.id) : null,
+    pipeline: lead.stageset?.name ?? null,
+    empresa: lead.primaryAccount?.name ?? "",
+    assigned: lead.assignee?.name ?? "",
+    valor: Number(lead.value?.amount ?? 0),
+    numero: extractNumeroFromLead(lead),
+    tag: formatTags(lead.tags),
+    id_primary_company: lead.primaryAccount?.id ?? "",
+    id_primary_person: lead.contacts?.[0]?.id ?? "",
+  };
+}
+
+/* ===================== DB ===================== */
+
 async function ensureTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS dash_geralcsWon (
+      lead_id TEXT PRIMARY KEY,
       data TIMESTAMP,
       pipeline_id TEXT,
       pipeline TEXT,
       empresa TEXT,
       assigned TEXT,
       valor NUMERIC(12,2),
-      numero TEXT UNIQUE,  tag TEXT,
+      numero TEXT UNIQUE,
+      tag TEXT,
       id_primary_company TEXT,
-      id_primary_person TEXT,
-      lead_id TEXT PRIMARY KEY
+      id_primary_person TEXT
     );
   `);
-  await ensurePipelineColumns(client);
-  await client.query(`
-    DELETE FROM dash_geralcsWon a
-    USING dash_geralcsWon b
-    WHERE a.ctid < b.ctid
-    AND a.numero = b.numero;
-  `);
 }
+
 async function upsertRows(client, rows) {
   if (!rows.length) return;
+
   const cols = Object.keys(rows[0]);
-  const vals = rows.flatMap((r) => cols.map((c) => r[c]));
+  const values = rows.flatMap((r) => cols.map((c) => r[c]));
   const placeholders = rows
     .map(
       (_, i) =>
@@ -213,167 +179,54 @@ async function upsertRows(client, rows) {
     )
     .join(",");
 
-  const sql = `INSERT INTO dash_geralcsWon (${cols.join(",")})
+  const sql = `
+    INSERT INTO dash_geralcsWon (${cols.join(",")})
     VALUES ${placeholders}
     ON CONFLICT (lead_id) DO UPDATE SET
     ${cols
       .filter((c) => c !== "lead_id")
       .map((c) => `${c}=EXCLUDED.${c}`)
-      .join(", ")}
+      .join(",")}
   `;
-  await client.query(sql, vals);
+
+  await client.query(sql, values);
 }
 
-async function ensurePipelineColumns(client) {
-  const columnCheck = await client.query(`
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_name = 'dash_geralcswon'
-      AND column_name = 'pipeline_id';
-  `);
-
-  if (!columnCheck.rowCount) {
-    await client.query(
-      `ALTER TABLE dash_geralcsWon ADD COLUMN pipeline_id TEXT;`
-    );
-  }
-
-  await client.query(`
-    UPDATE dash_geralcsWon
-    SET pipeline_id = regexp_replace(pipeline, '^\\s*(\\d+)\\s+-\\s+(.+)$', '\\1'),
-        pipeline = regexp_replace(pipeline, '^\\s*\\d+\\s+-\\s+(.+)$', '\\1')
-    WHERE (pipeline_id IS NULL OR pipeline_id = '')
-      AND pipeline ~ '^\\s*\\d+\\s+-\\s+';
-  `);
-}
-const PIPELINE_METHODS = [
-  "findStagesets",
-  "findPipelines",
-  "findProcessPipelines",
-];
-
-async function fetchPipelinesWithFallback() {
-  const limitPerPage = 100;
-  for (const method of PIPELINE_METHODS) {
-    try {
-      const all = [];
-      for (let page = 1; ; page++) {
-        const result = await callRPC(
-          method,
-          { orderBy: "id", orderDirection: "ASC", limit: limitPerPage, page },
-          1
-        );
-        if (!Array.isArray(result) || result.length === 0) break;
-        all.push(...result);
-        if (result.length < limitPerPage) break;
-      }
-      if (all.length) {
-        return all
-          .filter((p) => p && p.id !== undefined && p.id !== null)
-          .map((p) => ({
-            id: String(p.id),
-            name: p.name ?? "",
-          }));
-      }
-    } catch (err) {
-      console.warn(`⚠️ Falha ao chamar ${method}: ${err.message}`);
-    }
-  }
-  return null;
-}
-
-async function ensurePipelinesTable(client) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS pipelines (
-      id TEXT PRIMARY KEY,
-      name TEXT,
-      synced_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-}
-
-async function upsertPipelines(client, pipelines) {
-  if (!Array.isArray(pipelines) || !pipelines.length) return;
-  const vals = [];
-  const placeholders = pipelines
-    .map((p, i) => {
-      vals.push(p.id, p.name);
-      return `($${i * 2 + 1}, $${i * 2 + 2})`;
-    })
-    .join(",");
-  await client.query(
-    `
-    INSERT INTO pipelines (id, name)
-    VALUES ${placeholders}
-    ON CONFLICT (id) DO UPDATE SET
-      name = EXCLUDED.name,
-      synced_at = NOW()
-  `,
-    vals
-  );
-}
+/* ===================== MAIN ===================== */
 
 export default async function main() {
   const client = await pool.connect();
+
   try {
     await ensureTable(client);
-    console.log("✅ Pipeline armazenado em colunas separadas (id + nome)");
-    let pipelinesSynced = false;
-    let pipelinesCount = 0;
-    try {
-      const pipelines = await fetchPipelinesWithFallback();
-      if (pipelines && pipelines.length) {
-        await ensurePipelinesTable(client);
-        await upsertPipelines(client, pipelines);
-        pipelinesSynced = true;
-        pipelinesCount = pipelines.length;
-      } else {
-        console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
-      }
-    } catch (err) {
-      console.log("⚠️ Não foi possível obter pipelines, seguindo sem eles");
-    }
-    if (pipelinesSynced) {
-      console.log(`✅ Pipelines sincronizados: ${pipelinesCount}`);
-    } else {
-      console.log("⚠️ Pipelines não sincronizados");
-    }
 
-    const start = Date.now();
     const ids = await getAllLeadIds();
+    const rows = [];
 
-    const allRows = [];
-    for (let i = 0; i < ids.length; i += 100) {
-      const batch = ids.slice(i, i + 100);
+    for (const id of ids) {
+      await limit(async () => {
+        try {
+          const lead = await callRPC("getLead", { leadId: id });
+          const status = lead?.status?.id ?? lead?.status;
 
-      const tasks = batch.map((id) =>
-        limit(async () => {
-          try {
-            const lead = await callRPC("getLead", { leadId: id });
-
-            const statusVal = lead?.status?.id ?? lead?.status;
-            if (statusVal === 10 || String(statusVal).toLowerCase() === "won") {
-              allRows.push(mapLeadToRow(lead));
-            }
-          } catch (err) {
-            console.warn("⚠️ Falha ao processar lead", id, err.message);
+          // ✅ filtro WON SOMENTE AQUI
+          if (status === 10 || String(status).toLowerCase() === "won") {
+            rows.push(mapLeadToRow(lead));
           }
-        })
-      );
-      await Promise.all(tasks);
-
-      await upsertRows(client, allRows);
-      allRows.length = 0;
+        } catch (err) {
+          console.warn(`⚠️ Falha no lead ${id}: ${err.message}`);
+        }
+      });
     }
 
-    const countRes = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
-    const total = parseInt(countRes.rows[0].count, 10);
+    await upsertRows(client, rows);
 
-    const duration = ((Date.now() - start) / 1000).toFixed(2);
-    console.log(`✅ Processamento concluído com sucesso!`);
-    console.log(`📊 Total atual na tabela: ${total} registros.`);
-    console.log(`⏱️ Tempo total: ${duration}s`);
-    console.log("🏁 dash_geralcsWon finalizado com sucesso!\n");
+    const {
+      rows: [{ count }],
+    } = await client.query("SELECT COUNT(*) FROM dash_geralcsWon");
+
+    console.log(`✅ dash_geralcsWon finalizado`);
+    console.log(`📊 Total na tabela: ${count}`);
   } finally {
     client.release();
   }
