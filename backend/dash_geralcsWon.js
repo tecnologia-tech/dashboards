@@ -102,66 +102,32 @@ function mapLeadToRow(lead) {
 
 async function getAllLeadIds() {
   const ids = new Set();
-  const statusFilter = process.env.NUTSHELL_STATUS_WON ?? ""; // vazio = não filtra
-  const useDateFilter =
-    process.env.NUTSHELL_USE_MODIFIED_FILTER === "true" ||
-    process.env.NUTSHELL_USE_MODIFIED_FILTER === "1";
-
-  const baseQuery = {};
 
   const baseParams = {
-    query: { ...baseQuery },
-    orderBy: "modifiedTime",
+    orderBy: "closedTime",
     orderDirection: "DESC",
     limit: 100,
   };
 
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const paginatedParams = useDateFilter
-    ? {
-        query: {
-          closedTime: { operator: "after", value: since },
-        },
-      }
-    : baseParams;
 
-  async function fetchWithParams(params, label) {
-    for (let page = 1; ; page++) {
-      const leads = await callRPC("findLeads", { ...params, page });
-      if (!Array.isArray(leads) || leads.length === 0) break;
-      for (const l of leads) if (l?.id) ids.add(l.id);
-      if (leads.length < (params.limit || 0)) break;
+  const params = {
+    ...baseParams,
+    query: {
+      closedTime: { operator: "after", value: since },
+    },
+  };
+
+  for (let page = 1; ; page++) {
+    const leads = await callRPC("findLeads", { ...params, page });
+
+    if (!Array.isArray(leads) || leads.length === 0) break;
+
+    for (const l of leads) {
+      if (l?.id) ids.add(l.id);
     }
-    console.log(
-      `📦 findLeads(${label}) acumulou ${ids.size} ids (query=${JSON.stringify(
-        params.query
-      )})`
-    );
-  }
 
-  // 1) tenta com filtro de data (se habilitado)
-  try {
-    await fetchWithParams(paginatedParams, "filtro_data");
-  } catch (err) {
-    console.warn(
-      "⚠️ findLeads falhou com filtro de data, tentando sem filtro:",
-      err.message
-    );
-  }
-
-  // 2) se vazio, tenta sem filtro de data
-  if (!ids.size) {
-    await fetchWithParams(baseParams, "sem_data");
-  }
-
-  // 3) se ainda vazio, tenta completamente sem query (sem status)
-  if (!ids.size) {
-    const paramsNoFilters = {
-      orderBy: "modifiedTime",
-      orderDirection: "DESC",
-      limit: 100,
-    };
-    await fetchWithParams(paramsNoFilters, "sem_filtros");
+    if (leads.length < baseParams.limit) break;
   }
 
   console.log(
