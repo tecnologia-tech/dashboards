@@ -99,19 +99,35 @@ function mapLeadToRow(lead) {
     lead_id: id,
   };
 }
+
 async function getAllLeadIds() {
-  const ids = [];
+  const ids = new Set();
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // últimos 7 dias
+
   for (let page = 1; ; page++) {
     const leads = await callRPC("findLeads", {
-      query: { status: 10 },
+      query: {
+        modifiedTime: {
+          operator: "after",
+          value: since,
+        },
+      },
+      orderBy: "modifiedTime",
+      orderDirection: "DESC",
       page,
     });
+
     if (!Array.isArray(leads) || leads.length === 0) break;
-    ids.push(...leads.map((l) => l.id));
+
+    for (const l of leads) {
+      if (l?.id) ids.add(l.id);
+    }
   }
-  console.log(`📦 ${ids.length} leads encontrados.`);
-  return ids;
+
+  console.log(`📦 ${ids.size} leads recentes encontradas.`);
+  return [...ids];
 }
+
 async function callRPC(method, params = {}, retries = 3, delay = 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -334,7 +350,11 @@ export default async function main() {
         limit(async () => {
           try {
             const lead = await callRPC("getLead", { leadId: id });
-            allRows.push(mapLeadToRow(lead));
+
+            // status WON = 10
+            if (lead?.status?.id === 10) {
+              allRows.push(mapLeadToRow(lead));
+            }
           } catch (err) {
             console.warn("⚠️ Falha ao processar lead", id, err.message);
           }
