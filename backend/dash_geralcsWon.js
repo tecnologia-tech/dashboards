@@ -102,26 +102,27 @@ function mapLeadToRow(lead) {
 
 async function getAllLeadIds() {
   const ids = new Set();
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // últimos 7 dias
+
+  const params = {
+    query: {}, // 🔴 obrigatório no Nutshell
+    orderBy: "id", // ✅ único orderBy confiável
+    orderDirection: "DESC",
+    limit: 100,
+  };
 
   for (let page = 1; ; page++) {
-    const leads = await callRPC("findLeads", {
-      query: {
-        modifiedTime: {
-          operator: "after",
-          value: since,
-        },
-      },
-      orderBy: "modifiedTime",
-      orderDirection: "DESC",
-      page,
-    });
+    const leads = await callRPC("findLeads", { ...params, page });
+
     if (!Array.isArray(leads) || leads.length === 0) break;
+
     for (const l of leads) {
       if (l?.id) ids.add(l.id);
     }
+
+    if (leads.length < params.limit) break;
   }
-  console.log(`📦 ${ids.size} leads recentes encontradas.`);
+
+  console.log(`📦 ${ids.size} leads coletadas para processamento.`);
   return [...ids];
 }
 
