@@ -107,8 +107,7 @@ async function getAllLeadIds() {
     process.env.NUTSHELL_USE_MODIFIED_FILTER === "true" ||
     process.env.NUTSHELL_USE_MODIFIED_FILTER === "1";
 
-  const baseQuery =
-    statusFilter && statusFilter !== "all" ? { status: statusFilter } : {};
+  const baseQuery = {};
 
   const baseParams = {
     query: { ...baseQuery },
@@ -121,11 +120,7 @@ async function getAllLeadIds() {
   const paginatedParams = useDateFilter
     ? {
         query: {
-          ...baseParams.query,
-          OR: [
-            { closedTime: { operator: "after", value: since } },
-            { modifiedTime: { operator: "after", value: since } },
-          ],
+          closedTime: { operator: "after", value: since },
         },
       }
     : baseParams;
