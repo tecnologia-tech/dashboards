@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import logodozepe from "../../assets/MetaAnual/dozepe.png";
 
 const META_ANUAL = 23250000;
 
 const numberFont =
   "Inter, 'Manrope', 'Satoshi', 'Helvetica Neue', Arial, sans-serif";
+
 const numberFormatter = new Intl.NumberFormat("pt-BR");
 
 function toNumber(valor) {
@@ -21,6 +21,7 @@ function toNumber(valor) {
 
 export default function MetaAnual() {
   const [faltaMetaAnual, setFaltaMetaAnual] = useState(0);
+  const [metaBatida, setMetaBatida] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -31,10 +32,11 @@ export default function MetaAnual() {
       if (!Array.isArray(rawData)) return;
 
       const hoje = new Date(
-        new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+        new Date().toLocaleString("en-US", {
+          timeZone: "America/Sao_Paulo",
+        })
       );
 
-      // 🔴 MESMOS FILTROS DO LASTDANCE
       const pipelineIdsAno = ["15", "71", "23", "47", "59", "63", "35", "75"];
 
       const inicioAno = new Date(hoje.getFullYear(), 0, 1);
@@ -54,7 +56,13 @@ export default function MetaAnual() {
         0
       );
 
-      setFaltaMetaAnual(Math.max(META_ANUAL - somaAno, 0));
+      if (somaAno >= META_ANUAL) {
+        setMetaBatida(true);
+        setFaltaMetaAnual(0);
+      } else {
+        setMetaBatida(false);
+        setFaltaMetaAnual(META_ANUAL - somaAno);
+      }
     }
 
     fetchData();
@@ -68,77 +76,133 @@ export default function MetaAnual() {
       style={{
         fontFamily: numberFont,
         background:
-          "radial-gradient(circle at 50% 30%, rgba(255,200,0,0.08), transparent 38%), linear-gradient(140deg, #0b0b0f 0%, #070707 55%, #0e0e0e 100%)",
+          "radial-gradient(circle at 50% 35%, rgba(255,200,0,0.12), transparent 40%), linear-gradient(140deg, #0b0b0f 0%, #070707 55%, #0e0e0e 100%)",
       }}
     >
       {/* ARTBOARD */}
-      <div className="relative w-full max-w-[1480px] h-[88vh] rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-[2px] px-16 py-10 grid grid-rows-[auto_1fr] gap-10 shadow-[0_32px_100px_rgba(0,0,0,0.7)] overflow-hidden">
-        {/* Micro-gradientes */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle at 15% 20%, rgba(255,220,120,0.06), transparent 30%), radial-gradient(circle at 85% 80%, rgba(255,170,40,0.05), transparent 35%)",
-          }}
-        />
+      <div className="relative w-full max-w-[1700px] h-[92vh] rounded-[36px] border border-white/10 bg-white/5 backdrop-blur-[2px] shadow-[0_32px_140px_rgba(0,0,0,0.85)] overflow-hidden flex items-center justify-center text-center">
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-amber-400/10 via-transparent to-transparent" />
 
-        {/* HEADER */}
-        <div className="flex items-center justify-between relative">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
-              <img
-                src={logodozepe}
-                alt="12P"
-                className="h-6 w-auto opacity-80"
-                draggable={false}
-              />
+        {/* BLOCO CENTRAL */}
+        <div className="relative flex flex-col items-center justify-center gap-[3vh]">
+          {/* TOPO */}
+          <div>
+            <div
+              className="font-black tracking-tight"
+              style={{ fontSize: "clamp(42px, 6vh, 64px)" }}
+            >
+              <span className="text-amber-400">12</span>
+              <span className="text-white">P</span>
             </div>
-            <div className="leading-tight">
-              <p className="text-[16px] uppercase tracking-[0.34em] text-white/55">
+
+            <div
+              className="uppercase text-white/55"
+              style={{
+                fontSize: "clamp(14px, 2vh, 22px)",
+                letterSpacing: "0.5em",
+                marginTop: "0.5vh",
+              }}
+            >
+              Meta anual
+            </div>
+          </div>
+
+          {/* CONTEÚDO */}
+          {!metaBatida ? (
+            <>
+              <div
+                className="uppercase text-white/60"
+                style={{
+                  fontSize: "clamp(20px, 3vh, 36px)",
+                  letterSpacing: "0.45em",
+                }}
+              >
                 Ainda faltam
-              </p>
-              <p className="text-[15px] uppercase tracking-[0.26em] text-amber-200/80">
-                Meta anual 12P
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* CONTENT — AGORA CENTRALIZADO */}
-        <div className="flex items-center justify-center">
-          <div className="flex flex-col items-center justify-center text-center gap-6">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/55">
-              Saldo para atingir
-            </p>
-
-            <div className="space-y-3 leading-none">
-              <div className="text-lg font-semibold text-white/70 text-[40px]">
-                Meta anual 12P
               </div>
 
-              <div className="text-[150px] 2xl:text-[170px] font-black bg-gradient-to-br from-[#f9e7a3] via-[#f5c86b] to-[#d88d2a] bg-clip-text text-transparent drop-shadow-[0_12px_44px_rgba(216,141,42,0.35)]">
-                R$ {numberFormatter.format(faltaMetaAnual)}
+              <div className="flex items-end justify-center gap-[2vh]">
+                <span
+                  className="font-extrabold text-amber-200/90"
+                  style={{
+                    fontSize: "clamp(64px, 8vh, 120px)",
+                    marginBottom: "2vh",
+                  }}
+                >
+                  R$
+                </span>
+
+                <span
+                  className="font-extrabold tracking-tight bg-gradient-to-br from-[#fff4c7] via-[#f5c86b] to-[#d88d2a] bg-clip-text text-transparent leading-none"
+                  style={{
+                    fontSize: "clamp(140px, 22vh, 260px)",
+                    filter: "drop-shadow(0 32px 100px rgba(216,141,42,0.55))",
+                  }}
+                >
+                  {numberFormatter.format(faltaMetaAnual)}
+                </span>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 text-[40px] uppercase tracking-[0.18em] text-white/60">
-              <span className="h-px w-14 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-              de R$ 23 milhões
-              <span className="h-px w-14 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-            </div>
-          </div>
-        </div>
+              <div
+                className="flex items-center gap-[2vh] uppercase text-white/65"
+                style={{
+                  fontSize: "clamp(22px, 3.5vh, 48px)",
+                  letterSpacing: "0.3em",
+                }}
+              >
+                <span className="h-px w-[6vh] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+                de R$ 23.250.000,00
+                <span className="h-px w-[6vh] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* META BATIDA */}
+              <div
+                className="uppercase text-white/65 flex items-center gap-4"
+                style={{
+                  fontSize: "clamp(26px, 4vh, 48px)",
+                  letterSpacing: "0.35em",
+                }}
+              >
+                <span>Meta anual batida</span>
+                <span className="text-[1.2em]">🏆</span>
+              </div>
 
-        {/* 
-        ==================================
-        TABELA COMENTADA (OPÇÃO 1)
-        ==================================
-        */}
-        {/*
-        <div className="flex flex-col h-full">
-          ... tabela inteira aqui ...
+              {/* VALOR DA META */}
+              <div className="flex items-end justify-center gap-[2vh]">
+                <span
+                  className="font-extrabold text-amber-200/90"
+                  style={{
+                    fontSize: "clamp(64px, 8vh, 120px)",
+                    marginBottom: "2vh",
+                  }}
+                ></span>
+
+                <span
+                  className="font-extrabold tracking-tight bg-gradient-to-br from-[#fff4c7] via-[#f5c86b] to-[#d88d2a] bg-clip-text text-transparent leading-none"
+                  style={{
+                    fontSize: "clamp(160px, 24vh, 280px)",
+                    filter: "drop-shadow(0 36px 120px rgba(216,141,42,0.6))",
+                  }}
+                >
+                  23 milhões
+                </span>
+              </div>
+
+              {/* PARABÉNS */}
+              <div
+                className="uppercase text-white/70 flex items-center gap-3"
+                style={{
+                  fontSize: "clamp(24px, 4vh, 52px)",
+                  letterSpacing: "0.3em",
+                }}
+              >
+                <span>Parabéns</span>
+                <span className="text-[1.4em]">👏</span>
+              </div>
+            </>
+          )}
         </div>
-        */}
       </div>
     </div>
   );
