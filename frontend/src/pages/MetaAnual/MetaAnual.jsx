@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import logodozepe from "../../assets/MetaAnual/dozepe.png";
 
-const META_ANUAL = 23120000;
+const META_ANUAL = 23250000;
 
 const numberFont =
   "Inter, 'Manrope', 'Satoshi', 'Helvetica Neue', Arial, sans-serif";

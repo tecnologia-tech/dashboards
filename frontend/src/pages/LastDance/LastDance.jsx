@@ -3,7 +3,7 @@ import logolastdance from "../../assets/LastDance/lastdance.png";
 
 const META_MENSAL = 1000000;
 const META_ESTORNOS = 2000000;
-const META_ANUAL = 23120000;
+const META_ANUAL = 23250000;
 
 const ANIMATION_STYLES = `
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;900&display=swap");
