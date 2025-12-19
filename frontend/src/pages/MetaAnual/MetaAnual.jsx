@@ -150,7 +150,7 @@ export default function MetaAnual() {
                 }}
               >
                 <span className="h-px w-[6vh] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-                de R$ 23.250.000,00
+                de R$ 23 milhões
                 <span className="h-px w-[6vh] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
               </div>
             </>
