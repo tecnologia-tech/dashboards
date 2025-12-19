@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const META_ANUAL = 23250000;
+const META_ANUAL = 23183400;
 
 const numberFont =
   "Inter, 'Manrope', 'Satoshi', 'Helvetica Neue', Arial, sans-serif";
