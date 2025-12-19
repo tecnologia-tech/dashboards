@@ -18,6 +18,7 @@ export default function TVSelection() {
       <ButtonPrincipal label="TV 1" onClick={() => navigate("/tv1")} />
       <ButtonPrincipal label="TV 2" onClick={() => navigate("/tv2")} />
       <ButtonPrincipal label="TV 3" onClick={() => navigate("/tv3")} />
+      <ButtonPrincipal label="TV Big" onClick={() => navigate("/tvgrande")} />
     </div>
   );
 }

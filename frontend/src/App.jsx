@@ -9,6 +9,7 @@ import {
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import AutoRotate from "./components/AutoRotate";
+import FullscreenButton from "./components/FullscreenButton";
 import TVSelection from "./components/TVSelection";
 
 /* ===========================================================
@@ -20,7 +21,7 @@ const BlackFriday = lazy(() => import("./pages/BlackFriday/BlackFriday"));
 const Geral = lazy(() => import("./pages/Geral/Geral"));
 const LastDance = lazy(() => import("./pages/LastDance/LastDance"));
 const Conjunta = lazy(() => import("./pages/Conjunta/Conjunta"));
-
+const MetaAnual = lazy(() => import("./pages/MetaAnual/MetaAnual.jsx"));
 /* ===========================================================
    PRELOAD
 =========================================================== */
@@ -30,7 +31,7 @@ import("./pages/BlackFriday/BlackFriday");
 import("./pages/Geral/Geral");
 import("./pages/LastDance/LastDance");
 import("./pages/Conjunta/Conjunta");
-
+import("./pages/MetaAnual/MetaAnual");
 /* ===========================================================
    CONTEXTO TV3
 =========================================================== */
@@ -115,6 +116,22 @@ function TV1Wrapper({ children }) {
     </>
   );
 }
+/* ===========================================================
+   TV GRANDE WRAPPER (SEM ROTAÇÃO)
+=========================================================== */
+function TVGrandeWrapper({ children }) {
+  return (
+    <>
+      <FullscreenButton />
+
+      <TelaComRefresh>
+        <Suspense fallback={<div style={{ color: "white" }}>Carregando…</div>}>
+          {children}
+        </Suspense>
+      </TelaComRefresh>
+    </>
+  );
+}
 
 /* ===========================================================
    APP
@@ -128,7 +145,10 @@ export default function App() {
         <Route path="/tv1" element={<Navigate to="/conjunta" replace />} />
         <Route path="/tv2" element={<Navigate to="/lastdance" replace />} />
         <Route path="/tv3" element={<Navigate to="/farmers" replace />} />
-
+        <Route
+          path="/tvgrande"
+          element={<Navigate to="/metaanual" replace />}
+        />
         {/* ================= TV1 ================= */}
         <Route
           path="/conjunta"
@@ -138,7 +158,14 @@ export default function App() {
             </TV1Wrapper>
           }
         />
-
+        <Route
+          path="/metaanual"
+          element={
+            <TVGrandeWrapper>
+              <MetaAnual />
+            </TVGrandeWrapper>
+          }
+        />
         <Route
           path="/geral"
           element={
